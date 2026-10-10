@@ -76,8 +76,11 @@ await fs.cp(from('assets'), to('assets'), { recursive: true });
 await fs.copyFile(from('manifest.json'), to('manifest.json'));
 
 // 5. Service worker: its list of files to keep offline is rewritten to match dist/
-const stylesheets = (await fs.readdir(to('css'))).map(name => `/css/${name}`);
-const offline = ['/', ...PAGES.map(page => `/${page}`), '/landing', '/termos', '/privacidade', '/manifest.json', '/assets/icon.svg', ...stylesheets, '/js/app.js'];
+// with the same ?v= the page uses, so the cache is hit under the exact address
+const page = await fs.readFile(to('index.html'), 'utf8');
+const referenced = [...page.matchAll(/(?:href|src)="((?:css|js)\/[^"]+)"/g)].map(match => '/' + match[1]);
+if (!referenced.some(file => file.startsWith('/js/app.js'))) throw new Error('index.html: js/app.js não foi encontrado');
+const offline = ['/', ...PAGES.map(name => `/${name}`), '/manifest.json', '/assets/icon.svg', ...referenced];
 const worker = await fs.readFile(from('sw.js'), 'utf8');
 const listed = worker.replace(/const STATIC_ASSETS = \[[\s\S]*?\];/, `const STATIC_ASSETS = ${JSON.stringify(offline)};`);
 if (listed === worker) throw new Error('sw.js: a lista STATIC_ASSETS não foi encontrada');
