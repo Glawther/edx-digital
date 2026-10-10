@@ -21,11 +21,11 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.6.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.6.0">
-  <link rel="stylesheet" href="css/components.css?v=3.6.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.6.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.6.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.7.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.7.0">
+  <link rel="stylesheet" href="css/components.css?v=3.7.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.7.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.7.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -1647,7 +1647,6 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
         </div>
         <span class="status-text pending" id="chk-trial-days-badge"></span>
       </div>
-      <span id="chk-quota-users" hidden></span><span id="chk-quota-leads" hidden></span>
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Escolha o plano</h3>
       <div class="plan-grid">
@@ -1669,48 +1668,31 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       </div>
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Pague por PIX</h3>
-      <div class="pix-box">
+
+      <div class="pay-state" id="chk-state-message" hidden>
+        <p id="chk-state-text"></p>
+        <button type="button" class="btn btn-outline btn-sm" id="chk-retry" hidden>Tentar de novo</button>
+      </div>
+
+      <div class="pix-box" id="chk-state-ready" hidden>
         <div class="pix-qr">
           <img id="chk-pix-qrcode-img" src="" alt="QR Code do PIX">
         </div>
         <div class="pix-steps">
+          <div class="pix-amount"><span id="chk-pix-amount"></span> por 30 dias</div>
           <label for="chk-pix-copypaste-input">PIX copia e cola</label>
           <div style="display: flex; gap: 6px; margin-bottom: 0.75rem;">
             <input type="text" id="chk-pix-copypaste-input" readonly class="form-input" style="font-family: var(--font-mono, monospace); font-size: 0.78rem;">
             <button type="button" class="btn btn-primary btn-sm" id="btn-copy-pix-code" style="white-space: nowrap;">Copiar</button>
           </div>
-          <p>Pague no aplicativo do seu banco e depois envie o comprovante. O plano é liberado quando o pagamento for conferido.</p>
-          <div class="row-actions" style="margin-top: 0.75rem;">
-            <a href="#" id="chk-whatsapp-receipt-link" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Enviar comprovante pelo WhatsApp</a>
-            <a href="#" id="chk-gateway-card-link" target="_blank" rel="noopener" class="link-btn">Pagar com cartão</a>
-          </div>
+          <p>Pague no aplicativo do seu banco. Esta tela confirma sozinha, em alguns segundos, e o plano é liberado na hora.</p>
+          <p class="pix-waiting" id="chk-waiting" role="status">Aguardando o pagamento</p>
         </div>
       </div>
 
-      <!-- Recebimento: só para quem opera a plataforma (localStorage nexus_platform_owner = 1) -->
-      <div id="chk-admin-settings-section" style="display: none; margin-top: 1.25rem;">
-        <button type="button" id="btn-toggle-payment-settings" class="link-btn">Configurar o recebimento</button>
-        <div id="chk-admin-settings-drawer" style="display: none; margin-top: 0.75rem;">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="cfg-pix-key">Chave PIX de recebimento</label>
-              <input type="text" id="cfg-pix-key" class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="cfg-pix-name">Nome do titular</label>
-              <input type="text" id="cfg-pix-name" class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="cfg-support-whatsapp">WhatsApp para comprovantes, com DDD</label>
-              <input type="text" id="cfg-support-whatsapp" class="form-input">
-            </div>
-            <div class="form-group">
-              <label for="cfg-backend-url">Endereço do servidor</label>
-              <input type="text" id="cfg-backend-url" class="form-input">
-            </div>
-          </div>
-          <button type="button" id="btn-save-payment-settings" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Salvar</button>
-        </div>
+      <div class="pay-state pay-success" id="chk-state-approved" hidden role="status">
+        <h3 class="section-title">Pagamento confirmado</h3>
+        <p id="chk-approved-text"></p>
       </div>
     </div>
 
@@ -1726,7 +1708,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.6.0"></script>
+  <script type="module" src="js/app.js?v=3.7.0"></script>
 
 </body>
 </html>

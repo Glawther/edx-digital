@@ -14,6 +14,7 @@ const {
 } = require('./server/controllers/webhook-controller');
 const { handleStaticFile } = require('./server/controllers/static-controller');
 const { handleApiV1 } = require('./server/routes/api-v1');
+const { handleBilling } = require('./server/billing/billing-controller');
 
 // Initialize local storage files & directories
 initStorage();
@@ -33,6 +34,11 @@ const server = http.createServer((req, res) => {
   // Zero Trust API v1 (Multitenant, RBAC, DLP, Audit, Crypto)
   if (parsedUrl.startsWith('/api/v1/')) {
     return handleApiV1(req, res, parsedUrl);
+  }
+
+  // Subscription billing by PIX
+  if (parsedUrl.startsWith('/api/billing/')) {
+    return handleBilling(req, res, parsedUrl);
   }
 
   // Legacy Webhook Routes

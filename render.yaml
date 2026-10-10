@@ -12,22 +12,19 @@ services:
         value: production
       - key: PORT
         value: 3000
-      - key: BILLING_PROVIDER
-        value: direct_pix
-      - key: PIX_KEY
-        value: contato@nexuscrm.com.br
-      - key: PIX_MERCHANT_NAME
-        value: NEXUS CRM ENTERPRISE
-      - key: PIX_CITY
-        value: SAO PAULO
-      - key: SUPPORT_WHATSAPP
-        value: "5511999999999"
-      - key: CHECKOUT_STARTER_URL
-        value: "https://pay.kiwify.com.br/starter-demo"
-      - key: CHECKOUT_PRO_URL
-        value: "https://pay.kiwify.com.br/pro-demo"
-      - key: CHECKOUT_ENTERPRISE_URL
-        value: "https://pay.kiwify.com.br/enterprise-demo"
+      - key: FIREBASE_PROJECT_ID
+        value: nexuscrm-d8e13
+      # Endereco publico deste servidor: o Mercado Pago avisa os pagamentos aqui
+      - key: PUBLIC_API_URL
+        value: https://nexus-crm-yfof.onrender.com
+      # Os tres abaixo sao segredos: preencha no painel do Render, nunca neste arquivo.
+      # Passo a passo em docs/COBRANCA_PIX.md
+      - key: MERCADO_PAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADO_PAGO_WEBHOOK_SECRET
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: MASTER_ENCRYPTION_KEY

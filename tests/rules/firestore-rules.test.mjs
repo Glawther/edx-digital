@@ -298,6 +298,17 @@ test('a auditoria só recebe registros do próprio autor e nunca é alterada', a
   assert.equal(await get(world.b.owner, `audit_logs/log-${RUN}`), DENIED); // outra empresa também não
 });
 
+// ---------------------------------------------------------------- cobrança
+
+test('ninguém grava cobranças nem muda o plano pelo aplicativo; só o servidor', async () => {
+  const cobranca = { orgId: world.a.orgId, plan: 'enterprise', amount: 497, status: 'approved' };
+  assert.equal(await put(world.a.owner, `payments/falsa-${RUN}`, cobranca), DENIED);
+  assert.equal(await put(world.ana, `payments/falsa2-${RUN}`, cobranca), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { paidUntil: '2099-01-01T00:00:00.000Z' }), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { planStatus: 'active', plan: 'enterprise' }), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { pendingPaymentId: 'x' }), DENIED);
+});
+
 // ---------------------------------------------------------------- exclusão de conta e de empresa
 
 test('o vendedor exclui a própria conta, e só a própria', async () => {

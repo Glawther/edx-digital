@@ -1412,3 +1412,17 @@ body.is-first-run:not([data-view]) #kpi-container { display: none; }
   .dialog-footer { flex-wrap: wrap; }
   .toast { flex-wrap: wrap; }
 }
+
+
+/* Paying for a plan */
+.pay-state { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem 1.1rem; }
+.pay-state p { margin: 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; }
+.pay-state .btn { margin-top: 0.75rem; }
+.pay-success { border-color: var(--color-won, #1a7f4b); }
+.pay-success .section-title { color: var(--color-won, #1a7f4b); margin-bottom: 0.25rem; }
+.pix-amount { font-size: 1.05rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.6rem; }
+.pix-waiting { margin-top: 0.6rem !important; color: var(--text-muted) !important; }
+.pix-waiting::after { content: ''; display: inline-block; width: 1em; text-align: left; animation: waiting-dots 1.5s steps(4, end) infinite; }
+@keyframes waiting-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+@media (prefers-reduced-motion: reduce) { .pix-waiting::after { animation: none; content: '...'; } }
+#trial-header-pill.needs-attention { color: var(--color-lost, #b42318); border-color: var(--color-lost, #b42318); }
