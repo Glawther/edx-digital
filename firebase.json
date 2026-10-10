@@ -1,106 +1,131 @@
 {
-  "hosting": {
-    "public": ".",
-    "cleanUrls": false,
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/.git/**",
-      "**/.agents/**",
-      "**/node_modules/**",
-      "server/**",
-      "server.js",
-      "data/**",
-      "README.md",
-      "GEMINI.md",
-      "package*.json",
-      "firestore.rules",
-      ".env*",
-      "*.log",
-      "**/*.log",
-      "tests/**",
-      "docs/**",
-      "HISTORICO_DO_PROJETO.md",
-      "Dockerfile",
-      "docker-compose.yml",
-      "render.yaml",
-      "railway.json",
-      "Procfile",
-      "deploy-cloudrun.*"
-    ],
-    "headers": [
-      {
-        "source": "**",
-        "headers": [
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          },
-          {
-            "key": "X-Frame-Options",
-            "value": "SAMEORIGIN"
-          },
-          {
-            "key": "X-XSS-Protection",
-            "value": "1; mode=block"
-          },
-          {
-            "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
-          },
-          {
-            "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(), geolocation=()"
-          }
-        ]
-      },
-      {
-        "source": "sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(html|htm)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(js|css|woff2|png|svg)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=3600, must-revalidate"
-          }
-        ]
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/landing",
-        "destination": "/landing.html"
-      },
-      {
-        "source": "/termos",
-        "destination": "/termos.html"
-      },
-      {
-        "source": "/privacidade",
-        "destination": "/privacidade.html"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "site": "edx-digital",
+      "public": ".",
+      "cleanUrls": false,
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/.git/**",
+        "**/.agents/**",
+        "**/node_modules/**",
+        "server/**",
+        "server.js",
+        "data/**",
+        "README.md",
+        "GEMINI.md",
+        "package*.json",
+        "firestore.rules",
+        ".env*",
+        "*.log",
+        "**/*.log",
+        "tests/**",
+        "docs/**",
+        "HISTORICO_DO_PROJETO.md",
+        "Dockerfile",
+        "docker-compose.yml",
+        "render.yaml",
+        "railway.json",
+        "Procfile",
+        "deploy-cloudrun.*",
+        "legacy-site/**"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "1; mode=block"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=()"
+            }
+          ]
+        },
+        {
+          "source": "sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(html|htm)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css|woff2|png|svg)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "max-age=3600, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/landing",
+          "destination": "/landing.html"
+        },
+        {
+          "source": "/termos",
+          "destination": "/termos.html"
+        },
+        {
+          "source": "/privacidade",
+          "destination": "/privacidade.html"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "site": "nexuscrm-d8e13",
+      "public": "legacy-site",
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ],
   "firestore": {
     "rules": "firestore.rules"
   },

@@ -4,7 +4,7 @@
  * and follow-up reminders via the Service Worker.
  */
 
-const NOTIFICATIONS_STORAGE_KEY = 'nexus_crm_notifications';
+const NOTIFICATIONS_STORAGE_KEY = 'edx_notifications';
 const MAX_NOTIFICATIONS = 100;
 
 /**

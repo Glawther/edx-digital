@@ -113,4 +113,4 @@ O projeto é 100% compatível com o Firebase Hosting. Para publicar uma nova ver
 ```bash
 npx -y firebase-tools@latest deploy --only hosting
 ```
-- **Ambiente de Produção**: [https://nexuscrm-d8e13.web.app](https://nexuscrm-d8e13.web.app)
+- **Ambiente de Produção**: [https://edx-digital.web.app](https://edx-digital.web.app)

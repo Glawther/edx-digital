@@ -7,7 +7,7 @@
 import { getSavedOrganization } from '../core/config.js';
 import { getCurrentUser } from './auth-service.js';
 
-const AUDIT_STORAGE_KEY = 'nexus_crm_audit_logs';
+const AUDIT_STORAGE_KEY = 'edx_audit_logs';
 const MAX_LOCAL_LOGS = 500;
 
 // Firestore SDK lazy-loaded
@@ -96,7 +96,7 @@ export async function logAudit(action, details = {}, severity = AUDIT_SEVERITY.I
     userName: user?.name || 'Desconhecido',
     userEmail: user?.email || '',
     userRole: user?.role || 'unknown',
-    orgId: org?.id || 'org_nexus_default',
+    orgId: org?.id || 'org_edx_default',
     orgName: org?.name || 'EDX Digital',
     // Only what describes the action: no device fingerprinting data
     details: { ...details }

@@ -5,7 +5,7 @@
 
 import { recordAiUsage } from '../core/config.js';
 
-const GEMINI_KEY_STORAGE = 'nexus_crm_gemini_api_key';
+const GEMINI_KEY_STORAGE = 'edx_gemini_api_key';
 
 /**
  * Retrieves the stored Gemini API key

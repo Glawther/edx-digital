@@ -131,7 +131,7 @@ import {
 // ==========================================================================
 window.getApiBaseUrl = function() {
   if (typeof window === 'undefined') return '';
-  const custom = localStorage.getItem('nexus_cloud_backend_url');
+  const custom = localStorage.getItem('edx_cloud_backend_url');
   if (custom) return custom.replace(/\/$/, '');
 
   const host = window.location.hostname;
@@ -395,12 +395,12 @@ function setupIdleSignOut() {
 // and the demo's sample data.
 function clearCompanyDataFromBrowser() {
   [
-    'nexus_crm_audit_logs',
-    'nexus_crm_notifications',
-    'nexus_crm_ai_usage_metrics',
-    'nexus_crm_last_activity',
-    'nexus_jwt_token',
-    'nexus_tenant_id'
+    'edx_audit_logs',
+    'edx_notifications',
+    'edx_ai_usage_metrics',
+    'edx_last_activity',
+    'edx_jwt_token',
+    'edx_tenant_id'
   ].forEach(key => localStorage.removeItem(key));
 }
 

@@ -467,7 +467,7 @@ class StorageManager {
     } else {
       const org = getSavedOrganization();
       const newLead = {
-        orgId: user.orgId || customerData.orgId || org?.id || 'org_nexus_default',
+        orgId: user.orgId || customerData.orgId || org?.id || 'org_edx_default',
         activities: [],
         tasks: [],
         assignedTo: defaultAssignedTo,

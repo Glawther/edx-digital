@@ -8,7 +8,7 @@ import { crmStore } from '../core/crm-store.js';
 import { addInAppNotification, NOTIFICATION_TYPES } from './notification-service.js';
 import { logAudit, AUDIT_ACTIONS } from './audit-service.js';
 
-const WEBHOOK_CONFIG_KEY = 'nexus_webhook_config';
+const WEBHOOK_CONFIG_KEY = 'edx_webhook_config';
 
 /**
  * Gets or initializes the webhook configuration

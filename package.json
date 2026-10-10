@@ -1,5 +1,5 @@
 {
-  "name": "nexus-crm",
+  "name": "edx-digital",
   "version": "2.0.0",
   "description": "EDX Digital - Sistema Comercial Enterprise com IA Gemini, Tríade CID (RBAC) e Google Cloud Firestore",
   "main": "server.js",
@@ -7,13 +7,13 @@
     "dev": "node server.js || python -m http.server 3000",
     "start": "node server.js || python -m http.server 3000",
     "test": "node --test server/tests/*.test.js",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-nexus-crm",
-    "test:rules": "firebase emulators:exec --only auth,firestore --project demo-nexus-crm \"node --test tests/rules/\"",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-edx-digital",
+    "test:rules": "firebase emulators:exec --only auth,firestore --project demo-edx-digital \"node --test tests/rules/\"",
     "deploy": "npx -y firebase-tools deploy --only hosting"
   },
   "keywords": [
     "crm",
-    "nexus-crm",
+    "edx-digital",
     "sales",
     "gemini-ai",
     "firestore",

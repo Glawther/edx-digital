@@ -3,7 +3,7 @@
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'edx-digital-v3.9.0';
+const CACHE_NAME = 'edx-digital-v3.10.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
