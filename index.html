@@ -21,11 +21,11 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.4.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.4.0">
-  <link rel="stylesheet" href="css/components.css?v=3.4.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.4.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.4.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.5.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.5.0">
+  <link rel="stylesheet" href="css/components.css?v=3.5.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.5.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.5.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -203,7 +203,7 @@
         <li>
           <a href="#pipeline" class="nav-item active" data-view="pipeline" data-title="Funil de vendas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-            <span>Funil de Vendas</span>
+            <span>Funil</span>
             <span class="nav-count" id="nav-count-pipeline">0</span>
           </a>
         </li>
@@ -376,17 +376,18 @@
            ====================================================================== -->
       <header class="header">
         <div class="header-left">
-          <h1 class="page-title" id="current-page-title">Pipeline de Vendas</h1>
+          <h1 class="page-title" id="current-page-title">Funil de vendas</h1>
         </div>
 
         <!-- BARRA DE PESQUISA MAIOR CENTRALIZADA -->
         <div class="header-center">
           <div class="search-box-large">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="global-search-input" placeholder="Buscar por cliente, empresa, telefone ou tag..." autocomplete="off">
+            <input type="text" id="global-search-input" placeholder="Buscar cliente, empresa ou telefone" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="search-results" aria-autocomplete="list">
             <button type="button" class="search-kbd-trigger" id="btn-open-command-palette" title="Abrir busca rápida e comandos (Ctrl + K)">
               <kbd>Ctrl K</kbd>
             </button>
+            <div class="search-results" id="search-results" role="listbox" aria-label="Resultados da busca" hidden></div>
           </div>
         </div>
 
@@ -677,22 +678,12 @@
         <div class="form-grid">
           <div class="form-group full-width">
             <label for="input-customer-name">Nome do contato</label>
-            <input type="text" id="input-customer-name" class="form-input" placeholder="Mariana Albuquerque" required>
+            <input type="text" id="input-customer-name" class="form-input" placeholder="Mariana Albuquerque" required autocomplete="off">
           </div>
 
           <div class="form-group">
             <label for="input-customer-company">Empresa</label>
-            <input type="text" id="input-customer-company" class="form-input" placeholder="Albuquerque Móveis">
-          </div>
-
-          <div class="form-group">
-            <label for="input-customer-role">Cargo</label>
-            <input type="text" id="input-customer-role" class="form-input" placeholder="Diretora de compras">
-          </div>
-
-          <div class="form-group">
-            <label for="input-customer-email">E-mail</label>
-            <input type="email" id="input-customer-email" class="form-input" placeholder="mariana@empresa.com">
+            <input type="text" id="input-customer-company" class="form-input" placeholder="Albuquerque Móveis" autocomplete="off">
           </div>
 
           <div class="form-group">
@@ -702,7 +693,7 @@
 
           <div class="form-group">
             <label for="input-deal-value">Valor (R$)</label>
-            <input type="number" id="input-deal-value" class="form-input" placeholder="50000" min="0" step="0.01" inputmode="decimal" required>
+            <input type="number" id="input-deal-value" class="form-input" placeholder="0,00" min="0" step="0.01" inputmode="decimal" required>
           </div>
 
           <div class="form-group">
@@ -717,39 +708,50 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="input-deal-priority">Prioridade</label>
-            <select id="input-deal-priority" class="form-select">
-              <option value="high">Alta</option>
-              <option value="medium" selected>Média</option>
-              <option value="low">Baixa</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="input-deal-forecast">Previsão de fechamento</label>
-            <input type="date" id="input-deal-forecast" class="form-input" title="Data prevista para assinatura ou fechamento">
-          </div>
-
-          <div class="form-group">
-            <label for="input-customer-tags">Etiquetas, separadas por vírgula</label>
-            <input type="text" id="input-customer-tags" class="form-input" placeholder="Indicação, Varejo, Urgente">
-          </div>
-
-          <div class="form-group full-width">
-            <label for="input-customer-assigned">Responsável</label>
-            <select id="input-customer-assigned" class="form-select">
-              <option value="lucas.vendas@nexuscrm.com">Lucas Mendes (Consultor de Vendas)</option>
-              <option value="mariana.vendas@nexuscrm.com">Mariana Costa (Consultora de Vendas)</option>
-              <option value="admin@nexuscrm.com">Administrador do Sistema</option>
-            </select>
-          </div>
-
           <div class="form-group full-width">
             <label for="input-customer-notes">Anotações</label>
             <textarea id="input-customer-notes" class="form-textarea" placeholder="O que o cliente precisa, o que foi combinado e o próximo passo. Este texto vai para a proposta."></textarea>
           </div>
         </div>
+
+        <details class="form-more" id="customer-form-more">
+          <summary>Mais detalhes: e-mail, cargo, previsão, prioridade, etiquetas e responsável</summary>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="input-customer-email">E-mail</label>
+              <input type="email" id="input-customer-email" class="form-input" placeholder="mariana@empresa.com" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+              <label for="input-customer-role">Cargo</label>
+              <input type="text" id="input-customer-role" class="form-input" placeholder="Diretora de compras" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+              <label for="input-deal-forecast">Previsão de fechamento</label>
+              <input type="date" id="input-deal-forecast" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label for="input-deal-priority">Prioridade</label>
+              <select id="input-deal-priority" class="form-select">
+                <option value="high">Alta</option>
+                <option value="medium" selected>Média</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="input-customer-tags">Etiquetas, separadas por vírgula</label>
+              <input type="text" id="input-customer-tags" class="form-input" placeholder="Indicação, Varejo, Urgente" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+              <label for="input-customer-assigned">Responsável</label>
+              <select id="input-customer-assigned" class="form-select"></select>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="dialog-footer">
@@ -1753,7 +1755,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.4.0"></script>
+  <script type="module" src="js/app.js?v=3.5.0"></script>
 
 </body>
 </html>

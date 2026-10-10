@@ -205,7 +205,9 @@ class CRMStore {
       // Search filter
       if (this.searchQuery) {
         const target = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
-        return target.includes(this.searchQuery);
+        if (target.includes(this.searchQuery)) return true;
+        const digits = this.searchQuery.replace(/\D/g, '');
+        return digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits);
       }
       return true;
     });
