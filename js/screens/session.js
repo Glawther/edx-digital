@@ -37,7 +37,7 @@ export async function enterSession({ resumed = false } = {}) {
 
   if (typeof window.refreshTeamInviteCard === 'function') window.refreshTeamInviteCard();
   if (typeof window.refreshPlanPill === 'function') window.refreshPlanPill();
-  if (typeof window.navigateToView === 'function') window.navigateToView('pipeline');
+  if (typeof window.navigateToView === 'function') window.navigateToView('today');
   crmStore.emitChange();
 
   if (isCloudSession() && !result.success) {

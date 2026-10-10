@@ -4,6 +4,9 @@
  * Tests: tests/unit/report.test.mjs
  */
 
+import { attentionOf } from './attention.js';
+import { isConversation } from './history.js';
+
 export const REPORT_PERIODS = [
   { id: 'month', label: 'Este mês' },
   { id: 'last_month', label: 'Mês passado' },
@@ -39,24 +42,46 @@ const wonDate = (c) => c.wonAt || c.updatedAt || c.createdAt;
 const lostDate = (c) => c.lostAt || c.updatedAt || c.createdAt;
 
 function emptyRow(name) {
-  return { name, created: 0, wonCount: 0, wonValue: 0, lostCount: 0, openCount: 0, openValue: 0 };
+  return {
+    name,
+    // inside the period
+    created: 0, wonCount: 0, wonValue: 0, lostCount: 0, contacts: 0,
+    // as it stands now
+    openCount: 0, openValue: 0, stalled: 0, lateTasks: 0
+  };
 }
+
+// Won out of what was decided, and the average sale; null when there is nothing to divide by
+function withRates(row) {
+  const decided = row.wonCount + row.lostCount;
+  return {
+    ...row,
+    conversionRate: decided > 0 ? Math.round((row.wonCount / decided) * 100) : null,
+    avgTicket: row.wonCount > 0 ? row.wonValue / row.wonCount : null
+  };
+}
+
+const cleanName = (name) => String(name || '').replace(/\s*\(.*\)$/, '');
 
 /**
  * @param {Array} customers - the opportunities the person can see
+ * @param {Array<{id: string, name: string}>} [members] - people of the team, so that someone with
+ *        no opportunity at all still gets a row (it is the row a manager most needs to see)
  * @returns totals for the period, the same split per salesperson, and the lost ones (for the reasons chart)
  */
-export function periodReport(customers, periodId, now = new Date()) {
+export function periodReport(customers, periodId, now = new Date(), members = []) {
   const range = periodRange(periodId, now);
   const totals = emptyRow('Total');
   const people = new Map();
   const lost = [];
+  members.forEach(member => {
+    if (member && member.id && !people.has(member.id)) people.set(member.id, emptyRow(cleanName(member.name) || 'Sem nome'));
+  });
 
   customers.forEach(c => {
     const key = c.assignedTo?.id || c.assignedTo?.email || 'none';
     if (!people.has(key)) {
-      const name = (c.assignedTo?.name || c.assignedTo?.email || 'Sem responsável').replace(/\s*\(.*\)$/, '');
-      people.set(key, emptyRow(name));
+      people.set(key, emptyRow(cleanName(c.assignedTo?.name || c.assignedTo?.email) || 'Sem responsável'));
     }
     const row = people.get(key);
     const value = Number(c.dealValue) || 0;
@@ -70,16 +95,39 @@ export function periodReport(customers, periodId, now = new Date()) {
     } else {
       add('openCount');
       add('openValue', value);
+      const flags = attentionOf(c, now);
+      if (flags.stalled) add('stalled');
+      if (flags.lateTask) add('lateTasks');
     }
+
+    // calls, messages and meetings registered in the period, whoever the opportunity is with now
+    const talks = (c.activities || []).filter(activity => isConversation(activity) && within(activity.timestamp, range)).length;
+    if (talks) add('contacts', talks);
   });
 
-  const decided = totals.wonCount + totals.lostCount;
+  const summary = withRates(totals);
   return {
     range,
     totals,
-    conversionRate: decided > 0 ? Math.round((totals.wonCount / decided) * 100) : null,
-    avgTicket: totals.wonCount > 0 ? totals.wonValue / totals.wonCount : null,
-    people: [...people.values()].sort((a, b) => b.wonValue - a.wonValue || b.openValue - a.openValue || a.name.localeCompare(b.name)),
+    conversionRate: summary.conversionRate,
+    avgTicket: summary.avgTicket,
+    people: [...people.values()].map(withRates)
+      .sort((a, b) => b.wonValue - a.wonValue || b.openValue - a.openValue || a.name.localeCompare(b.name)),
     lost
   };
+}
+
+/**
+ * The per-salesperson table as rows of text, for a spreadsheet
+ */
+export function sellerReportRows(report) {
+  const money = (amount) => (Number(amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const header = ['Vendedor', 'Vendas', 'Valor vendido (R$)', 'Ticket médio (R$)', 'Conversão (%)', 'Perdidas', 'Novas', 'Conversas',
+    'Em aberto', 'Valor em aberto (R$)', 'Paradas', 'Com tarefa atrasada'];
+  const line = (row) => [
+    row.name, row.wonCount, money(row.wonValue), row.avgTicket === null ? '' : money(row.avgTicket),
+    row.conversionRate === null ? '' : row.conversionRate, row.lostCount, row.created, row.contacts,
+    row.openCount, money(row.openValue), row.stalled, row.lateTasks
+  ].map(String);
+  return [header, ...report.people.map(line)];
 }

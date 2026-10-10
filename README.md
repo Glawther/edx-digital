@@ -27,6 +27,7 @@ tests/
   ui/                    o aplicativo aberto num navegador de verdade
 server/tests/            cobrança, caixa de entrada e o que o servidor expõe
 scripts/build.mjs        gera dist/, a versão compactada que é publicada
+scripts/screens.mjs      salva imagens das telas da demonstração, para conferir uma mudança
 ```
 
 ## Rodar no seu computador

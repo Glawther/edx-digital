@@ -24,6 +24,8 @@ import {
   renderAuthBadge,
   renderConnectionStatus,
   renderDetailedMetrics,
+  renderToday,
+  exportSellerReport,
   renderFocusPills,
   renderKanban,
   renderKPIs,
@@ -76,7 +78,17 @@ async function initApp() {
         document.getElementById('sidebar-gemini-btn')?.click();
       },
       handleCustomersStage: (stage) => window.handleCustomersView({ stage }),
-      handleCustomersSort: (sort) => window.handleCustomersView({ sort })
+      handleCustomersSort: (sort) => window.handleCustomersView({ sort }),
+      // from the "Hoje" screen: the funnel showing only what one of its lists holds
+      openFunnelFocus: (focus) => { window.handleFocus(focus); window.navigateToView('pipeline'); },
+      openView: (view) => window.navigateToView(view),
+      handleExportSellerReport: () => {
+        try {
+          exportSellerReport(crmStore.getState().visibleCustomers);
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
     });
     setupNavigation();
     setupFilterEvents();
@@ -147,6 +159,7 @@ async function initApp() {
       renderTable(state.filteredCustomers, state.permissions);
       renderTasksView(state.tasks, state.taskFilter, state.allCustomers);
       renderDetailedMetrics(state.metrics, state.visibleCustomers, state.permissions);
+      renderToday(state.visibleCustomers, state.permissions);
       renderSecurityView(state);
       renderConnectionStatus(state.storageMode);
       updateNavCounters(state);

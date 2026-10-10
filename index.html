@@ -21,15 +21,15 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.15.1">
-  <link rel="stylesheet" href="css/layout.css?v=3.15.1">
-  <link rel="stylesheet" href="css/components.css?v=3.15.1">
-  <link rel="stylesheet" href="css/animations.css?v=3.15.1">
-  <link rel="stylesheet" href="css/identity.css?v=3.15.1">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.16.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.16.0">
+  <link rel="stylesheet" href="css/components.css?v=3.16.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.16.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.16.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.15.1"></script>
+  <script src="js/theme-boot.js?v=3.16.0"></script>
 </head>
-<body class="auth-pending">
+<body class="auth-pending" data-view="today">
 
   <!-- ======================================================================
        PORTAL DE AUTENTICAÇÃO & REGISTRO (Tríade CID & RBAC)
@@ -196,7 +196,14 @@
 
       <ul class="nav-menu">
         <li>
-          <a href="#pipeline" class="nav-item active" data-view="pipeline" data-title="Funil de vendas">
+          <a href="#today" class="nav-item active" data-view="today" data-title="Hoje">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><polyline points="9 15 11 17 15 13"/></svg>
+            <span>Hoje</span>
+            <span class="nav-count" id="nav-count-today">0</span>
+          </a>
+        </li>
+        <li>
+          <a href="#pipeline" class="nav-item" data-view="pipeline" data-title="Funil de vendas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
             <span>Funil</span>
             <span class="nav-count" id="nav-count-pipeline">0</span>
@@ -460,7 +467,11 @@
       <section class="kpi-grid" id="kpi-container" aria-label="Indicadores Chave"></section>
 
       <!-- VIEW 1: Pipeline Kanban -->
-      <section class="view-section active" id="view-pipeline">
+      <section class="view-section active" id="view-today">
+        <div id="today-content"></div>
+      </section>
+
+      <section class="view-section" id="view-pipeline">
         <div class="pipeline-actions-bar">
           <div class="filter-group">
             <span class="filter-label" id="priority-filter-label">Prioridade</span>
@@ -1189,6 +1200,10 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <div>
           <div class="shortcuts-column-title">Navegação</div>
           <div class="shortcut-row">
+            <span>Hoje</span>
+            <kbd class="kbd-badge">H</kbd>
+          </div>
+          <div class="shortcut-row">
             <span>Funil de Vendas</span>
             <kbd class="kbd-badge">1</kbd>
           </div>
@@ -1798,7 +1813,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.15.1"></script>
+  <script type="module" src="js/app.js?v=3.16.0"></script>
 
 </body>
 </html>

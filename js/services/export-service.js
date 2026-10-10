@@ -7,6 +7,25 @@ import { csvSafe } from './import-service.js';
 import { getCustomFields } from '../ui/customize-dialog.js';
 import { formatCustomValue } from '../core/customization.js';
 
+/**
+ * Hands a table to the person as a file a spreadsheet opens
+ * @param {string[][]} rows - the first one is the header
+ */
+export function downloadCsv(rows, filename) {
+  // Quoted, and with anything a spreadsheet would run as a formula neutralised
+  const cell = (value) => `"${csvSafe(value).replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+  // The BOM makes Excel read the accents right
+  const content = '\uFEFF' + rows.map(row => row.map(cell).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/csv;charset=utf-8;' }));
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export function exportCustomersToCSV(customers, filename = 'edx-digital-oportunidades.csv') {
   if (!customers || customers.length === 0) {
     throw new Error("Nenhum cliente disponível para exportação.");
