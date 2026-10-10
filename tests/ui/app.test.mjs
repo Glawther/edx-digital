@@ -85,7 +85,7 @@ async function openDemo(t, role = 'admin', viewport = { width: 1300, height: 800
   await page.addInitScript(() => {
     document.addEventListener('securitypolicyviolation', event => {
       // fonts and the cloud are outside this machine; what matters here is the page's own code
-      if (event.violatedDirective.startsWith('script-src')) console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`);
+      if (event.violatedDirective.startsWith('script-src') || event.violatedDirective.startsWith('style-src-elem')) console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`);
     });
   });
   page.on('dialog', dialog => dialog.accept());
@@ -107,6 +107,10 @@ test('a página não tem código embutido e a política de segurança o proíbe'
   const response = await fetch(base + '/');
   const policy = response.headers.get('content-security-policy');
   assert.match(policy, /script-src 'self' https:\/\/www\.gstatic\.com;/);
+  assert.match(policy, /style-src 'self' https:\/\/fonts\.googleapis\.com; style-src-attr 'unsafe-inline';/);
+  for (const address of ['/', '/landing', '/ajuda', '/termos', '/privacidade']) {
+    assert.equal(/<style[\s>]/i.test(await (await fetch(base + address)).text()), false, `${address}: bloco de estilo na página`);
+  }
   const html = await response.text();
   assert.equal(/<script(?![^>]*\ssrc=)/i.test(html), false, 'script embutido na página');
   assert.equal(/\son[a-z]+\s*=\s*["']/i.test(html), false, 'evento embutido na página');
@@ -529,4 +533,22 @@ test('proposta com itens: a tabela aparece na folha e o total vira o valor da op
   await page.click('#btn-close-proposal-footer');
   assert.match((await page.locator('#lead-details-summary').textContent()).replace(/\s/g, ' '), /R\$ 3\.800/);
   assert.deepEqual(problems, []);
+});
+
+test('páginas públicas: desenhadas pelos arquivos de estilo, sem nada recusado pela política de segurança', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR' });
+  t.after(() => context.close());
+  for (const address of ['/landing', '/ajuda', '/termos', '/privacidade']) {
+    const page = await context.newPage();
+    const refused = [];
+    await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`)));
+    page.on('console', message => { if (/^CSP (style|script)/.test(message.text())) refused.push(message.text()); });
+    await page.goto(base + address);
+    // the page's own stylesheet applied: the title is not the browser's default serif
+    const font = await page.locator('h1').first().evaluate(el => getComputedStyle(el).fontFamily);
+    assert.match(font, /IBM Plex Sans|system-ui/, `${address}: ${font}`);
+    assert.deepEqual(refused, [], address);
+    await page.close();
+  }
 });

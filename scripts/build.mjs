@@ -72,6 +72,7 @@ for (const page of PAGES) {
     .replace(/^[ \t]+$/gm, '')
     .replace(/(\r?\n){3,}/g, '\n\n');
   if (/<script(?![^>]*\ssrc=)/i.test(clean) || /\son[a-z]+\s*=\s*["']/i.test(clean)) throw new Error(`${page}: script ou evento embutido no HTML`);
+  if (/<style[\s>]/i.test(clean)) throw new Error(`${page}: bloco <style> na página; o estilo vai num arquivo em css/`);
   await fs.writeFile(to(page), clean);
 }
 
