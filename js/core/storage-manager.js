@@ -214,7 +214,7 @@ const INITIAL_DEMO_LEADS = [
       {
         id: 'act-5-1',
         type: 'stage_change',
-        title: 'Contrato Fechado Ganho 🎉',
+        title: 'Contrato Fechado Ganho ',
         text: 'Negócio fechado e assinado via DocuSign no valor de R$ 95.000.',
         author: 'Mariana Costa',
         timestamp: new Date(Date.now() - 2 * 86400000).toISOString()

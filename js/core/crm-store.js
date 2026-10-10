@@ -47,10 +47,10 @@ export function getLossReasonLabel(stored) {
 }
 
 export const TASK_TYPES = [
-  { id: 'call', label: 'Ligação', icon: '📞' },
-  { id: 'meeting', label: 'Reunião', icon: '📅' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-  { id: 'followup', label: 'Follow-up', icon: '📝' }
+  { id: 'call', label: 'Ligação', icon: '' },
+  { id: 'meeting', label: 'Reunião', icon: '' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '' },
+  { id: 'followup', label: 'Follow-up', icon: '' }
 ];
 
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';

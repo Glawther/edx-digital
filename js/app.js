@@ -197,7 +197,7 @@ async function initApp() {
       const res = await pollWebhookInbox();
       if (res && res.count > 0) {
         if (crmStore) crmStore.emitChange();
-        showToast(`⚡ ${res.count} novo(s) lead(s) capturado(s) via Webhook!`, 'success');
+        showToast(`${res.count} novo(s) lead(s) capturado(s) via Webhook!`, 'success');
       }
     }, 15000);
 
@@ -324,11 +324,11 @@ function applyRoleUIRestrictions(permissions) {
     // Restrito para Funcionários pela Confidencialidade (Tríade CID)
     if (geminiBtn) {
       geminiBtn.style.opacity = '0.4';
-      geminiBtn.title = '🔒 Acesso restrito ao Administrador (Confidencialidade CID)';
+      geminiBtn.title = 'Acesso restrito ao Administrador (Confidencialidade CID)';
     }
     if (firebaseBtn) {
       firebaseBtn.style.opacity = '0.4';
-      firebaseBtn.title = '🔒 Acesso restrito ao Administrador (Confidencialidade CID)';
+      firebaseBtn.title = 'Acesso restrito ao Administrador (Confidencialidade CID)';
     }
   }
 
@@ -348,8 +348,8 @@ window.handleToggleRole = function() {
   setUserRole(nextRole);
   logAudit(AUDIT_ACTIONS.ROLE_SWITCHED, { fromRole: role, toRole: nextRole });
   showToast(nextRole === USER_ROLES.ADMIN 
-    ? "🛡️ Modo Administrador Ativado (Visão 360°, Equipe, Auditoria e Governança)" 
-    : "💼 Modo Funcionário Ativado (Abas administrativas ocultas conforme Confidencialidade CID)", "info");
+    ? "Modo Administrador Ativado (Visão 360°, Equipe, Auditoria e Governança)" 
+    : "Modo Funcionário Ativado (Abas administrativas ocultas conforme Confidencialidade CID)", "info");
 };
 
 // ==========================================================================
@@ -365,7 +365,7 @@ function setupNavigation() {
     const isAdmin = !!state.permissions?.isAdmin;
 
     if (adminOnlyViews.includes(targetView) && !isAdmin) {
-      showToast('🔒 Acesso restrito: As abas Equipe, Auditoria e Tríade CID são exclusivas de Administradores.', 'warning');
+      showToast('Acesso restrito: As abas Equipe, Auditoria e Tríade CID são exclusivas de Administradores.', 'warning');
       targetView = 'pipeline';
     }
 
@@ -673,10 +673,10 @@ function setupWhatsAppModalEvents() {
 
     // Render fast templates
     renderTemplatesList([
-      { tone: '👋 Primeiro Contato', text: OUTREACH_TEMPLATES.first_contact.template(customer, user, org.name) },
-      { tone: '📄 Acompanhamento de Proposta', text: OUTREACH_TEMPLATES.proposal_followup.template(customer, user, org.name) },
-      { tone: '🎯 Quebra de Objeção', text: OUTREACH_TEMPLATES.negotiation.template(customer, user, org.name) },
-      { tone: '❄️ Reativação de Lead', text: OUTREACH_TEMPLATES.cold_lead.template(customer, user, org.name) }
+      { tone: 'Primeiro Contato', text: OUTREACH_TEMPLATES.first_contact.template(customer, user, org.name) },
+      { tone: 'Acompanhamento de Proposta', text: OUTREACH_TEMPLATES.proposal_followup.template(customer, user, org.name) },
+      { tone: 'Quebra de Objeção', text: OUTREACH_TEMPLATES.negotiation.template(customer, user, org.name) },
+      { tone: 'Reativação de Lead', text: OUTREACH_TEMPLATES.cold_lead.template(customer, user, org.name) }
     ], customer);
 
     if (dialog) dialog.showModal();
@@ -727,7 +727,7 @@ function setupWhatsAppModalEvents() {
       if (!customer) return;
 
       btnGenerateAi.disabled = true;
-      btnGenerateAi.textContent = '✨ Criando abordagens personalizadas com Gemini...';
+      btnGenerateAi.textContent = 'Criando abordagens personalizadas com Gemini...';
 
       const org = getSavedOrganization();
       const user = getCurrentUser();
@@ -739,12 +739,12 @@ function setupWhatsAppModalEvents() {
         });
 
         renderTemplatesList(aiOptions, customer);
-        showToast('✨ 3 Novas opções de abordagem geradas pela IA!', 'success');
+        showToast('3 Novas opções de abordagem geradas pela IA!', 'success');
       } catch (err) {
         showToast('Erro ao gerar com IA: ' + err.message, 'error');
       } finally {
         btnGenerateAi.disabled = false;
-        btnGenerateAi.textContent = '✨ Gerar com IA Gemini';
+        btnGenerateAi.textContent = 'Gerar com IA Gemini';
       }
     });
   }
@@ -754,11 +754,11 @@ function setupWhatsAppModalEvents() {
     btnCopy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(messagePreview.value);
-        showToast('📋 Mensagem copiada para a área de transferência!', 'success');
+        showToast('Mensagem copiada para a área de transferência!', 'success');
       } catch {
         messagePreview.select();
         document.execCommand('copy');
-        showToast('📋 Mensagem selecionada e copiada!', 'success');
+        showToast('Mensagem selecionada e copiada!', 'success');
       }
     });
   }
@@ -789,7 +789,7 @@ function setupWhatsAppModalEvents() {
       // Open WhatsApp Web
       window.open(link, '_blank');
       closeDialog();
-      showToast('🚀 Conversa aberta no WhatsApp Web e registrada no histórico!', 'success');
+      showToast('Conversa aberta no WhatsApp Web e registrada no histórico!', 'success');
     });
   }
 }
@@ -865,7 +865,7 @@ function setupWebhookModalEvents() {
     btnToggleToken.addEventListener('click', () => {
       const isPassword = tokenInput.type === 'password';
       tokenInput.type = isPassword ? 'text' : 'password';
-      btnToggleToken.textContent = isPassword ? '🙈 Ocultar' : '👁️ Ver';
+      btnToggleToken.textContent = isPassword ? 'Ocultar' : 'Ver';
     });
   }
 
@@ -880,16 +880,16 @@ function setupWebhookModalEvents() {
   if (btnSendTest) {
     btnSendTest.addEventListener('click', async () => {
       btnSendTest.disabled = true;
-      btnSendTest.textContent = '⏳ Enviando lead de teste...';
+      btnSendTest.textContent = 'Enviando lead de teste...';
       try {
         const res = await sendTestWebhookLead();
         if (crmStore) crmStore.emitChange();
-        showToast(`🎉 Lead de teste (${res.lead.name}) recebido e adicionado ao funil!`, 'success');
+        showToast(`Lead de teste (${res.lead.name}) recebido e adicionado ao funil!`, 'success');
       } catch (err) {
         showToast('Erro ao disparar teste: ' + err.message, 'error');
       } finally {
         btnSendTest.disabled = false;
-        btnSendTest.textContent = '⚡ Simular Envio de Lead via Webhook';
+        btnSendTest.textContent = 'Simular Envio de Lead via Webhook';
       }
     });
   }
@@ -939,9 +939,9 @@ function setupLeadDetailsEvents() {
   const btnLogMeeting = document.getElementById('btn-quick-log-meeting');
   const btnLogNote = document.getElementById('btn-quick-log-note');
 
-  if (btnLogCall) btnLogCall.addEventListener('click', () => openQuickForm('call', '📞 Registrar Ligação Telefônica'));
-  if (btnLogMeeting) btnLogMeeting.addEventListener('click', () => openQuickForm('meeting', '📅 Registrar Reunião Comercial'));
-  if (btnLogNote) btnLogNote.addEventListener('click', () => openQuickForm('note', '📝 Adicionar Nota Interna'));
+  if (btnLogCall) btnLogCall.addEventListener('click', () => openQuickForm('call', 'Registrar Ligação Telefônica'));
+  if (btnLogMeeting) btnLogMeeting.addEventListener('click', () => openQuickForm('meeting', 'Registrar Reunião Comercial'));
+  if (btnLogNote) btnLogNote.addEventListener('click', () => openQuickForm('note', 'Adicionar Nota Interna'));
 
   if (btnCancelQuick) {
     btnCancelQuick.addEventListener('click', () => {
@@ -1202,7 +1202,7 @@ window.handleOpenEditCustomer = function(customerId) {
 
 window.handleDeleteCustomer = async function(customerId) {
   if (!isAdmin()) {
-    showToast("🔒 Ação bloqueada pela Tríade CID: Apenas Administradores têm permissão para excluir oportunidades definitivamente.", "error");
+    showToast("Ação bloqueada pela Tríade CID: Apenas Administradores têm permissão para excluir oportunidades definitivamente.", "error");
     logAudit(AUDIT_ACTIONS.PERMISSION_DENIED, { action: 'delete_customer', customerId }, AUDIT_SEVERITY.WARNING);
     return;
   }
@@ -1594,7 +1594,7 @@ function setupBackupEvents() {
 
   window.handleTriggerRestoreBackup = function() {
     if (!isAdmin()) {
-      showToast("🔒 Acesso negado: Apenas Administradores podem restaurar snapshots de backup (Tríade CID: Disponibilidade).", "error");
+      showToast("Acesso negado: Apenas Administradores podem restaurar snapshots de backup (Tríade CID: Disponibilidade).", "error");
       logAudit(AUDIT_ACTIONS.PERMISSION_DENIED, { action: 'restore_backup' }, AUDIT_SEVERITY.WARNING);
       return;
     }
@@ -1892,7 +1892,7 @@ function setupAuthPortalEvents() {
       loginAsDemoRole(USER_ROLES.ADMIN);
       logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'quick_demo', role: 'admin' });
       window.hideAuthPortal();
-      showToast("Conectado como Administrador do Sistema 🛡️ (Acesso Total 360°)", "success");
+      showToast("Conectado como Administrador do Sistema (Acesso Total 360°)", "success");
     });
   }
 
@@ -1901,7 +1901,7 @@ function setupAuthPortalEvents() {
       loginAsDemoRole(USER_ROLES.EMPLOYEE);
       logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'quick_demo', role: 'employee' });
       window.hideAuthPortal();
-      showToast("Conectado como Lucas Mendes 💼 (Consultor Comercial)", "success");
+      showToast("Conectado como Lucas Mendes (Consultor Comercial)", "success");
     });
   }
 
@@ -1944,7 +1944,7 @@ function setupAuthPortalEvents() {
             inputEmpId.value = emp.id;
             spanEmpName.textContent = emp.name;
             firstAccessDialog.showModal();
-            showToast("🔒 Primeiro acesso detectado! Crie sua senha definitiva.", "info");
+            showToast("Primeiro acesso detectado! Crie sua senha definitiva.", "info");
             return;
           }
         }
@@ -1973,7 +1973,7 @@ function setupAuthPortalEvents() {
       loginWithEmail(loginValue, password, role);
       logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'email_password', email: loginValue, role });
       window.hideAuthPortal();
-      const roleLabel = role === 'admin' ? 'Administrador 🛡️' : 'Funcionário 💼';
+      const roleLabel = role === 'admin' ? 'Administrador ' : 'Funcionário ';
       showToast(`Bem-vindo(a) ao Nexus CRM! Perfil ativo: ${roleLabel}`, "success");
     });
   }
@@ -1987,9 +1987,9 @@ function setupAuthPortalEvents() {
   if (tabRegOwner && tabRegEmployee) {
     tabRegOwner.addEventListener('click', () => {
       tabRegOwner.classList.add('active');
-      tabRegOwner.style.borderColor = 'rgba(217, 249, 66, 0.4)';
-      tabRegOwner.style.background = 'rgba(217, 249, 66, 0.12)';
-      tabRegOwner.style.color = '#d9f942';
+      tabRegOwner.style.borderColor = 'var(--accent-line)';
+      tabRegOwner.style.background = 'var(--accent-soft)';
+      tabRegOwner.style.color = 'var(--accent)';
 
       tabRegEmployee.classList.remove('active');
       tabRegEmployee.style.borderColor = 'transparent';
@@ -2138,7 +2138,7 @@ function setupAuthPortalEvents() {
     formJoinTeam.addEventListener('submit', async (e) => {
       e.preventDefault();
       const submitBtn = document.getElementById('btn-submit-join-team') || formJoinTeam.querySelector('button[type="submit"]');
-      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Validar Código e Entrar na Equipe 💼';
+      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Validar Código e Entrar na Equipe ';
 
       const inviteCode = document.getElementById('join-input-code')?.value?.trim().toUpperCase();
       const name = document.getElementById('join-input-name')?.value?.trim();
@@ -2170,7 +2170,7 @@ function setupAuthPortalEvents() {
       const joinResult = await joinTeamWithInviteCode({ inviteCode, name, email, password });
 
       if (!joinResult.success) {
-        showToast(`❌ ${joinResult.error}`, "error");
+        showToast(`${joinResult.error}`, "error");
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.innerHTML = originalBtnHtml;
@@ -2337,19 +2337,19 @@ function setupCommandPalette() {
     const allActions = [
       {
         id: 'action-toggle-theme',
-        icon: '🌓',
+        icon: '',
         title: 'Alternar Modo Noturno / Claro (Doctor+)',
         hint: 'Atalho: Alt + T',
         category: 'Aparência & Interface',
         run: () => {
           window.closeCommandPalette();
           const newTheme = toggleTheme();
-          showToast(newTheme === 'dark' ? '🌙 Modo Noturno Doctor+ ativado' : '☀️ Modo Claro ativado', 'info');
+          showToast(newTheme === 'dark' ? 'Modo Noturno Doctor+ ativado' : 'Modo Claro ativado', 'info');
         }
       },
       {
         id: 'action-new-lead',
-        icon: '➕',
+        icon: '',
         title: 'Nova Oportunidade / Lead',
         hint: 'Atalho: N',
         category: 'Ações Rápidas',
@@ -2360,7 +2360,7 @@ function setupCommandPalette() {
       },
       {
         id: 'action-import-csv',
-        icon: '📥',
+        icon: '',
         title: 'Importar Leads (CSV / Excel)',
         hint: 'Atalho: I',
         category: 'Ações Rápidas',
@@ -2371,7 +2371,7 @@ function setupCommandPalette() {
       },
       {
         id: 'action-export-csv',
-        icon: '📊',
+        icon: '',
         title: 'Exportar Base de Clientes (Excel CSV)',
         hint: 'Download UTF-8',
         category: 'Ações Rápidas',
@@ -2382,7 +2382,7 @@ function setupCommandPalette() {
       },
       {
         id: 'action-export-audit',
-        icon: '🛡️',
+        icon: '',
         title: 'Exportar Relatório de Auditoria (Tríade CID)',
         hint: 'Logs imutáveis',
         adminOnly: true,
@@ -2399,7 +2399,7 @@ function setupCommandPalette() {
       },
       {
         id: 'action-toggle-role',
-        icon: '🔄',
+        icon: '',
         title: 'Alternar Papel (Administrador / Funcionário)',
         hint: 'RBAC',
         category: 'Ações Rápidas',
@@ -2410,7 +2410,7 @@ function setupCommandPalette() {
       },
       {
         id: 'action-shortcuts',
-        icon: '⌨️',
+        icon: '',
         title: 'Guia de Atalhos do Teclado',
         hint: 'Atalho: ?',
         category: 'Ações Rápidas',
@@ -2421,7 +2421,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-pipeline',
-        icon: '📌',
+        icon: '',
         title: 'Ir para Funil de Vendas (Kanban)',
         hint: 'Atalho: 1',
         category: 'Navegação',
@@ -2432,7 +2432,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-customers',
-        icon: '👥',
+        icon: '',
         title: 'Ir para Clientes & Leads',
         hint: 'Atalho: 2',
         category: 'Navegação',
@@ -2443,7 +2443,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-tasks',
-        icon: '📅',
+        icon: '',
         title: 'Ir para Tarefas & Follow-up',
         hint: 'Atalho: 3',
         category: 'Navegação',
@@ -2454,7 +2454,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-metrics',
-        icon: '📈',
+        icon: '',
         title: 'Ir para Métricas, Metas Q4 e Comissões',
         hint: 'Atalho: 4',
         category: 'Navegação',
@@ -2465,7 +2465,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-team',
-        icon: '👥',
+        icon: '',
         title: 'Ir para Equipe & Convites',
         hint: 'Gestão de Time',
         adminOnly: true,
@@ -2477,7 +2477,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-audit',
-        icon: '📜',
+        icon: '',
         title: 'Ir para Trilha de Auditoria & Logs',
         hint: 'ISO 27001',
         adminOnly: true,
@@ -2489,7 +2489,7 @@ function setupCommandPalette() {
       },
       {
         id: 'nav-security',
-        icon: '🔒',
+        icon: '',
         title: 'Ir para Tríade CID & Governança',
         hint: 'Atalho: 5',
         adminOnly: true,
@@ -2559,7 +2559,7 @@ function setupCommandPalette() {
           html += `
             <div class="command-item ${isAct ? 'active' : ''}" data-customer-id="${c.id}">
               <div class="command-item-left">
-                <span class="command-item-icon">🏢</span>
+                <span class="command-item-icon"></span>
                 <div>
                   <div style="font-weight: 600; font-size: 0.82rem;">${escapeHtml(c.name)}</div>
                   <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.company || 'Sem empresa')} • ${formatBRL(c.dealValue)}</div>
@@ -2669,7 +2669,7 @@ function setupKeyboardShortcuts() {
       if (crmStore.getState().permissions?.isAdmin) {
         window.navigateToView ? window.navigateToView('security') : (window.location.hash = 'security');
       } else {
-        showToast('🔒 Acesso restrito: Apenas administradores podem acessar a Tríade CID.', 'warning');
+        showToast('Acesso restrito: Apenas administradores podem acessar a Tríade CID.', 'warning');
       }
     }
   });
@@ -3050,7 +3050,7 @@ function setupEmployeeManagementEvents() {
     if (!emp) return;
     const shareText = generateCredentialsShareText(emp);
     navigator.clipboard.writeText(shareText);
-    showToast(`📋 Credenciais de ${emp.name} copiadas! Envie no WhatsApp ou E-mail.`, 'success');
+    showToast(`Credenciais de ${emp.name} copiadas! Envie no WhatsApp ou E-mail.`, 'success');
   };
 
   window.handleResetEmployeePassword = function(empId) {
@@ -3071,7 +3071,7 @@ function setupEmployeeManagementEvents() {
     logAudit(AUDIT_ACTIONS.EMPLOYEE_PASSWORD_RESET, { empId, name: emp.name }, AUDIT_SEVERITY.WARNING);
     const shareText = generateCredentialsShareText(res.employee);
     navigator.clipboard.writeText(shareText);
-    showToast(`🔑 Nova senha emitida: ${res.tempPassword}. Credenciais copiadas!`, 'success');
+    showToast(`Nova senha emitida: ${res.tempPassword}. Credenciais copiadas!`, 'success');
     renderSecurityView(crmStore.getState());
   };
 
@@ -3092,7 +3092,7 @@ function setupEmployeeManagementEvents() {
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_STATUS_CHANGED, { empId, name: emp.name, status: res.status }, AUDIT_SEVERITY.WARNING);
-    showToast(`Status de ${emp.name}: ${res.status === 'active' ? 'ATIVO 🟢' : 'BLOQUEADO 🔴'}`, 'info');
+    showToast(`Status de ${emp.name}: ${res.status === 'active' ? 'ATIVO ' : 'BLOQUEADO '}`, 'info');
     renderSecurityView(crmStore.getState());
   };
 
@@ -3296,7 +3296,7 @@ function setupLegacyCheckoutDialogEvents() {
 
     // Update submit button text
     if (btnSubmitCard) {
-      btnSubmitCard.textContent = `🔒 Pagar ${formattedPrice} e Ativar CRM`;
+      btnSubmitCard.textContent = `Pagar ${formattedPrice} e Ativar CRM`;
     }
   }
 
@@ -3412,7 +3412,7 @@ function setupLegacyCheckoutDialogEvents() {
       if (cardInputName) cardInputName.value = 'CARLOS A SILVA';
       if (cardInputExpiry) cardInputExpiry.value = '12/28';
       if (cardInputCvv) cardInputCvv.value = '888';
-      if (cardBrandBadge) cardBrandBadge.textContent = 'Visa 💳';
+      if (cardBrandBadge) cardBrandBadge.textContent = 'Visa ';
       showToast('Dados de teste do Stripe carregados!', 'info');
     });
   }
@@ -3421,7 +3421,7 @@ function setupLegacyCheckoutDialogEvents() {
   if (btnSimulatePix) {
     btnSimulatePix.addEventListener('click', async () => {
       btnSimulatePix.disabled = true;
-      btnSimulatePix.textContent = '⏳ Confirmando PIX com o Banco Central...';
+      btnSimulatePix.textContent = 'Confirmando PIX com o Banco Central...';
 
       const user = getCurrentUser();
       const res = await processPayment({
@@ -3432,7 +3432,7 @@ function setupLegacyCheckoutDialogEvents() {
       });
 
       btnSimulatePix.disabled = false;
-      btnSimulatePix.textContent = '⚡ Simular Confirmação do PIX (Aprovação Imediata)';
+      btnSimulatePix.textContent = 'Simular Confirmação do PIX (Aprovação Imediata)';
 
       if (res.success) {
         displayReceipt(res.invoice);
@@ -3448,7 +3448,7 @@ function setupLegacyCheckoutDialogEvents() {
       e.preventDefault();
       if (btnSubmitCard) {
         btnSubmitCard.disabled = true;
-        btnSubmitCard.textContent = '⏳ Processando com a operadora...';
+        btnSubmitCard.textContent = 'Processando com a operadora...';
       }
 
       const user = getCurrentUser();
@@ -3469,7 +3469,7 @@ function setupLegacyCheckoutDialogEvents() {
         btnSubmitCard.disabled = false;
         const plan = PLANS[selectedPlan] || PLANS.pro;
         const price = selectedCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
-        btnSubmitCard.textContent = `🔒 Pagar R$ ${price.toFixed(2).replace('.', ',')} e Ativar CRM`;
+        btnSubmitCard.textContent = `Pagar R$ ${price.toFixed(2).replace('.', ',')} e Ativar CRM`;
       }
 
       if (res.success) {
@@ -3493,7 +3493,7 @@ function setupLegacyCheckoutDialogEvents() {
       receiptValidUntil.textContent = new Date(inv.validUntil).toLocaleDateString('pt-BR');
     }
 
-    showToast(`🎉 Parabéns! Plano ${inv.planName} ativado com sucesso!`, 'success');
+    showToast(`Parabéns! Plano ${inv.planName} ativado com sucesso!`, 'success');
   }
 
   if (btnFinish) {
@@ -3553,7 +3553,7 @@ function setupTeamInviteEvents() {
     }
 
     const roleLabels = {
-      admin: '🛡️ Admin', manager: '📊 Gerente', employee: '💼 Vendedor', viewer: '👁️ Viewer'
+      admin: 'Admin', manager: 'Gerente', employee: 'Vendedor', viewer: 'Viewer'
     };
     const statusLabels = {
       pending: 'Pendente', accepted: 'Aceito', expired: 'Expirado', revoked: 'Revogado'
@@ -3571,10 +3571,10 @@ function setupTeamInviteEvents() {
           <span class="invite-status-badge ${inv.status}">${statusLabels[inv.status] || inv.status}</span>
           <div class="invite-card-actions">
             ${inv.status === 'pending' ? `
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleCopyInvite('${inv.id}')" title="Copiar credenciais">📋</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleRevokeInvite('${inv.id}')" title="Revogar">❌</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleCopyInvite('${inv.id}')" title="Copiar credenciais"></button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleRevokeInvite('${inv.id}')" title="Revogar"></button>
             ` : inv.status === 'expired' || inv.status === 'revoked' ? `
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleResendInvite('${inv.id}')" title="Reenviar">🔄</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleResendInvite('${inv.id}')" title="Reenviar"></button>
             ` : ''}
           </div>
         </div>
@@ -3601,8 +3601,8 @@ function setupTeamInviteEvents() {
       const shareText = generateInviteShareText(result.invite);
       navigator.clipboard.writeText(shareText).catch(() => {});
 
-      showToast(`📨 Convite enviado para ${name}! Credenciais copiadas para a área de transferência.`, 'success');
-      sendPushNotification(`📨 Novo convite enviado`, {
+      showToast(`Convite enviado para ${name}! Credenciais copiadas para a área de transferência.`, 'success');
+      sendPushNotification(`Novo convite enviado`, {
         body: `${name} (${email}) foi convidado como ${role}`,
         data: { type: NOTIFICATION_TYPES.TEAM_INVITE }
       });
@@ -3619,7 +3619,7 @@ function setupTeamInviteEvents() {
     if (!inv) return;
     const shareText = generateInviteShareText(inv);
     navigator.clipboard.writeText(shareText);
-    showToast(`📋 Credenciais de ${inv.name} copiadas! Envie via WhatsApp ou E-mail.`, 'success');
+    showToast(`Credenciais de ${inv.name} copiadas! Envie via WhatsApp ou E-mail.`, 'success');
   };
 
   window.handleRevokeInvite = function(inviteId) {
@@ -3638,7 +3638,7 @@ function setupTeamInviteEvents() {
     if (result.success) {
       const shareText = generateInviteShareText(result.invite);
       navigator.clipboard.writeText(shareText).catch(() => {});
-      showToast(`🔄 Convite reenviado! Novas credenciais copiadas.`, 'success');
+      showToast(`Convite reenviado! Novas credenciais copiadas.`, 'success');
       renderInvitesList();
     } else {
       showToast(result.error, 'error');
@@ -3657,9 +3657,9 @@ function setupTeamInviteEvents() {
   if (btnCopyTeamCode) {
     btnCopyTeamCode.addEventListener('click', () => {
       const code = displayTeamCode ? displayTeamCode.textContent.trim() : teamInviteCode;
-      const textToCopy = `🚀 *Convite para a Equipe Nexus CRM*\n\nUse o código de acesso abaixo para entrar na equipe da nossa empresa no CRM:\n\n🔑 *Código de Convite:* ${code}\n\nCadastre-se na aba "Sou Colaborador" em: ${window.location.origin}`;
+      const textToCopy = `*Convite para a Equipe Nexus CRM*\n\nUse o código de acesso abaixo para entrar na equipe da nossa empresa no CRM:\n\n*Código de Convite:* ${code}\n\nCadastre-se na aba "Sou Colaborador" em: ${window.location.origin}`;
       navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast(`📋 Código ${code} copiado! Envie para seus vendedores pelo WhatsApp.`, 'success');
+        showToast(`Código ${code} copiado! Envie para seus vendedores pelo WhatsApp.`, 'success');
       }).catch(() => {
         showToast(`Código da equipe: ${code}`, 'info');
       });
@@ -3744,7 +3744,7 @@ function setupAuditTrailView() {
       link.href = URL.createObjectURL(blob);
       link.download = `nexus_audit_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
-      showToast('📊 Relatório de auditoria exportado!', 'success');
+      showToast('Relatório de auditoria exportado!', 'success');
       logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'audit_csv' });
     });
   }
@@ -3802,12 +3802,12 @@ function setupNotificationCenter() {
       else if (diffMin < 1440) timeAgo = `${Math.floor(diffMin / 60)}h atrás`;
       else timeAgo = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-      return `<div class="notification-item ${n.read ? '' : 'unread'}" style="background: ${n.read ? '#181d28' : '#1c263c'} !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; ${n.read ? '' : 'border-left: 4px solid #3b82f6 !important;'}" onclick="window.handleNotificationClick('${n.id}')">
-        <div class="notification-item-icon" style="background: #22293a !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; color: #ffffff !important;">${icon}</div>
+      return `<div class="notification-item ${n.read ? '' : 'unread'}" style="background: ${n.read ? 'var(--bg-surface)' : '#1c263c'} !important; border-bottom: 1px solid var(--border-subtle) !important; ${n.read ? '' : 'border-left: 4px solid #3b82f6 !important;'}" onclick="window.handleNotificationClick('${n.id}')">
+        <div class="notification-item-icon" style="background: #22293a !important; border: 1px solid var(--border-subtle) !important; color: #ffffff !important;">${icon}</div>
         <div class="notification-item-content">
           <div class="notification-item-title" style="color: #ffffff !important; font-weight: 600; font-size: 0.86rem;">${escapeHtml(n.title)}</div>
-          <div class="notification-item-body" style="color: #cbd5e1 !important; font-size: 0.78rem; line-height: 1.4;">${escapeHtml(n.body)}</div>
-          <div class="notification-item-time" style="color: #94a3b8 !important; font-size: 0.7rem; margin-top: 4px;">${timeAgo}</div>
+          <div class="notification-item-body" style="color: var(--text-secondary) !important; font-size: 0.78rem; line-height: 1.4;">${escapeHtml(n.body)}</div>
+          <div class="notification-item-time" style="color: var(--text-secondary) !important; font-size: 0.7rem; margin-top: 4px;">${timeAgo}</div>
         </div>
       </div>`;
     }).join('');
@@ -3850,8 +3850,8 @@ function setupNotificationCenter() {
     enablePushBtn.addEventListener('click', async () => {
       const permission = await requestNotificationPermission();
       if (permission === 'granted') {
-        showToast('🔔 Notificações push ativadas!', 'success');
-        enablePushBtn.textContent = '✅ Notificações Push Ativas';
+        showToast('Notificações push ativadas!', 'success');
+        enablePushBtn.textContent = 'Notificações Push Ativas';
         enablePushBtn.disabled = true;
       } else if (permission === 'denied') {
         showToast('Permissão de notificações foi negada pelo navegador.', 'error');
@@ -3862,7 +3862,7 @@ function setupNotificationCenter() {
 
     // Update button state
     if (getNotificationPermission() === 'granted') {
-      enablePushBtn.textContent = '✅ Notificações Push Ativas';
+      enablePushBtn.textContent = 'Notificações Push Ativas';
       enablePushBtn.disabled = true;
     }
   }
@@ -3985,7 +3985,7 @@ function setupCheckoutModalEvents() {
             planName = (data.data.planName || data.data.plan || 'PROFESSIONAL').toUpperCase();
             daysRemaining = data.data.trialDaysRemaining ?? 7;
             if (currentPlanBadge) currentPlanBadge.textContent = planName;
-            if (trialDaysBadge) trialDaysBadge.textContent = `⏳ ${daysRemaining} dias de teste`;
+            if (trialDaysBadge) trialDaysBadge.textContent = `${daysRemaining} dias de teste`;
             if (quotaUsers && data.data.quotas) quotaUsers.textContent = `${data.data.quotas.users.used} / ${data.data.quotas.users.limit}`;
             if (quotaLeads && data.data.quotas) quotaLeads.textContent = `${data.data.quotas.leads.used} / ${data.data.quotas.leads.limit.toLocaleString()}`;
           }
@@ -3996,7 +3996,7 @@ function setupCheckoutModalEvents() {
     }
 
     if (trialPillText) {
-      trialPillText.textContent = `⚡ Teste: ${daysRemaining} dias restantes`;
+      trialPillText.textContent = `Teste: ${daysRemaining} dias restantes`;
     }
   }
 
@@ -4059,8 +4059,8 @@ function setupCheckoutModalEvents() {
     document.querySelectorAll('.checkout-plan-card').forEach(card => {
       const isSelected = card.dataset.plan === plan;
       card.classList.toggle('active', isSelected);
-      card.style.border = isSelected ? '2px solid #d9f942' : '1px solid rgba(255,255,255,0.1)';
-      card.style.background = isSelected ? 'rgba(217, 249, 66, 0.05)' : 'rgba(255,255,255,0.02)';
+      card.style.border = isSelected ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)';
+      card.style.background = isSelected ? 'var(--accent-soft)' : 'rgba(255,255,255,0.02)';
     });
     loadCheckoutData(plan);
   };
@@ -4073,7 +4073,7 @@ function setupCheckoutModalEvents() {
       try {
         await navigator.clipboard.writeText(pixInput.value);
         showToast('Código PIX Copia e Cola copiado com sucesso! Abra seu banco para pagar.', 'success');
-        btnCopyPix.textContent = '✅ Copiado!';
+        btnCopyPix.textContent = 'Copiado!';
         setTimeout(() => { btnCopyPix.textContent = 'Copiar PIX'; }, 3000);
       } catch {
         pixInput.select();

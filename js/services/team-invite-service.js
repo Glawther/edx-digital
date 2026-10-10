@@ -25,10 +25,10 @@ export const INVITE_STATUS = {
  * Team role options for invitations
  */
 export const TEAM_ROLES = {
-  ADMIN: { id: 'admin', label: '🛡️ Administrador', description: 'Acesso total ao sistema' },
-  MANAGER: { id: 'manager', label: '📊 Gerente de Vendas', description: 'Visão da equipe e relatórios' },
-  SELLER: { id: 'employee', label: '💼 Vendedor / Consultor', description: 'Carteira individual de leads' },
-  VIEWER: { id: 'viewer', label: '👁️ Visualizador', description: 'Apenas leitura (auditor, diretoria)' }
+  ADMIN: { id: 'admin', label: 'Administrador', description: 'Acesso total ao sistema' },
+  MANAGER: { id: 'manager', label: 'Gerente de Vendas', description: 'Visão da equipe e relatórios' },
+  SELLER: { id: 'employee', label: 'Vendedor / Consultor', description: 'Carteira individual de leads' },
+  VIEWER: { id: 'viewer', label: 'Visualizador', description: 'Apenas leitura (auditor, diretoria)' }
 };
 
 /**
@@ -235,13 +235,13 @@ export function generateInviteShareText(invite) {
   const org = getSavedOrganization();
   const appUrl = window.location.origin || 'https://nexuscrm-d8e13.web.app';
   
-  return `🚀 *Convite para ${org.name || 'Nexus CRM'}*\n\n` +
+  return `*Convite para ${org.name || 'Nexus CRM'}*\n\n` +
     `Olá, ${invite.name}! Você foi convidado(a) para acessar o CRM da nossa equipe.\n\n` +
-    `📧 Seu e-mail de acesso: ${invite.email}\n` +
-    `🔑 Senha temporária: ${invite.tempPassword}\n` +
-    `🔗 Código de acesso: ${invite.accessCode}\n\n` +
+    `Seu e-mail de acesso: ${invite.email}\n` +
+    `Senha temporária: ${invite.tempPassword}\n` +
+    `Código de acesso: ${invite.accessCode}\n\n` +
     `Acesse agora: ${appUrl}\n\n` +
-    `⚠️ Você será solicitado(a) a trocar a senha no primeiro acesso.\n` +
+    `Você será solicitado(a) a trocar a senha no primeiro acesso.\n` +
     `Este convite expira em ${new Date(invite.expiresAt).toLocaleDateString('pt-BR')}.`;
 }
 

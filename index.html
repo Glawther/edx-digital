@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus CRM - Gestão Inteligente com Google Cloud Firestore</title>
-  <meta name="description" content="CRM moderno de alto desempenho com sincronização em tempo real via Google Cloud Firestore. Pipeline Kanban, métricas e gestão de clientes.">
-  <meta name="theme-color" content="#0f172a">
+  <title>Nexus CRM</title>
+  <meta name="description" content="CRM de vendas com funil Kanban, tarefas, métricas e gestão de equipe.">
+  <meta name="theme-color" content="#ffffff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Nexus CRM">
@@ -18,17 +18,18 @@
   <!-- Modern Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=1.4.2">
-  <link rel="stylesheet" href="css/layout.css?v=1.4.2">
-  <link rel="stylesheet" href="css/components.css?v=1.4.2">
-  <link rel="stylesheet" href="css/animations.css?v=1.4.2">
-  <!-- Pre-render Theme Application (Doctor+ Dark / Light) -->
+  <link rel="stylesheet" href="css/design-tokens.css?v=2.0.0">
+  <link rel="stylesheet" href="css/layout.css?v=2.0.0">
+  <link rel="stylesheet" href="css/components.css?v=2.0.0">
+  <link rel="stylesheet" href="css/animations.css?v=2.0.0">
+  <link rel="stylesheet" href="css/identity.css?v=2.0.0">
+  <!-- Pre-render Theme Application -->
   <script>
     (function() {
-      const savedTheme = localStorage.getItem('nexus_crm_theme') || 'dark';
+      const savedTheme = localStorage.getItem('nexus_crm_theme') || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
     })();
   </script>
@@ -41,67 +42,61 @@
   <div id="auth-portal-screen" class="auth-portal-wrapper" style="display: none;">
     <div class="auth-portal-card">
       <div class="auth-portal-header">
-        <div class="auth-brand-badge">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          <span>Tríade CID • RBAC Ativo</span>
-        </div>
         <h1 class="auth-portal-title">Nexus CRM</h1>
-        <p class="auth-portal-subtitle">Plataforma Inteligente de Gestão Comercial &amp; Vendas</p>
+        <p class="auth-portal-subtitle">Entre para acompanhar seu funil de vendas.</p>
       </div>
 
       <!-- Navigation Tabs (Login vs Registro) -->
       <div class="auth-tabs-nav">
-        <button type="button" class="auth-tab-btn active" id="tab-auth-login">Acessar Conta</button>
-        <button type="button" class="auth-tab-btn" id="tab-auth-register">Criar Nova Conta</button>
+        <button type="button" class="auth-tab-btn active" id="tab-auth-login">Entrar</button>
+        <button type="button" class="auth-tab-btn" id="tab-auth-register">Criar conta</button>
       </div>
 
       <!-- TAB 1: FORMULÁRIO DE LOGIN -->
       <div id="auth-panel-login">
         <!-- Quick 1-Click Role Login Cards -->
-        <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">
-          Acesso Rápido por Papel (Tríade CID):
-        </div>
+        <div class="auth-demo-label">Conhecer com dados de exemplo</div>
         <div class="auth-demo-grid">
           <button type="button" class="auth-demo-btn" id="btn-quick-login-admin">
-            <span class="auth-demo-btn-title">🛡️ Administrador</span>
-            <span class="auth-demo-btn-desc">Visão 360°, faturamento geral e governança total.</span>
+            <span class="auth-demo-btn-title">Como administrador</span>
+            <span class="auth-demo-btn-desc">Vê toda a equipe, o faturamento e as configurações.</span>
           </button>
           <button type="button" class="auth-demo-btn" id="btn-quick-login-employee">
-            <span class="auth-demo-btn-title">💼 Funcionário</span>
-            <span class="auth-demo-btn-desc">Lucas Mendes, carteira individual e funil de vendas.</span>
+            <span class="auth-demo-btn-title">Como vendedor</span>
+            <span class="auth-demo-btn-desc">Vê só a própria carteira de clientes.</span>
           </button>
         </div>
 
-        <div class="auth-divider">ou acesse com email corporativo</div>
+        <div class="auth-divider">ou entre com a sua conta</div>
 
         <form id="form-auth-login">
           <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label for="login-input-email">E-mail Corporativo ou CPF</label>
-            <input type="text" id="login-input-email" class="form-input" placeholder="seu.email@empresa.com ou 000.000.000-00" required autocomplete="username">
+            <label for="login-input-email">E-mail ou CPF</label>
+            <input type="text" id="login-input-email" class="form-input" placeholder="voce@empresa.com ou 000.000.000-00" required autocomplete="username">
           </div>
 
           <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label for="login-input-password">Senha de Acesso</label>
-            <input type="password" id="login-input-password" class="form-input" placeholder="••••••••" required>
+            <label for="login-input-password">Senha</label>
+            <input type="password" id="login-input-password" class="form-input" required autocomplete="current-password">
           </div>
 
           <div class="form-group" style="margin-bottom: 1.25rem;">
-            <label for="login-select-role">Papel de Acesso (RBAC)</label>
+            <label for="login-select-role">Perfil</label>
             <select id="login-select-role" class="form-select">
-              <option value="admin">🛡️ Administrador do Sistema</option>
-              <option value="employee" selected>💼 Funcionário / Consultor de Vendas</option>
+              <option value="admin">Administrador</option>
+              <option value="employee" selected>Vendedor</option>
             </select>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
-            Acessar o Painel Nexus
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
+            Entrar
           </button>
         </form>
 
-        <div style="margin-top: 1rem; text-align: center;">
-          <button type="button" class="btn btn-outline" id="btn-login-google-portal" style="width: 100%; justify-content: center; font-size: 0.85rem;">
+        <div style="margin-top: 0.75rem;">
+          <button type="button" class="btn btn-outline" id="btn-login-google-portal" style="width: 100%; justify-content: center;">
             <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right: 6px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-            Entrar com Google Cloud
+            Entrar com Google
           </button>
         </div>
       </div>
@@ -110,93 +105,81 @@
       <div id="auth-panel-register" style="display: none;">
         
         <!-- Seletor de Perfil de Registro: Dono de Empresa vs Colaborador -->
-        <div style="display: flex; gap: 8px; margin-bottom: 1.15rem; background: rgba(255,255,255,0.03); padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
-          <button type="button" id="tab-reg-type-owner" class="auth-reg-toggle-btn active" style="flex: 1; padding: 8px 6px; border-radius: 7px; border: 1px solid rgba(217, 249, 66, 0.4); background: rgba(217, 249, 66, 0.12); color: #d9f942; font-weight: 700; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; text-align: center;">
-            🏢 Dono de Empresa<br><span style="font-size: 0.7rem; font-weight: 400; opacity: 0.85;">Cadastrar Empresa</span>
-          </button>
-          <button type="button" id="tab-reg-type-employee" class="auth-reg-toggle-btn" style="flex: 1; padding: 8px 6px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--text-secondary); font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; text-align: center;">
-            💼 Sou Colaborador<br><span style="font-size: 0.7rem; font-weight: 400; opacity: 0.85;">Entrar com Convite</span>
-          </button>
+        <div class="auth-reg-toggle">
+          <button type="button" id="tab-reg-type-owner" class="auth-reg-toggle-btn active">Cadastrar minha empresa</button>
+          <button type="button" id="tab-reg-type-employee" class="auth-reg-toggle-btn">Tenho um convite</button>
         </div>
 
         <!-- FORMULÁRIO 1: DONO DE EMPRESA (ADMINISTRADOR DO SISTEMA) -->
         <div id="reg-container-owner">
-          <div id="auth-selected-plan-badge" style="display: none; margin-bottom: 0.85rem; padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 700; background: rgba(217, 249, 66, 0.12); color: #d9f942; border: 1px solid rgba(217, 249, 66, 0.3); text-align: center;">
-            ⚡ Plano Selecionado: <span id="auth-plan-name-label">Professional</span>
+          <div id="auth-selected-plan-badge" class="auth-note" style="display: none;">
+            Plano selecionado: <strong id="auth-plan-name-label">Professional</strong>
           </div>
 
           <form id="form-auth-register">
             <input type="hidden" id="reg-input-plan" value="pro">
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="reg-input-name">Nome do Dono / Administrador *</label>
-              <input type="text" id="reg-input-name" class="form-input" placeholder="Ex: Rodrigo Fagundes" required>
+              <label for="reg-input-name">Seu nome</label>
+              <input type="text" id="reg-input-name" class="form-input" required autocomplete="name">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="reg-input-email">E-mail Corporativo *</label>
-              <input type="email" id="reg-input-email" class="form-input" placeholder="rodrigo@suaempresa.com" required>
+              <label for="reg-input-email">E-mail</label>
+              <input type="email" id="reg-input-email" class="form-input" placeholder="voce@empresa.com" required autocomplete="email">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="reg-input-company">Nome da Sua Empresa *</label>
-              <input type="text" id="reg-input-company" class="form-input" placeholder="Ex: Inova Soluções B2B" required>
+              <label for="reg-input-company">Nome da empresa</label>
+              <input type="text" id="reg-input-company" class="form-input" required autocomplete="organization">
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label for="reg-input-password">Criar Senha de Administrador *</label>
-              <input type="password" id="reg-input-password" class="form-input" placeholder="Mínimo 6 caracteres" minlength="6" required>
+              <label for="reg-input-password">Senha</label>
+              <input type="password" id="reg-input-password" class="form-input" placeholder="Mínimo de 6 caracteres" minlength="6" required autocomplete="new-password">
             </div>
 
-            <button type="submit" id="btn-submit-register" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
-              Criar Empresa e Acessar CRM (Admin 🛡️)
+            <button type="submit" id="btn-submit-register" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
+              Criar empresa
             </button>
           </form>
         </div>
 
         <!-- FORMULÁRIO 2: COLABORADOR / FUNCIONÁRIO (EXIGE CÓDIGO DO DONO) -->
         <div id="reg-container-employee" style="display: none;">
-          <div style="margin-bottom: 1rem; padding: 10px 12px; border-radius: 8px; font-size: 0.78rem; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); color: #93c5fd; line-height: 1.4;">
-            🔒 <strong>Acesso Protegido por Convite:</strong> Digite o <strong>Código de Convite</strong> fornecido pelo dono da sua empresa para liberar seu acesso ao CRM.
+          <div class="auth-note">
+            Peça o código de convite a quem administra o CRM da sua empresa.
           </div>
 
           <form id="form-auth-join-team">
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="join-input-code" style="color: #d9f942; font-weight: 700;">🔑 Código de Convite da Empresa *</label>
-              <input type="text" id="join-input-code" class="form-input" placeholder="Ex: NX-8492" required style="font-family: monospace; letter-spacing: 1px; font-weight: 700; text-transform: uppercase;">
+              <label for="join-input-code">Código de convite</label>
+              <input type="text" id="join-input-code" class="form-input" placeholder="NX-0000" required style="text-transform: uppercase; letter-spacing: 0.04em;">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="join-input-name">Seu Nome Completo *</label>
-              <input type="text" id="join-input-name" class="form-input" placeholder="Ex: Lucas Mendes" required>
+              <label for="join-input-name">Seu nome</label>
+              <input type="text" id="join-input-name" class="form-input" required autocomplete="name">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
-              <label for="join-input-email">Seu E-mail Corporativo *</label>
-              <input type="email" id="join-input-email" class="form-input" placeholder="lucas@empresa.com" required>
+              <label for="join-input-email">E-mail</label>
+              <input type="email" id="join-input-email" class="form-input" placeholder="voce@empresa.com" required autocomplete="email">
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
-              <label for="join-input-password">Criar Senha de Acesso *</label>
-              <input type="password" id="join-input-password" class="form-input" placeholder="Mínimo 6 caracteres" minlength="6" required>
+              <label for="join-input-password">Senha</label>
+              <input type="password" id="join-input-password" class="form-input" placeholder="Mínimo de 6 caracteres" minlength="6" required autocomplete="new-password">
             </div>
 
-            <button type="submit" id="btn-submit-join-team" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
-              Validar Código e Entrar na Equipe 💼
+            <button type="submit" id="btn-submit-join-team" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
+              Entrar na equipe
             </button>
           </form>
         </div>
       </div>
 
-      <div style="margin-top: 1.25rem; text-align: center;">
-        <a href="/landing" style="font-size: 0.85rem; color: #d9f942; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; padding: 6px 14px; border-radius: 6px; background: rgba(217, 249, 66, 0.08); border: 1px solid rgba(217, 249, 66, 0.25); transition: all 0.2s;">
-          <span>⭐ Conheça os Recursos &amp; Planos Oficiais</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-        </a>
-      </div>
-
       <div class="auth-footer-security">
-        🔒 Ambiente Corporativo Seguro com Criptografia de Ponta a Ponta<br>
-        Conformidade com a LGPD e Governança pela Tríade CID.
+        <a href="/landing" class="auth-plans-link">Ver recursos e planos</a>
       </div>
     </div>
   </div>
@@ -213,8 +196,8 @@
         </div>
         <span class="brand-name">Nexus CRM</span>
         <span class="brand-badge">Cloud</span>
-        <button type="button" class="brand-theme-btn" id="btn-brand-theme-toggle" title="Alternar Modo Noturno / Claro">
-          <span class="theme-icon-moon">🌙</span>
+        <button type="button" class="brand-theme-btn" id="btn-brand-theme-toggle" title="Alternar tema claro e escuro" aria-label="Alternar tema claro e escuro">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
       </div>
 
@@ -263,8 +246,8 @@
         <li id="nav-item-security" class="nav-admin-only">
           <a href="#security" class="nav-item" data-view="security" data-title="Segurança, Governança &amp; Tríade CID">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            <span>Tríade CID</span>
-            <span class="nav-count" id="nav-count-security" style="background: var(--color-contact-bg); color: var(--color-contact); font-weight:700;">RBAC</span>
+            <span>Segurança</span>
+            <span class="nav-count" id="nav-count-security" style="display: none;"></span>
           </a>
         </li>
       </ul>
@@ -273,9 +256,9 @@
         <!-- Menu de Ferramentas, Inteligência e Configurações (Reposicionado na Barra Lateral) -->
         <div class="dropdown-wrapper sidebar-tools-wrapper" id="header-tools-dropdown-wrapper">
           <button type="button" class="btn btn-secondary btn-sm sidebar-tool-btn" id="btn-header-tools" title="Menu de Ferramentas, Inteligência e Configurações">
-            <span style="display: flex; align-items: center; gap: 0.5rem;">
-              <span style="font-size: 0.95rem;">⚡</span>
-              <span style="font-weight: 600;">Ferramentas &amp; Ajustes</span>
+            <span style="display: flex; align-items: center; gap: 0.6rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Ferramentas</span>
             </span>
             <svg class="tool-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
@@ -284,7 +267,7 @@
             <!-- Inteligência Artificial & Nuvem (Dentro do Menu de Ferramentas) -->
             <div class="tools-group-title">Inteligência &amp; Nuvem</div>
             <button type="button" class="dropdown-item" id="sidebar-subscription-btn" onclick="window.openCheckoutModal()">
-              <span class="dropdown-item-icon">💳</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Assinatura &amp; Planos</span>
                 <span class="dropdown-item-desc">Limites, PIX e cotas do plano</span>
@@ -292,7 +275,7 @@
             </button>
 
             <button type="button" class="dropdown-item" id="sidebar-gemini-btn">
-              <span class="dropdown-item-icon">✨</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Gemini AI Config</span>
                 <span class="dropdown-item-desc">Ajustar chave API e modelos</span>
@@ -300,7 +283,7 @@
             </button>
             
             <button type="button" class="dropdown-item" id="sidebar-firebase-btn">
-              <span class="dropdown-item-icon">☁️</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Google Cloud Config</span>
                 <span class="dropdown-item-desc">Conexão Firestore e sync</span>
@@ -311,7 +294,7 @@
 
             <div class="tools-group-title" id="tools-group-company">Empresa &amp; Comercial</div>
             <button type="button" class="dropdown-item" id="btn-menu-whitelabel">
-              <span class="dropdown-item-icon">🎨</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Minha Empresa &amp; Whitelabel</span>
                 <span class="dropdown-item-desc">Nome, Logotipo e Cores da Marca</span>
@@ -319,7 +302,7 @@
             </button>
 
             <button type="button" class="dropdown-item" id="btn-menu-billing">
-              <span class="dropdown-item-icon">💳</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Assinatura &amp; Cota de IA</span>
                 <span class="dropdown-item-desc">Plano Nexus e medidor de consumo</span>
@@ -330,7 +313,7 @@
 
             <div class="tools-group-title">Operações &amp; Dados</div>
             <button type="button" class="dropdown-item" id="btn-menu-import">
-              <span class="dropdown-item-icon">📥</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Importar Leads</span>
                 <span class="dropdown-item-desc">Planilha Excel ou arquivo CSV</span>
@@ -338,7 +321,7 @@
             </button>
             
             <button type="button" class="dropdown-item" id="btn-menu-export-csv">
-              <span class="dropdown-item-icon">📊</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Exportar Clientes</span>
                 <span class="dropdown-item-desc">Planilha formatada para Excel (CSV)</span>
@@ -346,7 +329,7 @@
             </button>
             
             <button type="button" class="dropdown-item" id="btn-menu-export-audit">
-              <span class="dropdown-item-icon">🛡️</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Exportar Auditoria (CID)</span>
                 <span class="dropdown-item-desc">Relatório de integridade e logs</span>
@@ -354,7 +337,7 @@
             </button>
 
             <button type="button" class="dropdown-item" id="btn-menu-webhook">
-              <span class="dropdown-item-icon">⚡</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Webhooks &amp; Captura de Leads</span>
                 <span class="dropdown-item-desc">Meta Ads, Hotmart, Kiwify e Sites</span>
@@ -362,7 +345,7 @@
             </button>
 
             <a href="/landing" class="dropdown-item" style="text-decoration: none; color: inherit;">
-              <span class="dropdown-item-icon">🌐</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Página Comercial &amp; Planos</span>
                 <span class="dropdown-item-desc">Conheça os recursos e preços oficiais</span>
@@ -372,7 +355,7 @@
             <div class="dropdown-divider"></div>
 
             <button type="button" class="dropdown-item" id="btn-menu-shortcuts">
-              <span class="dropdown-item-icon">⌨️</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Atalhos de Teclado</span>
                 <span class="dropdown-item-desc">Guia rápido de produtividade (?)</span>
@@ -380,7 +363,7 @@
             </button>
             
             <button type="button" class="dropdown-item" id="btn-menu-pwa" style="display: none;">
-              <span class="dropdown-item-icon">📲</span>
+              <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Instalar Aplicativo</span>
                 <span class="dropdown-item-desc">Usar Nexus CRM como App nativo</span>
@@ -426,24 +409,23 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <span class="notification-badge" id="notification-badge" style="display: none;">0</span>
             </button>
-            <div class="notification-dropdown" id="notification-dropdown" style="display: none; background: #181d28 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important; z-index: 99999 !important; box-shadow: 0 20px 48px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.12) !important;">
-              <div class="notification-dropdown-header" style="background: #141722 !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important;">
-                <span style="font-weight: 700; font-size: 0.9rem; color: #ffffff !important;">🔔 Notificações</span>
-                <button type="button" class="btn-link" id="btn-mark-all-read" style="font-size: 0.75rem; color: #3b82f6 !important; cursor: pointer; background: none; border: none; font-weight: 600;">Marcar todas como lidas</button>
+            <div class="notification-dropdown" id="notification-dropdown" style="display: none; z-index: 99999;">
+              <div class="notification-dropdown-header" style="border-bottom: 1px solid var(--border-subtle);">
+                <span style="font-weight: 600; font-size: 0.93rem; color: var(--text-primary);">Notificações</span>
+                <button type="button" class="btn-link" id="btn-mark-all-read" style="font-size: 0.82rem; color: var(--accent); cursor: pointer; background: none; border: none; font-weight: 500;">Marcar todas como lidas</button>
               </div>
-              <div class="notification-list" id="notification-list" style="background: #181d28 !important;">
-                <div class="notification-empty" style="text-align: center; padding: 2rem; color: #94a3b8 !important; font-size: 0.85rem; background: #181d28 !important;">Nenhuma notificação ainda.</div>
+              <div class="notification-list" id="notification-list">
+                <div class="notification-empty" style="text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.88rem;">Nenhuma notificação ainda.</div>
               </div>
-              <div class="notification-dropdown-footer" style="background: #141722 !important; border-top: 1px solid rgba(255,255,255,0.1) !important;">
-                <button type="button" class="btn-link" id="btn-enable-push" style="font-size: 0.75rem; cursor: pointer; background: none; border: none; color: #cbd5e1 !important; font-weight: 500;">🔔 Ativar Notificações Push</button>
+              <div class="notification-dropdown-footer" style="border-top: 1px solid var(--border-subtle);">
+                <button type="button" class="btn-link" id="btn-enable-push" style="font-size: 0.82rem; cursor: pointer; background: none; border: none; color: var(--text-secondary); font-weight: 500;">Ativar notificações no navegador</button>
               </div>
             </div>
           </div>
 
           <!-- Indicador de Assinatura / Teste Grátis de 7 Dias -->
-          <button type="button" class="connection-pill" id="trial-header-pill" onclick="window.openCheckoutModal()" title="Gerenciar assinatura e limites do CRM" style="background: rgba(217, 249, 66, 0.12); color: #d9f942; border: 1px solid rgba(217, 249, 66, 0.3); font-weight: 700; cursor: pointer;">
-            <span class="pulse-dot" style="background: #d9f942;"></span>
-            <span id="trial-pill-text">⚡ Teste: 7 dias</span>
+          <button type="button" class="connection-pill" id="trial-header-pill" onclick="window.openCheckoutModal()" title="Gerenciar assinatura e limites do CRM">
+            <span id="trial-pill-text">Teste: 7 dias</span>
           </button>
 
           <!-- Status de Conexão com Google Cloud -->
@@ -455,7 +437,7 @@
           <!-- Botão de Lead no Canto Direito (Sem ++ Duplo) -->
           <button type="button" class="btn btn-primary btn-header-lead" id="btn-new-lead" title="Cadastrar nova oportunidade comercial (N)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Nova Oportunidade</span>
+            <span>Nova oportunidade</span>
           </button>
         </div>
 
@@ -492,7 +474,7 @@
           <div class="pipeline-nav-controls">
             <div class="kanban-stage-pills" id="kanban-stage-pills" aria-label="Navegação rápida por estágio">
               <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('lead')" title="Ir para Novo Lead">Novo Lead</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('contacted')" title="Ir para Primeiro Contato">Contato</button>
+              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('contact')" title="Ir para Primeiro Contato">Contato</button>
               <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('proposal')" title="Ir para Proposta Enviada">Proposta</button>
               <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('negotiation')" title="Ir para Em Negociação">Negociação</button>
               <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('won')" title="Ir para Fechado Ganho">Ganho</button>
@@ -576,10 +558,10 @@
               <div class="form-group" style="margin-bottom: 0.85rem;">
                 <label for="task-input-type">Tipo de Atividade</label>
                 <select id="task-input-type" class="form-select">
-                  <option value="call">📞 Ligação</option>
-                  <option value="meeting">📅 Reunião</option>
-                  <option value="whatsapp" selected>💬 WhatsApp</option>
-                  <option value="followup">📝 Follow-up / Proposta</option>
+                  <option value="call">Ligação</option>
+                  <option value="meeting">Reunião</option>
+                  <option value="whatsapp" selected>WhatsApp</option>
+                  <option value="followup">Follow-up / Proposta</option>
                 </select>
               </div>
 
@@ -610,7 +592,7 @@
           <div class="table-container" style="padding: 1.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
               <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Previsão de Fechamento (Mês)</span>
-              <span style="font-size: 1.1rem; color: #2563eb;">📅</span>
+              <span style="font-size: 1.1rem; color: #2563eb;"></span>
             </div>
             <div class="kpi-value" id="metrics-forecast-value" style="color: #2563eb; font-size: 1.6rem;">R$ 0</div>
             <p style="font-size: 0.75rem; color: var(--text-muted);">Estimativa de receita com base na data prevista das oportunidades ativas.</p>
@@ -619,7 +601,7 @@
           <div class="table-container" style="padding: 1.25rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
               <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Leads Estagnados (Deal Rotting)</span>
-              <span style="font-size: 1.1rem; color: #d97706;">⏳</span>
+              <span style="font-size: 1.1rem; color: #d97706;"></span>
             </div>
             <div class="kpi-value" id="metrics-rotting-value" style="color: #d97706; font-size: 1.6rem;">0</div>
             <p style="font-size: 0.75rem; color: var(--text-muted);">Oportunidades em aberto sem interação recente há mais de 3 dias.</p>
@@ -630,7 +612,7 @@
         <div class="sales-goals-grid">
           <div class="goal-card">
             <div class="goal-header">
-              <span class="goal-title">🎯 Meta Comercial da Equipe</span>
+              <span class="goal-title">Meta Comercial da Equipe</span>
               <span id="target-percentage-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--color-won); background: var(--color-won-bg); padding: 2px 7px; border-radius: 4px;">0% Atingido</span>
             </div>
             <div style="display: flex; align-items: baseline; justify-content: space-between;">
@@ -652,7 +634,7 @@
 
           <div class="goal-card">
             <div class="goal-header">
-              <span class="goal-title">💰 Extrato de Comissões &amp; Desempenho</span>
+              <span class="goal-title">Extrato de Comissões &amp; Desempenho</span>
               <span style="font-size: 0.72rem; color: var(--text-muted);">Taxa: 5% por negócio ganho</span>
             </div>
             <div id="commissions-leaderboard">
@@ -743,28 +725,28 @@
           <!-- Team Stats Cards -->
           <div class="team-stats-grid" id="team-stats-grid">
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">👥</div>
+              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="stat-total-members">0</div>
                 <div class="team-stat-label">Membros Ativos</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;">📨</div>
+              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="stat-pending-invites">0</div>
                 <div class="team-stat-label">Convites Pendentes</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">✅</div>
+              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="stat-accepted-invites">0</div>
                 <div class="team-stat-label">Convites Aceitos</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(139,92,246,0.12); color: #8b5cf6;">🛡️</div>
+              <div class="team-stat-icon" style="background: rgba(139,92,246,0.12); color: #8b5cf6;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="stat-admin-count">1</div>
                 <div class="team-stat-label">Administradores</div>
@@ -773,22 +755,22 @@
           </div>
 
           <!-- Card de Código Rápido de Convite da Empresa (Exclusivo do Dono) -->
-          <div class="team-invite-code-card" style="background: linear-gradient(135deg, rgba(217,249,66,0.08), rgba(59,130,246,0.05)); border: 1px solid rgba(217,249,66,0.25); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div class="team-invite-code-card" style="background: linear-gradient(135deg, var(--accent-soft), rgba(59,130,246,0.05)); border: 1px solid var(--accent-line); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
             <div>
-              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #d9f942; font-size: 0.95rem;">
-                <span>🔑 Código de Acesso da sua Equipe</span>
-                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; background: rgba(217,249,66,0.2); color: #d9f942; font-weight: 700;">Dono da Empresa</span>
+              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent); font-size: 0.95rem;">
+                <span>Código de Acesso da sua Equipe</span>
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; background: var(--accent-line); color: var(--accent); font-weight: 700;">Dono da Empresa</span>
               </div>
               <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 0 0;">
                 Envie este código aos seus consultores e vendedores. Eles só conseguem criar conta no CRM com este código!
               </p>
             </div>
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span id="display-team-invite-code" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; letter-spacing: 2px; color: #fff; background: rgba(0,0,0,0.45); padding: 8px 18px; border-radius: 8px; border: 1px dashed rgba(217,249,66,0.6);">
+              <span id="display-team-invite-code" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; letter-spacing: 2px; color: #fff; background: rgba(0,0,0,0.45); padding: 8px 18px; border-radius: 8px; border: 1px dashed var(--accent-line);">
                 NX-8492
               </span>
               <button type="button" class="btn btn-primary btn-sm" id="btn-copy-team-code" style="gap: 6px; font-weight: 600;">
-                📋 Copiar Código
+                Copiar Código
               </button>
             </div>
           </div>
@@ -797,7 +779,7 @@
             <!-- Invite Form -->
             <div class="table-container" style="padding: 1.5rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                <span style="font-size: 1.2rem;">📨</span>
+                <span style="font-size: 1.2rem;"></span>
                 <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Convidar Membro</h2>
               </div>
               <form id="form-team-invite">
@@ -812,10 +794,10 @@
                 <div class="form-group" style="margin-bottom: 0.85rem;">
                   <label for="invite-select-role">Papel de Acesso</label>
                   <select id="invite-select-role" class="form-select">
-                    <option value="employee" selected>💼 Vendedor / Consultor</option>
-                    <option value="manager">📊 Gerente de Vendas</option>
-                    <option value="admin">🛡️ Administrador</option>
-                    <option value="viewer">👁️ Visualizador (Somente Leitura)</option>
+                    <option value="employee" selected>Vendedor / Consultor</option>
+                    <option value="manager">Gerente de Vendas</option>
+                    <option value="admin">Administrador</option>
+                    <option value="viewer">Visualizador (Somente Leitura)</option>
                   </select>
                 </div>
                 <div class="form-group" style="margin-bottom: 1rem;">
@@ -823,7 +805,7 @@
                   <textarea id="invite-input-message" class="form-input" rows="2" placeholder="Ex: Bem-vindo(a) à equipe!"></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
-                  📨 Enviar Convite
+                  Enviar Convite
                 </button>
               </form>
             </div>
@@ -832,7 +814,7 @@
             <div class="table-container" style="padding: 1.5rem;">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="font-size: 1.2rem;">📋</span>
+                  <span style="font-size: 1.2rem;"></span>
                   <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Convites Enviados</h2>
                 </div>
               </div>
@@ -852,28 +834,28 @@
           <!-- Audit Stats -->
           <div class="team-stats-grid" id="audit-stats-grid">
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">📝</div>
+              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="audit-stat-total">0</div>
                 <div class="team-stat-label">Total de Registros</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">📅</div>
+              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="audit-stat-today">0</div>
                 <div class="team-stat-label">Ações Hoje</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;">⚠️</div>
+              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="audit-stat-warnings">0</div>
                 <div class="team-stat-label">Alertas</div>
               </div>
             </div>
             <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(239,68,68,0.12); color: #ef4444;">🔴</div>
+              <div class="team-stat-icon" style="background: rgba(239,68,68,0.12); color: #ef4444;"></div>
               <div class="team-stat-data">
                 <div class="team-stat-value" id="audit-stat-critical">0</div>
                 <div class="team-stat-label">Críticos</div>
@@ -885,11 +867,11 @@
           <div class="table-container" style="padding: 1.5rem;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.2rem;">📋</span>
+                <span style="font-size: 1.2rem;"></span>
                 <h2 style="font-size: 1.1rem; font-weight: 700;">Trilha de Auditoria Completa</h2>
               </div>
               <button type="button" class="btn btn-outline btn-sm" id="btn-export-audit-csv">
-                📊 Exportar Auditoria (CSV)
+                Exportar Auditoria (CSV)
               </button>
             </div>
             <div style="overflow-x: auto;">
@@ -1031,7 +1013,7 @@
   <dialog id="loss-reason-dialog" class="crm-dialog" style="max-width: 500px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="color: #dc2626; font-size: 1.2rem;">🛑</span>
+        <span style="color: #dc2626; font-size: 1.2rem;"></span>
         <h2 class="dialog-title">Qual o motivo da perda?</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-loss-dialog" aria-label="Fechar modal">
@@ -1049,13 +1031,13 @@
         <div class="form-group" style="margin-bottom: 1rem;">
           <label for="select-loss-reason">Motivo Principal *</label>
           <select id="select-loss-reason" class="form-select" required>
-            <option value="price">💰 Preço / Orçamento insuficiente</option>
-            <option value="competitor">⚔️ Optou pelo Concorrente</option>
-            <option value="timing">⏳ Timing / Projeto adiado</option>
-            <option value="features">⚙️ Falta de recursos / Produto</option>
-            <option value="ghosting">👻 Parou de responder (Ghosting)</option>
-            <option value="cancelled">🚫 Iniciativa cancelada pelo cliente</option>
-            <option value="other">📌 Outro motivo</option>
+            <option value="price">Preço / Orçamento insuficiente</option>
+            <option value="competitor">Optou pelo Concorrente</option>
+            <option value="timing">Timing / Projeto adiado</option>
+            <option value="features">Falta de recursos / Produto</option>
+            <option value="ghosting">Parou de responder (Ghosting)</option>
+            <option value="cancelled">Iniciativa cancelada pelo cliente</option>
+            <option value="other">Outro motivo</option>
           </select>
         </div>
 
@@ -1092,13 +1074,13 @@
       <!-- Quick Action Toolbar -->
       <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
-          📞 Registrar Ligação
+          Registrar Ligação
         </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-meeting">
-          📅 Registrar Reunião
+          Registrar Reunião
         </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-note">
-          📝 Adicionar Nota
+          Adicionar Nota
         </button>
       </div>
 
@@ -1115,7 +1097,7 @@
 
       <!-- Timeline Title -->
       <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>📜 Linha do Tempo &amp; Histórico</span>
+        <span>Linha do Tempo &amp; Histórico</span>
       </h3>
 
       <div class="timeline-container" id="lead-details-timeline">
@@ -1193,7 +1175,7 @@
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
         <div style="width: 28px; height: 28px; border-radius: var(--radius-sm); background: linear-gradient(135deg, #4285f4, #a855f7); display:flex; align-items:center; justify-content:center; color:#fff;">
-          ✦
+          
         </div>
         <div>
           <h2 class="dialog-title" id="gemini-dialog-customer-name">Análise com Google Gemini AI</h2>
@@ -1208,7 +1190,7 @@
     <div class="dialog-body" id="gemini-dialog-body">
       <!-- Loading State -->
       <div id="gemini-loading" style="text-align: center; padding: 3rem 1rem;">
-        <div class="gemini-sparkle-icon" style="font-size: 2.5rem; margin-bottom: 1rem; display: inline-block; color: #2563eb;">✦</div>
+        <div class="gemini-sparkle-icon" style="font-size: 2.5rem; margin-bottom: 1rem; display: inline-block; color: #2563eb;"></div>
         <p style="font-weight: 600; color: var(--text-primary);">O Google Gemini está analisando esta oportunidade...</p>
         <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">Calculando probabilidade de conversão, riscos e gerando proposta personalizada.</p>
       </div>
@@ -1234,21 +1216,21 @@
             <ul id="gemini-keypoints-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
           <div class="gemini-insight-card" style="margin-bottom: 0;">
-            <div class="gemini-insight-title" style="color: #f59e0b;">⚠ Como Contornar Objeções</div>
+            <div class="gemini-insight-title" style="color: #f59e0b;">Como Contornar Objeções</div>
             <ul id="gemini-objections-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
         </div>
 
         <!-- Recommended Action -->
         <div class="gemini-insight-card" style="border-left: 3px solid #10b981;">
-          <div class="gemini-insight-title" style="color: #10b981;">🎯 Próxima Ação Recomendada</div>
+          <div class="gemini-insight-title" style="color: #10b981;">Próxima Ação Recomendada</div>
           <p id="gemini-recommended-action" style="font-size: 0.85rem; color: var(--text-primary); font-weight: 500;"></p>
         </div>
 
         <!-- Commercial Email Draft -->
         <div class="gemini-insight-card">
           <div class="gemini-insight-title" style="display: flex; align-items: center; justify-content: space-between;">
-            <span>✉ Rascunho de E-mail de Proposta</span>
+            <span>Rascunho de E-mail de Proposta</span>
             <button type="button" class="btn btn-outline btn-sm" id="btn-copy-proposal-email" style="font-size: 0.75rem; padding: 2px 8px;">
               Copiar E-mail
             </button>
@@ -1269,7 +1251,7 @@
   <dialog id="gemini-key-dialog" class="crm-dialog">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="color: #a855f7; font-size: 1.2rem;">✦</span>
+        <span style="color: #a855f7; font-size: 1.2rem;"></span>
         <h2 class="dialog-title">Chave de API do Google Gemini</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-gemini-key-dialog" aria-label="Fechar modal">
@@ -1302,7 +1284,7 @@
   <dialog id="proposal-dialog" class="crm-dialog" style="max-width: 820px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;">📄</span>
+        <span style="font-size: 1.25rem;"></span>
         <h2 class="dialog-title" id="proposal-dialog-title">Proposta Comercial Executiva</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-proposal-dialog" aria-label="Fechar proposta">
@@ -1390,10 +1372,10 @@
     <div class="dialog-footer" style="justify-content: space-between;">
       <div style="display: flex; gap: 0.5rem;">
         <button type="button" class="btn btn-outline" id="btn-print-proposal">
-          🖨️ Imprimir / Salvar PDF
+          Imprimir / Salvar PDF
         </button>
         <button type="button" class="btn btn-outline" id="btn-send-proposal-wa" style="color: #15803d; border-color: #bbf7d0;">
-          💬 Enviar no WhatsApp
+          Enviar no WhatsApp
         </button>
       </div>
       <button type="button" class="btn btn-primary" id="btn-close-proposal-footer">Fechar</button>
@@ -1406,7 +1388,7 @@
   <dialog id="import-dialog" class="crm-dialog" style="max-width: 680px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;">📥</span>
+        <span style="font-size: 1.25rem;"></span>
         <h2 class="dialog-title">Importar Leads (Planilha Excel / CSV)</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-import-dialog" aria-label="Fechar importador">
@@ -1487,7 +1469,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="shortcuts-dialog" class="crm-dialog" style="max-width: 520px; width: 90%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;">⌨️</span>
+        <span style="font-size: 1.25rem;"></span>
         <h2 class="dialog-title">Atalhos de Teclado</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-shortcuts-dialog" aria-label="Fechar atalhos">
@@ -1555,7 +1537,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="employee-dialog" class="crm-dialog" style="max-width: 620px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <span style="font-size: 1.25rem;">👥</span>
+        <span style="font-size: 1.25rem;"></span>
         <div>
           <h2 class="dialog-title" id="employee-dialog-title">Cadastrar Novo Colaborador</h2>
           <span style="font-size: 0.72rem; color: var(--text-secondary);">Tríade CID • Emissão de Credencial Segura &amp; RBAC</span>
@@ -1614,8 +1596,8 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           <div class="form-group">
             <label for="emp-select-role">Papel de Acesso (RBAC) *</label>
             <select id="emp-select-role" class="form-select">
-              <option value="employee" selected>💼 Consultor de Vendas (Acesso à Própria Carteira)</option>
-              <option value="admin">🛡️ Administrador do Sistema (Acesso Global 360°)</option>
+              <option value="employee" selected>Consultor de Vendas (Acesso à Própria Carteira)</option>
+              <option value="admin">Administrador do Sistema (Acesso Global 360°)</option>
             </select>
           </div>
 
@@ -1623,13 +1605,13 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
               <label for="emp-input-password" style="font-weight: 600; margin: 0; font-size: 0.82rem;">Senha Temporária de Acesso *</label>
               <button type="button" class="btn btn-outline btn-sm" id="btn-generate-temp-password" style="padding: 3px 8px; font-size: 0.72rem;">
-                ⚡ Gerar Senha Segura
+                Gerar Senha Segura
               </button>
             </div>
             <div style="display: flex; gap: 0.5rem;">
               <input type="text" id="emp-input-password" class="form-input" style="font-family: monospace; font-weight: 700; letter-spacing: 0.05em;" placeholder="Clique em Gerar Senha" required>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-temp-password-field" title="Copiar senha">
-                📋
+                
               </button>
             </div>
             <div style="margin-top: 0.6rem;">
@@ -1655,7 +1637,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="first-access-password-dialog" class="crm-dialog" style="max-width: 480px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <span style="font-size: 1.25rem;">🔒</span>
+        <span style="font-size: 1.25rem;"></span>
         <div>
           <h2 class="dialog-title">Primeiro Acesso - Nova Senha</h2>
           <span style="font-size: 0.72rem; color: var(--text-secondary);">Tríade CID • Governança &amp; Confidencialidade</span>
@@ -1668,7 +1650,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
 
       <div class="dialog-body">
         <div style="background: var(--color-contact-bg); border: 1px solid var(--color-contact-border); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--color-contact); line-height: 1.4;">
-          👋 Olá, <strong id="first-access-employee-name">Colaborador</strong>! Você está acessando com uma <strong>senha temporária</strong>. Para garantir a segurança dos dados da sua carteira, crie sua senha pessoal definitiva.
+          Olá, <strong id="first-access-employee-name">Colaborador</strong>! Você está acessando com uma <strong>senha temporária</strong>. Para garantir a segurança dos dados da sua carteira, crie sua senha pessoal definitiva.
         </div>
 
         <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -1697,7 +1679,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          🎨
+          
         </div>
         <div>
           <h2 class="dialog-title">Minha Empresa &amp; Whitelabel</h2>
@@ -1742,7 +1724,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           <div style="display: flex; gap: 0.5rem;">
             <input type="text" id="whitelabel-input-logo" class="form-input" placeholder="https://suaempresa.com/logo.png">
             <label class="btn btn-secondary btn-sm" style="cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
-              📁 Arquivo
+              Arquivo
               <input type="file" id="whitelabel-file-logo" accept="image/*" style="display: none;">
             </label>
           </div>
@@ -1781,7 +1763,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          💳
+          
         </div>
         <div>
           <h2 class="dialog-title">Assinatura &amp; Consumo de IA</h2>
@@ -1808,7 +1790,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
         <!-- AI Usage Progress Bar -->
         <div style="margin-top: 1rem;">
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.35rem;">
-            <span style="font-weight: 600; color: var(--text-primary);">✨ Análises de IA (Google Gemini Flash):</span>
+            <span style="font-weight: 600; color: var(--text-primary);">Análises de IA (Google Gemini Flash):</span>
             <strong id="billing-ai-count" style="color: var(--color-primary);">14 / 150 chamadas este mês (9%)</strong>
           </div>
           <div style="height: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-color);">
@@ -1891,7 +1873,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     </div>
 
     <div class="dialog-footer" style="display: flex; justify-content: space-between; align-items: center;">
-      <span style="font-size: 0.75rem; color: var(--text-muted);">🔒 Pagamentos recorrentes seguros via Stripe / Pix</span>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Pagamentos recorrentes seguros via Stripe / Pix</span>
       <button type="button" class="btn btn-secondary" id="btn-close-billing-dialog-footer">Fechar</button>
     </div>
   </dialog>
@@ -1903,7 +1885,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2)); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-          🔒
+          
         </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -1962,10 +1944,10 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           <!-- Payment Method Tabs -->
           <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
             <button type="button" id="tab-pay-pix" class="btn btn-primary" style="flex: 1; justify-content: center; font-size: 0.82rem; gap: 0.4rem;">
-              ⚡ PIX Instantâneo
+              PIX Instantâneo
             </button>
             <button type="button" id="tab-pay-card" class="btn btn-outline" style="flex: 1; justify-content: center; font-size: 0.82rem; gap: 0.4rem;">
-              💳 Cartão de Crédito
+              Cartão de Crédito
             </button>
           </div>
 
@@ -1976,19 +1958,19 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             </div>
             
             <div style="font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
-              <span>⏱️ Código válido por:</span>
+              <span>Código válido por:</span>
               <strong id="pix-timer" style="color: #ef4444; font-size: 0.85rem;">10:00</strong>
             </div>
 
             <div style="width: 100%; display: flex; gap: 0.5rem;">
               <input type="text" id="pix-copia-cola-input" readonly class="form-input" style="font-size: 0.72rem; font-family: monospace; background: rgba(0,0,0,0.2);">
               <button type="button" class="btn btn-outline btn-sm" id="btn-copy-pix" style="white-space: nowrap;">
-                📋 Copiar
+                Copiar
               </button>
             </div>
 
             <button type="button" class="btn btn-primary" id="btn-simulate-pix-success" style="width: 100%; justify-content: center; padding: 0.75rem; background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">
-              ⚡ Simular Confirmação do PIX (Aprovação Imediata)
+              Simular Confirmação do PIX (Aprovação Imediata)
             </button>
           </div>
 
@@ -1999,7 +1981,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
                 <label for="card-input-number" style="font-size: 0.78rem;">Número do Cartão *</label>
                 <div style="position: relative;">
                   <input type="text" id="card-input-number" class="form-input" placeholder="4242 4242 4242 4242" required maxlength="19">
-                  <span id="card-brand-badge" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; pointer-events: none;">💳</span>
+                  <span id="card-brand-badge" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; pointer-events: none;"></span>
                 </div>
               </div>
 
@@ -2020,11 +2002,11 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
               </div>
 
               <button type="button" id="btn-fill-test-card" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; font-size: 0.72rem; margin-bottom: 0.5rem;">
-                🧪 Preencher Dados de Teste (Stripe Sandbox)
+                Preencher Dados de Teste (Stripe Sandbox)
               </button>
 
               <button type="submit" class="btn btn-primary" id="btn-submit-card-pay" style="width: 100%; justify-content: center; padding: 0.75rem; font-weight: 700;">
-                🔒 Pagar e Ativar CRM Imediatamente
+                Pagar e Ativar CRM Imediatamente
               </button>
             </form>
           </div>
@@ -2063,7 +2045,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
         </div>
 
         <button type="button" class="btn btn-primary" id="btn-checkout-finish" style="padding: 0.75rem 2.5rem; font-weight: 700;">
-          🚀 Acessar Meus Recursos Agora
+          Acessar Meus Recursos Agora
         </button>
       </div>
 
@@ -2077,7 +2059,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); color: #25d366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
-          💬
+          
         </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -2108,8 +2090,8 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <div style="margin-bottom: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
           <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">Modelos Prontos de Abordagem:</span>
-          <button type="button" id="btn-wa-generate-ai" class="btn btn-sm btn-outline" style="font-size: 0.72rem; gap: 0.35rem; color: #d9f942; border-color: rgba(217, 249, 66, 0.4);">
-            ✨ Gerar com IA Gemini
+          <button type="button" id="btn-wa-generate-ai" class="btn btn-sm btn-outline" style="font-size: 0.72rem; gap: 0.35rem; color: var(--accent); border-color: var(--accent-line);">
+            Gerar com IA Gemini
           </button>
         </div>
         <div id="wa-templates-container" style="display: flex; flex-direction: column; gap: 0.45rem;">
@@ -2129,10 +2111,10 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Quick Action Buttons -->
       <div style="display: flex; gap: 0.75rem;">
         <button type="button" class="btn btn-secondary" id="btn-wa-copy" style="flex: 1; justify-content: center; font-size: 0.85rem;">
-          📋 Copiar Texto
+          Copiar Texto
         </button>
         <button type="button" class="btn btn-primary" id="btn-wa-send-direct" style="flex: 1.5; justify-content: center; font-size: 0.88rem; background: #25d366; color: #000; border-color: #25d366; font-weight: 700;">
-          💬 Abrir no WhatsApp Web
+          Abrir no WhatsApp Web
         </button>
       </div>
     </div>
@@ -2145,7 +2127,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
         <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
-          ⚡
+          
         </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -2166,7 +2148,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <input type="text" id="webhook-url-input" class="form-input" style="font-family: monospace; font-size: 0.8rem;" readonly>
-          <button type="button" id="btn-copy-webhook-url" class="btn btn-outline btn-sm">📋 Copiar</button>
+          <button type="button" id="btn-copy-webhook-url" class="btn btn-outline btn-sm">Copiar</button>
         </div>
       </div>
 
@@ -2174,12 +2156,12 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
           <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Token Secreto (Header: x-webhook-token)</span>
-          <button type="button" id="btn-regenerate-webhook-token" style="background: none; border: none; color: var(--color-primary); font-size: 0.72rem; cursor: pointer;">🔄 Gerar Novo</button>
+          <button type="button" id="btn-regenerate-webhook-token" style="background: none; border: none; color: var(--color-primary); font-size: 0.72rem; cursor: pointer;">Gerar Novo</button>
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <input type="password" id="webhook-token-input" class="form-input" style="font-family: monospace; font-size: 0.8rem;" readonly>
-          <button type="button" id="btn-toggle-show-token" class="btn btn-outline btn-sm">👁️ Ver</button>
-          <button type="button" id="btn-copy-webhook-token" class="btn btn-outline btn-sm">📋 Copiar</button>
+          <button type="button" id="btn-toggle-show-token" class="btn btn-outline btn-sm">Ver</button>
+          <button type="button" id="btn-copy-webhook-token" class="btn btn-outline btn-sm">Copiar</button>
         </div>
       </div>
 
@@ -2188,7 +2170,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.35rem;">
           Exemplo de Payload JSON (Compatível com Make, Zapier e Elementor):
         </div>
-        <pre style="background: var(--bg-deep); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; font-size: 0.72rem; color: #a5b4fc; overflow-x: auto; margin: 0;">{
+        <pre style="background: var(--bg-deep); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; font-size: 0.72rem; color: var(--text-secondary); overflow-x: auto; margin: 0;">{
   "nome": "João da Silva",
   "email": "joao.silva@exemplo.com.br",
   "whatsapp": "(11) 98765-4321",
@@ -2205,7 +2187,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           Fechar
         </button>
         <button type="button" class="btn btn-primary" id="btn-send-test-webhook" style="flex: 2; justify-content: center; font-weight: 700; gap: 0.5rem;">
-          ⚡ Simular Envio de Lead via Webhook
+          Simular Envio de Lead via Webhook
         </button>
       </div>
     </div>
@@ -2214,31 +2196,31 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ======================================================================
        Modal: Gestão de Assinatura, Planos & Pagamento PIX 1-Clique
        ====================================================================== -->
-  <dialog id="modal-checkout" class="crm-modal" style="max-width: 650px; width: 95%; padding: 0; border: 1px solid var(--border-color); background: #0f1420; color: #f8fafc; border-radius: 20px; box-shadow: 0 25px 70px rgba(0,0,0,0.8);">
-    <div style="padding: 1.5rem 1.75rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+  <dialog id="modal-checkout" class="crm-modal" style="max-width: 650px; width: 95%; padding: 0; border: 1px solid var(--border-color); background: #0f1420; color: var(--text-primary); border-radius: 20px; box-shadow: 0 25px 70px rgba(0,0,0,0.8);">
+    <div style="padding: 1.5rem 1.75rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface-elevated);">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 1.4rem;">💳</span>
+        <span style="font-size: 1.4rem;"></span>
         <div>
           <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Assinatura &amp; Planos Comerciais</h2>
-          <p style="font-size: 0.78rem; color: #94a3b8; margin: 0;">Gerencie seu plano, cotas de usuários e faturamento</p>
+          <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0;">Gerencie seu plano, cotas de usuários e faturamento</p>
         </div>
       </div>
-      <button type="button" class="modal-close-btn" id="btn-close-checkout-modal" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
+      <button type="button" class="modal-close-btn" id="btn-close-checkout-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer;">&times;</button>
     </div>
 
     <div style="padding: 1.5rem 1.75rem; max-height: 80vh; overflow-y: auto;">
       <!-- Active Subscription Status Banner -->
-      <div style="background: rgba(217, 249, 66, 0.08); border: 1px solid rgba(217, 249, 66, 0.25); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+      <div style="background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; background: #d9f942; color: #000; padding: 2px 8px; border-radius: 4px;" id="chk-current-plan-badge">PROFESSIONAL</span>
+            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 4px;" id="chk-current-plan-badge">PROFESSIONAL</span>
             <span style="font-size: 0.85rem; font-weight: 600; color: #fff;" id="chk-current-status-title">Período de Testes Ativo</span>
           </div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: #d9f942;" id="chk-trial-days-badge">⏳ 7 dias restantes</span>
+          <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent);" id="chk-trial-days-badge">7 dias restantes</span>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem; color: #cbd5e1; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
-          <div>👥 Usuários: <strong id="chk-quota-users">1 / 15</strong></div>
-          <div>🎯 Leads no Funil: <strong id="chk-quota-leads">1 / 25.000</strong></div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle);">
+          <div>Usuários: <strong id="chk-quota-users">1 / 15</strong></div>
+          <div>Leads no Funil: <strong id="chk-quota-leads">1 / 25.000</strong></div>
         </div>
       </div>
 
@@ -2246,35 +2228,35 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">Escolha seu Plano para Efetivar a Assinatura:</div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 1.25rem;">
         <!-- Starter Card -->
-        <div class="checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')" style="cursor: pointer; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,0.02); transition: all 0.2s;">
+        <div class="checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')" style="cursor: pointer; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem; background: var(--bg-surface-elevated); transition: all 0.2s;">
           <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">Starter</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #d9f942; margin: 4px 0;">R$ 97<span style="font-size: 0.7rem; font-weight: 500; color: #94a3b8;">/mês</span></div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">Até 3 usuários e 5.000 leads</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 97<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
+          <div style="font-size: 0.72rem; color: var(--text-secondary);">Até 3 usuários e 5.000 leads</div>
         </div>
 
         <!-- Pro Card (Selected by default) -->
-        <div class="checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')" style="cursor: pointer; border: 2px solid #d9f942; border-radius: 12px; padding: 1rem; background: rgba(217, 249, 66, 0.05); transition: all 0.2s;">
+        <div class="checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')" style="cursor: pointer; border: 2px solid var(--accent); border-radius: 12px; padding: 1rem; background: var(--accent-soft); transition: all 0.2s;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">Professional</span>
-            <span style="font-size: 0.65rem; background: #d9f942; color: #000; font-weight: 800; padding: 1px 5px; border-radius: 3px;">TOP</span>
+            <span style="font-size: 0.65rem; background: var(--accent); color: #000; font-weight: 800; padding: 1px 5px; border-radius: 3px;">TOP</span>
           </div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #d9f942; margin: 4px 0;">R$ 197<span style="font-size: 0.7rem; font-weight: 500; color: #94a3b8;">/mês</span></div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">Até 15 usuários + IA Gemini</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 197<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
+          <div style="font-size: 0.72rem; color: var(--text-secondary);">Até 15 usuários + IA Gemini</div>
         </div>
 
         <!-- Enterprise Card -->
-        <div class="checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')" style="cursor: pointer; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; background: rgba(255,255,255,0.02); transition: all 0.2s;">
+        <div class="checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')" style="cursor: pointer; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem; background: var(--bg-surface-elevated); transition: all 0.2s;">
           <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">Enterprise</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: #d9f942; margin: 4px 0;">R$ 497<span style="font-size: 0.7rem; font-weight: 500; color: #94a3b8;">/mês</span></div>
-          <div style="font-size: 0.72rem; color: #94a3b8;">Usuários ilimitados + Whitelabel</div>
+          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 497<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
+          <div style="font-size: 0.72rem; color: var(--text-secondary);">Usuários ilimitados + Whitelabel</div>
         </div>
       </div>
 
       <!-- Payment Section: PIX 1-Click + Gateway Link -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1.25rem;">
+      <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
           <div style="font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
-            <span>⚡ Pagamento Instantâneo via PIX</span>
+            <span>Pagamento Instantâneo via PIX</span>
           </div>
           <span style="font-size: 0.72rem; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 12px;">Liberação Automática</span>
         </div>
@@ -2284,69 +2266,69 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             <img id="chk-pix-qrcode-img" src="" alt="QR Code PIX" style="width: 100%; height: 100%; object-fit: contain;">
           </div>
           <div style="flex: 1; min-width: 220px;">
-            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px;">Código PIX Copia e Cola:</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Código PIX Copia e Cola:</div>
             <div style="display: flex; gap: 6px; margin-bottom: 0.75rem;">
               <input type="text" id="chk-pix-copypaste-input" readonly class="form-input" style="font-size: 0.75rem; font-family: monospace;" value="...">
               <button type="button" class="btn btn-primary btn-sm" id="btn-copy-pix-code" style="white-space: nowrap;">Copiar PIX</button>
             </div>
-            <div style="font-size: 0.72rem; color: #94a3b8; line-height: 1.4;">
+            <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
               Abra seu aplicativo do banco, escolha <strong>PIX Copia e Cola</strong> e efetue o pagamento. O acesso é liberado instantaneamente.
             </div>
           </div>
         </div>
 
-        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <a href="#" id="chk-whatsapp-receipt-link" target="_blank" rel="noopener" class="btn btn-sm" style="background: #25d366; color: #fff; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; font-size: 0.78rem;">
-            <span>📱 Já paguei! Enviar Comprovante</span>
+            <span>Já paguei! Enviar Comprovante</span>
           </a>
           <a href="#" id="chk-gateway-card-link" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size: 0.78rem;">
-            💳 Pagar com Cartão de Crédito
+            Pagar com Cartão de Crédito
           </a>
         </div>
       </div>
 
       <!-- Admin Payment & Cloud Configuration Drawer (Visible for Admins ONLY) -->
-      <div id="chk-admin-settings-section" style="display: none; margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+      <div id="chk-admin-settings-section" style="display: none; margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
         <button type="button" id="btn-toggle-payment-settings" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; gap: 6px; font-size: 0.75rem; border-color: rgba(255,255,255,0.15);">
-          <span>⚙️ Configurar Meu PIX Real &amp; Backend na Nuvem (Admin)</span>
+          <span>Configurar Meu PIX Real &amp; Backend na Nuvem (Admin)</span>
         </button>
 
-        <div id="chk-admin-settings-drawer" style="display: none; margin-top: 1rem; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: #d9f942; margin-bottom: 0.5rem;">Configurações de Recebimento do SaaS</div>
-          <p style="font-size: 0.72rem; color: #94a3b8; margin-bottom: 0.75rem;">Digite sua chave PIX para o dinheiro cair direto na sua conta bancária sem intermediários, ou informe a URL do seu backend na nuvem.</p>
+        <div id="chk-admin-settings-drawer" style="display: none; margin-top: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">Configurações de Recebimento do SaaS</div>
+          <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Digite sua chave PIX para o dinheiro cair direto na sua conta bancária sem intermediários, ou informe a URL do seu backend na nuvem.</p>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
             <div>
-              <label style="font-size: 0.72rem; color: #cbd5e1; display: block; margin-bottom: 2px;">Sua Chave PIX (CPF/CNPJ/Email/EVP):</label>
+              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Sua Chave PIX (CPF/CNPJ/Email/EVP):</label>
               <input type="text" id="cfg-pix-key" class="form-input" placeholder="ex: 12345678900 ou seu@email.com" style="font-size: 0.75rem;">
             </div>
             <div>
-              <label style="font-size: 0.72rem; color: #cbd5e1; display: block; margin-bottom: 2px;">Nome do Titular / Razão Social:</label>
+              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Nome do Titular / Razão Social:</label>
               <input type="text" id="cfg-pix-name" class="form-input" placeholder="ex: SEU NOME OU EMPRESA" style="font-size: 0.75rem;">
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
             <div>
-              <label style="font-size: 0.72rem; color: #cbd5e1; display: block; margin-bottom: 2px;">WhatsApp p/ Comprovantes (com DDD):</label>
+              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">WhatsApp p/ Comprovantes (com DDD):</label>
               <input type="text" id="cfg-support-whatsapp" class="form-input" placeholder="ex: 11999998888" style="font-size: 0.75rem;">
             </div>
             <div>
-              <label style="font-size: 0.72rem; color: #cbd5e1; display: block; margin-bottom: 2px;">URL do Backend na Nuvem (Render/Railway):</label>
+              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">URL do Backend na Nuvem (Render/Railway):</label>
               <input type="text" id="cfg-backend-url" class="form-input" placeholder="https://nexus-crm-yfof.onrender.com" style="font-size: 0.75rem;">
             </div>
           </div>
 
           <div style="display: flex; justify-content: flex-end; gap: 8px;">
             <button type="button" id="btn-save-payment-settings" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
-              💾 Salvar Configurações
+              Salvar Configurações
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <div style="padding: 1rem 1.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; background: rgba(255,255,255,0.02);">
+    <div style="padding: 1rem 1.75rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; background: var(--bg-surface-elevated);">
       <button type="button" class="btn btn-secondary" id="btn-close-checkout-footer">Fechar</button>
     </div>
   </dialog>

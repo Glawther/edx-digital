@@ -216,32 +216,32 @@ export function getAuditStats() {
  */
 export function formatAuditAction(action) {
   const labels = {
-    [AUDIT_ACTIONS.LEAD_CREATED]: '📋 Lead Criado',
-    [AUDIT_ACTIONS.LEAD_UPDATED]: '✏️ Lead Atualizado',
-    [AUDIT_ACTIONS.LEAD_DELETED]: '🗑️ Lead Excluído',
-    [AUDIT_ACTIONS.LEAD_STAGE_CHANGED]: '🔄 Estágio Alterado',
-    [AUDIT_ACTIONS.LEAD_WON]: '🏆 Negócio Fechado (Ganho)',
-    [AUDIT_ACTIONS.LEAD_LOST]: '❌ Negócio Perdido',
-    [AUDIT_ACTIONS.USER_LOGIN]: '🔑 Login Realizado',
-    [AUDIT_ACTIONS.USER_LOGOUT]: '🚪 Logout',
-    [AUDIT_ACTIONS.USER_REGISTERED]: '📝 Conta Criada',
-    [AUDIT_ACTIONS.EMPLOYEE_CREATED]: '👤 Colaborador Cadastrado',
-    [AUDIT_ACTIONS.EMPLOYEE_DELETED]: '🗑️ Colaborador Excluído',
-    [AUDIT_ACTIONS.EMPLOYEE_PASSWORD_RESET]: '🔐 Senha Reset',
-    [AUDIT_ACTIONS.EMPLOYEE_STATUS_CHANGED]: '🔒 Status Alterado',
-    [AUDIT_ACTIONS.TEAM_INVITE_SENT]: '📨 Convite Enviado',
-    [AUDIT_ACTIONS.DATA_EXPORTED]: '📊 Dados Exportados',
-    [AUDIT_ACTIONS.DATA_IMPORTED]: '📥 Dados Importados',
-    [AUDIT_ACTIONS.BACKUP_CREATED]: '💾 Backup Criado',
-    [AUDIT_ACTIONS.BACKUP_RESTORED]: '♻️ Backup Restaurado',
-    [AUDIT_ACTIONS.CONFIG_FIREBASE_CHANGED]: '☁️ Firebase Config Alterado',
-    [AUDIT_ACTIONS.CONFIG_GEMINI_CHANGED]: '✨ Gemini Config Alterado',
-    [AUDIT_ACTIONS.CONFIG_WHITELABEL_CHANGED]: '🎨 Whitelabel Alterado',
-    [AUDIT_ACTIONS.PLAN_CHANGED]: '💳 Plano Alterado',
-    [AUDIT_ACTIONS.ROLE_SWITCHED]: '🛡️ Papel Alternado',
-    [AUDIT_ACTIONS.PERMISSION_DENIED]: '⛔ Acesso Negado'
+    [AUDIT_ACTIONS.LEAD_CREATED]: 'Lead Criado',
+    [AUDIT_ACTIONS.LEAD_UPDATED]: 'Lead Atualizado',
+    [AUDIT_ACTIONS.LEAD_DELETED]: 'Lead Excluído',
+    [AUDIT_ACTIONS.LEAD_STAGE_CHANGED]: 'Estágio Alterado',
+    [AUDIT_ACTIONS.LEAD_WON]: 'Negócio Fechado (Ganho)',
+    [AUDIT_ACTIONS.LEAD_LOST]: 'Negócio Perdido',
+    [AUDIT_ACTIONS.USER_LOGIN]: 'Login Realizado',
+    [AUDIT_ACTIONS.USER_LOGOUT]: 'Logout',
+    [AUDIT_ACTIONS.USER_REGISTERED]: 'Conta Criada',
+    [AUDIT_ACTIONS.EMPLOYEE_CREATED]: 'Colaborador Cadastrado',
+    [AUDIT_ACTIONS.EMPLOYEE_DELETED]: 'Colaborador Excluído',
+    [AUDIT_ACTIONS.EMPLOYEE_PASSWORD_RESET]: 'Senha Reset',
+    [AUDIT_ACTIONS.EMPLOYEE_STATUS_CHANGED]: 'Status Alterado',
+    [AUDIT_ACTIONS.TEAM_INVITE_SENT]: 'Convite Enviado',
+    [AUDIT_ACTIONS.DATA_EXPORTED]: 'Dados Exportados',
+    [AUDIT_ACTIONS.DATA_IMPORTED]: 'Dados Importados',
+    [AUDIT_ACTIONS.BACKUP_CREATED]: 'Backup Criado',
+    [AUDIT_ACTIONS.BACKUP_RESTORED]: 'Backup Restaurado',
+    [AUDIT_ACTIONS.CONFIG_FIREBASE_CHANGED]: 'Firebase Config Alterado',
+    [AUDIT_ACTIONS.CONFIG_GEMINI_CHANGED]: 'Gemini Config Alterado',
+    [AUDIT_ACTIONS.CONFIG_WHITELABEL_CHANGED]: 'Whitelabel Alterado',
+    [AUDIT_ACTIONS.PLAN_CHANGED]: 'Plano Alterado',
+    [AUDIT_ACTIONS.ROLE_SWITCHED]: 'Papel Alternado',
+    [AUDIT_ACTIONS.PERMISSION_DENIED]: 'Acesso Negado'
   };
-  return labels[action] || `📝 ${action}`;
+  return labels[action] || `${action}`;
 }
 
 /**

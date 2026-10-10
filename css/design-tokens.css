@@ -1,6 +1,7 @@
 /* ==========================================================================
    Nexus CRM Design System - Themes & Design Tokens
-   Inspired by Doctor+ Modern Dashboard (Dark Matte Neon Lime & Clean White)
+   Sober and quiet: white surfaces, ink text, one blue accent. Colour is
+   reserved for meaning (stage, priority, status), never for decoration.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -11,171 +12,179 @@
   --theme-name: 'light';
 
   /* Surfaces & Backgrounds */
-  --bg-deep: #f4f6fa;
+  --bg-deep: #f5f6f8;
   --bg-primary: #ffffff;
   --bg-surface: #ffffff;
   --bg-card: #ffffff;
-  --bg-surface-elevated: #f8fafc;
-  --bg-surface-glass: rgba(255, 255, 255, 0.94);
-  --bg-surface-glass-border: #e2e8f0;
-  --bg-surface-glass-hover: #f1f5f9;
-  
+  --bg-surface-elevated: #f7f8fa;
+  --bg-surface-glass: #ffffff;
+  --bg-surface-glass-border: #e4e7ec;
+  --bg-surface-glass-hover: #eff1f4;
+
   /* Text & Foreground */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-primary: #18212f;
+  --text-secondary: #566173;
+  --text-muted: #8a93a1;
   --text-inverse: #ffffff;
 
-  /* Brand Accents (Doctor+ Neon Lime & Deep Charcoal) */
-  --accent-primary: #0f172a;
-  --accent-primary-hover: #1e293b;
+  /* Primary actions use ink; the blue accent marks selection, links and focus */
+  --accent-primary: #18212f;
+  --accent-primary-hover: #2a3547;
   --accent-text: #ffffff;
-  --accent-secondary: #2563eb;
-  --accent-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  --accent-gradient-glow: 0 4px 14px rgba(15, 23, 42, 0.15);
+  --accent-secondary: #2447a8;
+  --accent: #2447a8;
+  --accent-hover: #1c3a8c;
+  --accent-soft: #eef2fb;
+  --accent-line: #c5d1ee;
+  --accent-gradient: linear-gradient(#18212f, #18212f);
+  --accent-gradient-glow: none;
 
-  /* Signature Doctor+ Neon Lime Highlight */
-  --accent-lime: #d9f942;
-  --accent-lime-hover: #c4eb22;
-  --accent-lime-text: #0b0f17;
-  --accent-lime-glow: 0 0 16px rgba(217, 249, 66, 0.35);
+  /* Legacy names kept so older rules keep working; they now resolve to the accent */
+  --accent-lime: var(--accent);
+  --accent-lime-hover: var(--accent-hover);
+  --accent-lime-text: #ffffff;
+  --accent-lime-glow: none;
+  --color-primary: var(--accent);
 
   /* Status Colors */
-  --color-lead: #0284c7;
-  --color-lead-bg: #f0f9ff;
-  --color-lead-border: #bae6fd;
-  
-  --color-contact: #2563eb;
-  --color-contact-bg: #eff6ff;
-  --color-contact-border: #bfdbfe;
+  --color-lead: #46607f;
+  --color-lead-bg: #f1f4f8;
+  --color-lead-border: #d5dde8;
 
-  --color-proposal: #d97706;
-  --color-proposal-bg: #fffbeb;
-  --color-proposal-border: #fde68a;
+  --color-contact: #2447a8;
+  --color-contact-bg: #eef2fb;
+  --color-contact-border: #c5d1ee;
 
-  --color-negotiation: #7c3aed;
-  --color-negotiation-bg: #f5f3ff;
-  --color-negotiation-border: #ddd6fe;
+  --color-proposal: #9a5b06;
+  --color-proposal-bg: #fdf6e7;
+  --color-proposal-border: #f0dcae;
 
-  --color-won: #16a34a;
-  --color-won-bg: #f0fdf4;
-  --color-won-border: #bbf7d0;
+  --color-negotiation: #5b3fa3;
+  --color-negotiation-bg: #f3f0fa;
+  --color-negotiation-border: #d9d0ef;
 
-  --color-lost: #dc2626;
-  --color-lost-bg: #fef2f2;
-  --color-lost-border: #fecaca;
+  --color-won: #17753f;
+  --color-won-bg: #edf7f0;
+  --color-won-border: #c2e2cd;
+
+  --color-lost: #b3261e;
+  --color-lost-bg: #fdf1f0;
+  --color-lost-border: #f2cdc9;
 
   /* Priorities */
-  --priority-high: #e11d48;
-  --priority-medium: #d97706;
-  --priority-low: #16a34a;
+  --priority-high: #b3261e;
+  --priority-medium: #9a5b06;
+  --priority-low: #566173;
 
   /* Borders & Dividers */
-  --border-subtle: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --border-focus: #0f172a;
+  --border-subtle: #e4e7ec;
+  --border-strong: #cdd3db;
+  --border-focus: #2447a8;
 
-  /* Typography */
-  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Shadows & Elevation */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.05), 0 2px 4px rgba(15, 23, 42, 0.03);
-  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.08), 0 4px 8px rgba(15, 23, 42, 0.04);
-  --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  /* Typography: one family for everything; weight and size carry the hierarchy */
+  --font-heading: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* Radii (Modern Doctor+ rounded corners) */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* Shadows & Elevation: borders do the separating; shadows only lift overlays */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 2px 6px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.14);
+  --shadow-card: none;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
   --radius-full: 9999px;
 
   /* Transitions */
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-bounce: 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-fast: 120ms ease;
+  --transition-normal: 180ms ease;
+  --transition-bounce: 180ms ease;
 
   /* Layout Spacing */
-  --sidebar-width: 250px;
-  --header-height: 64px;
+  --sidebar-width: 232px;
+  --header-height: 60px;
 }
 
 /* --------------------------------------------------------------------------
-   Dark Mode ([data-theme="dark"]) - Doctor+ Aesthetic
+   Dark Mode ([data-theme="dark"])
    -------------------------------------------------------------------------- */
 [data-theme="dark"] {
   --theme-name: 'dark';
 
   /* Surfaces & Backgrounds */
-  --bg-deep: #0b0d12;
-  --bg-primary: #11141c;
-  --bg-surface: #171b26;
-  --bg-card: #1f2533;
-  --bg-surface-elevated: #1f2533;
-  --bg-surface-glass: rgba(23, 27, 38, 0.88);
-  --bg-surface-glass-border: rgba(255, 255, 255, 0.08);
-  --bg-surface-glass-hover: #262d3d;
-  
+  --bg-deep: #10141a;
+  --bg-primary: #151a21;
+  --bg-surface: #1a2029;
+  --bg-card: #1a2029;
+  --bg-surface-elevated: #202731;
+  --bg-surface-glass: #1a2029;
+  --bg-surface-glass-border: #2b3340;
+  --bg-surface-glass-hover: #27303c;
+
   /* Text & Foreground */
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-inverse: #0b0d12;
+  --text-primary: #e9edf2;
+  --text-secondary: #a3adba;
+  --text-muted: #77818f;
+  --text-inverse: #10141a;
 
-  /* Brand Accents (Doctor+ Signature Neon Lime) */
-  --accent-primary: #d9f942;
-  --accent-primary-hover: #c8eb25;
-  --accent-text: #0b0d12;
-  --accent-secondary: #60a5fa;
-  --accent-gradient: linear-gradient(135deg, #d9f942 0%, #a8e010 100%);
-  --accent-gradient-glow: 0 0 24px rgba(217, 249, 66, 0.32);
+  --accent-primary: #e9edf2;
+  --accent-primary-hover: #ffffff;
+  --accent-text: #10141a;
+  --accent-secondary: #8fb0ff;
+  --accent: #8fb0ff;
+  --accent-hover: #adc5ff;
+  --accent-soft: rgba(143, 176, 255, 0.12);
+  --accent-line: rgba(143, 176, 255, 0.35);
+  --accent-gradient: linear-gradient(#e9edf2, #e9edf2);
+  --accent-gradient-glow: none;
 
-  /* Signature Doctor+ Neon Lime Highlight */
-  --accent-lime: #d9f942;
-  --accent-lime-hover: #c4eb22;
-  --accent-lime-text: #0b0f17;
-  --accent-lime-glow: 0 0 20px rgba(217, 249, 66, 0.4);
+  --accent-lime: var(--accent);
+  --accent-lime-hover: var(--accent-hover);
+  --accent-lime-text: #10141a;
+  --accent-lime-glow: none;
+  --color-primary: var(--accent);
 
-  /* Status Colors (Rich Dark Translucent Badges with Luminous Glow) */
-  --color-lead: #38bdf8;
-  --color-lead-bg: rgba(56, 189, 248, 0.12);
-  --color-lead-border: rgba(56, 189, 248, 0.28);
-  
-  --color-contact: #60a5fa;
-  --color-contact-bg: rgba(96, 165, 250, 0.12);
-  --color-contact-border: rgba(96, 165, 250, 0.28);
+  /* Status Colors */
+  --color-lead: #9fb3cc;
+  --color-lead-bg: rgba(159, 179, 204, 0.12);
+  --color-lead-border: rgba(159, 179, 204, 0.28);
 
-  --color-proposal: #fbbf24;
-  --color-proposal-bg: rgba(251, 191, 36, 0.12);
-  --color-proposal-border: rgba(251, 191, 36, 0.28);
+  --color-contact: #8fb0ff;
+  --color-contact-bg: rgba(143, 176, 255, 0.12);
+  --color-contact-border: rgba(143, 176, 255, 0.3);
 
-  --color-negotiation: #c084fc;
-  --color-negotiation-bg: rgba(192, 132, 252, 0.12);
-  --color-negotiation-border: rgba(192, 132, 252, 0.28);
+  --color-proposal: #e0b060;
+  --color-proposal-bg: rgba(224, 176, 96, 0.12);
+  --color-proposal-border: rgba(224, 176, 96, 0.3);
 
-  --color-won: #4ade80;
-  --color-won-bg: rgba(74, 222, 128, 0.12);
-  --color-won-border: rgba(74, 222, 128, 0.28);
+  --color-negotiation: #b9a3ee;
+  --color-negotiation-bg: rgba(185, 163, 238, 0.12);
+  --color-negotiation-border: rgba(185, 163, 238, 0.3);
 
-  --color-lost: #f87171;
-  --color-lost-bg: rgba(248, 113, 113, 0.12);
-  --color-lost-border: rgba(248, 113, 113, 0.28);
+  --color-won: #6cc490;
+  --color-won-bg: rgba(108, 196, 144, 0.12);
+  --color-won-border: rgba(108, 196, 144, 0.3);
+
+  --color-lost: #f08a82;
+  --color-lost-bg: rgba(240, 138, 130, 0.12);
+  --color-lost-border: rgba(240, 138, 130, 0.3);
 
   /* Priorities */
-  --priority-high: #fb7185;
-  --priority-medium: #fbbf24;
-  --priority-low: #4ade80;
+  --priority-high: #f08a82;
+  --priority-medium: #e0b060;
+  --priority-low: #a3adba;
 
   /* Borders & Dividers */
-  --border-subtle: #222836;
-  --border-strong: #2f374a;
-  --border-focus: #d9f942;
+  --border-subtle: #2b3340;
+  --border-strong: #3a4454;
+  --border-focus: #8fb0ff;
 
   /* Shadows & Elevation */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
-  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-card: none;
 }

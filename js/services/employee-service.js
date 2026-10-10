@@ -360,7 +360,7 @@ export function verifyEmployeeLogin(loginInput, password) {
   if (emp.status === 'blocked') {
     return { 
       success: false, 
-      error: '⚠️ Acesso temporariamente bloqueado pela Governança. Contate o Administrador do sistema.' 
+      error: 'Acesso temporariamente bloqueado pela Governança. Contate o Administrador do sistema.' 
     };
   }
 
@@ -416,18 +416,18 @@ export function setEmployeePermanentPassword(employeeId, newPassword) {
  */
 export function generateCredentialsShareText(employee) {
   const url = window.location.origin + window.location.pathname;
-  return `🚀 *Acesso ao Nexus CRM Criado com Sucesso!*
+  return `*Acesso ao Nexus CRM Criado com Sucesso!*
 
 Olá, *${employee.name}*!
 Seu acesso à plataforma Nexus CRM foi configurado com perfil: *${employee.jobTitle}*.
 
-🔑 *Suas Credenciais de Acesso:*
+*Suas Credenciais de Acesso:*
 • *Login:* ${employee.email}
 • *Ou pelo CPF:* ${employee.cpf}
 • *Senha Temporária:* \`${employee.tempPassword || 'Definida'}\`
 • *Endereço da Plataforma:* ${url}
 
-⚠️ *Atenção:* No seu primeiro login, o sistema solicitará a criação da sua senha definitiva pessoal.
+*Atenção:* No seu primeiro login, o sistema solicitará a criação da sua senha definitiva pessoal.
 Qualquer dúvida, contate o Administrador do Sistema.`;
 }
 
