@@ -3,7 +3,7 @@
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'edx-digital-v3.10.0';
+const CACHE_NAME = 'edx-digital-v3.11.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -37,7 +37,13 @@ const STATIC_ASSETS = [
   '/js/services/webhook-service.js',
   '/js/services/firebase-service.js',
   '/js/services/gemini-service.js',
-  '/js/services/export-service.js'
+  '/js/services/export-service.js',
+  '/js/services/import-service.js',
+  '/js/services/reminder-service.js',
+  '/js/core/report.js',
+  '/js/core/customization.js',
+  '/js/ui/import-dialog.js',
+  '/js/ui/customize-dialog.js'
 ];
 
 // Install: Cache core application assets safely without failing if one asset 404s
@@ -149,4 +155,20 @@ self.addEventListener('fetch', (event) => {
       return cachedResponse || fetchPromise;
     })
   );
+});
+
+// A click on a notification brings the CRM to the front, on the screen it points to
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const view = (event.notification.data && event.notification.data.view) || '';
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const open = windows.find(client => new URL(client.url).origin === self.location.origin && !new URL(client.url).pathname.includes('landing'));
+    if (open) {
+      await open.focus();
+      open.postMessage({ type: 'OPEN_VIEW', view });
+      return;
+    }
+    await self.clients.openWindow('/' + (view ? '#' + view : ''));
+  })());
 });

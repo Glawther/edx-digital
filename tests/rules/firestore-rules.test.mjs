@@ -414,3 +414,26 @@ test('o dono exclui a empresa inteira: clientes, auditoria, pessoas, empresa e a
   assert.equal(await get(c.owner, `organizations/${c.orgId}`), DENIED);
   assert.equal(await get(vend, `customers/g-${RUN}`), DENIED);
 });
+
+// ---------------------------------------------------------------- personalização da empresa
+
+test('o administrador renomeia etapas e cria campos extras; listas grandes e vendedores são recusados', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  const fields = (n) => Array.from({ length: n }, (_, i) => ({ id: `cf_campo${i}`, label: `Campo ${i}`, type: 'text' }));
+
+  assert.equal(await patch(world.a.owner, org, { stageNames: { lead: 'Interessado' }, customFields: fields(8) }), OK);
+  assert.equal(await patch(world.a.owner, org, { customFields: fields(9) }), DENIED, 'mais de 8 campos');
+  assert.equal(await patch(world.a.owner, org, { stageNames: 'texto' }), DENIED, 'precisa ser um mapa');
+  assert.equal(await patch(world.ana, org, { stageNames: { lead: 'Meu nome' } }), DENIED, 'vendedor não personaliza');
+  assert.equal(await patch(world.b.owner, org, { customFields: [] }), DENIED, 'outra empresa não mexe');
+});
+
+test('o convite pode ser pausado pelo administrador e deixa de abrir a empresa', async () => {
+  const company = await registerCompany('pausa');
+  assert.equal(await patch(company.owner, `invites/${company.code}`, { active: false, pausedBy: 'team-full' }), OK);
+  const person = await signUp('atrasado');
+  const profile = { orgId: company.orgId, role: 'employee', name: 'Chegou tarde', email: person.email, status: 'active', inviteCode: company.code };
+  assert.equal(await put(person, `users/${person.uid}`, profile), DENIED);
+  assert.equal(await patch(company.owner, `invites/${company.code}`, { active: true, pausedBy: null }), OK);
+  assert.equal(await put(person, `users/${person.uid}`, profile), OK);
+});

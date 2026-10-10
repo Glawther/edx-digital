@@ -4,7 +4,8 @@
  */
 
 import { crmStore } from '../core/crm-store.js';
-import { getCurrentUser, getCurrentRole, isCloudSession, USER_ROLES } from './auth-service.js';
+import { getCurrentUser, getCurrentRole, isCloudSession, setTeamInviteOpen, USER_ROLES } from './auth-service.js';
+import { seatsRoom, currentPlan } from './billing-service.js';
 import { getFirebase, createAccountForSomeoneElse, describeAuthError } from './firebase-app.js';
 
 const EMPLOYEES_STORAGE_KEY = 'edx_employees_db';
@@ -160,6 +161,7 @@ export async function startEmployeeSync() {
     (snap) => {
       cloudProfiles = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       rebuild();
+      syncInviteWithSeats();
     },
     (err) => console.warn('Team list error:', err)
   );
@@ -179,6 +181,7 @@ export async function startEmployeeSync() {
 }
 
 export function stopEmployeeSync() {
+  inviteOpenState = null;
   if (unsubscribeProfiles) unsubscribeProfiles();
   if (unsubscribePrivate) unsubscribePrivate();
   unsubscribeProfiles = null;
@@ -221,6 +224,26 @@ function saveEmployeesToLocal() {
   } catch (e) {
     console.error("Falha ao salvar colaboradores localmente:", e);
   }
+}
+
+function seatsFullMessage(seats) {
+  return `O plano ${currentPlan().name} comporta ${seats.limit} pessoas com acesso, e esse limite foi atingido. Bloqueie ou exclua alguém, ou mude de plano.`;
+}
+
+// With the team full the invite code stops opening; it opens again when there is room
+let inviteOpenState = null;
+function syncInviteWithSeats() {
+  if (getCurrentRole() !== USER_ROLES.ADMIN) return;
+  const open = seatsRoom(employeesCache).left > 0;
+  if (open === inviteOpenState) return;
+  inviteOpenState = open;
+  setTeamInviteOpen(open).catch(() => { inviteOpenState = null; });
+}
+
+// A new code starts open: check it against the team size again
+export function recheckInviteWithSeats() {
+  inviteOpenState = null;
+  syncInviteWithSeats();
 }
 
 function requireAdmin(action) {
@@ -329,6 +352,8 @@ async function saveEmployeeToCloud(input) {
     if (!tempPassword || tempPassword.length < 8) {
       return { success: false, error: 'A senha temporária precisa ter pelo menos 8 caracteres.' };
     }
+    const seats = seatsRoom(employeesCache);
+    if (seats.left <= 0) return { success: false, error: seatsFullMessage(seats) };
 
     const uid = await createAccountForSomeoneElse(email, tempPassword);
     const profile = {
@@ -395,6 +420,11 @@ export async function toggleEmployeeStatus(employeeId) {
 
   const status = emp.status === 'blocked' ? 'active' : 'blocked';
   const now = new Date().toISOString();
+
+  if (status === 'active' && isCloudSession()) {
+    const seats = seatsRoom(employees);
+    if (seats.left <= 0) return { success: false, error: seatsFullMessage(seats) };
+  }
 
   if (isCloudSession()) {
     try {

@@ -55,6 +55,17 @@ npm run test:rules
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
 - **Servidor (Render)**: o login do servidor (`/api/v1`) é independente deste. O aplicativo web não depende dele para entrar.
 
+## Proteções do navegador
+
+- **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
+- **Exportação**: células que uma planilha executaria como fórmula (começando com `=`, `+`, `-` ou `@`) saem com um apóstrofo na frente.
+- **Chave do Gemini**: fica só no navegador de quem a informou e vai para o Google num cabeçalho, nunca no endereço.
+
+### O que vale ligar no console (depende de você)
+
+- **Restringir a chave de API do Firebase** aos seus endereços: Google Cloud Console > APIs e serviços > Credenciais > a chave do navegador > Restrições de aplicativo > Sites, com `edx-digital.web.app/*`, `nexuscrm-d8e13.web.app/*`, `nexuscrm-d8e13.firebaseapp.com/*` e o seu domínio quando houver.
+- **App Check** (reCAPTCHA Enterprise): faz o banco aceitar chamadas só do seu site. Exige criar a chave do reCAPTCHA no console e um ajuste no código; peça quando for ativar.
+
 ## Termos, privacidade e direitos dos titulares
 
 - **Aceite**: quem cria conta marca que leu os Termos de Uso e a Política de Privacidade. A versão aceita e a data ficam em `users/{uid}` (`termsVersion`, `termsAcceptedAt`). Ao mudar o conteúdo de `termos.html` ou `privacidade.html`, atualize `LEGAL_VERSION` em `js/services/auth-service.js`.

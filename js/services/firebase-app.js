@@ -109,6 +109,7 @@ export function describeAuthError(err) {
     'edx/no-profile': 'Esta conta ainda não está ligada a uma empresa. Use Criar conta para cadastrar a empresa ou entrar com um convite.',
     'edx/blocked': 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.',
     'edx/invalid-invite': 'Código de convite inválido ou desativado. Confira com quem administra o CRM da sua empresa.',
+    'edx/team-full': 'A equipe desta empresa já está completa no plano atual. Fale com quem administra o CRM da sua empresa.',
     'edx/account-exists': 'Este e-mail já tem uma conta ligada a uma empresa. Use a aba Entrar.',
     'edx/not-owner': 'Só quem criou a empresa pode excluí-la.'
   };

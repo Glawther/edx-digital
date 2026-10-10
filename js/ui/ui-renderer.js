@@ -3,7 +3,10 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
-import { STAGES, TASK_TYPES, getLossReasonLabel } from '../core/crm-store.js';
+import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
+import { REPORT_PERIODS, periodReport } from '../core/report.js';
+import { localDateString } from '../services/reminder-service.js';
+import { customFacts } from './customize-dialog.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
 import { isDemoSession, isCloudSession, getCurrentUser, isAdmin } from '../services/auth-service.js';
 
@@ -27,38 +30,6 @@ export function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-export const WA_TEMPLATES = [
-  {
-    id: 'intro',
-    title: 'Apresentação Comercial',
-    getText: (c) => `Olá ${c.name || ''}, tudo bem? Sou da equipe comercial do EDX Digital. Recebi seu contato e gostaria de entender seus principais desafios comerciais hoje na ${c.company || 'sua empresa'}.`
-  },
-  {
-    id: 'proposal',
-    title: 'Envio de Proposta',
-    getText: (c) => `Olá ${c.name || ''}! Preparamos a proposta comercial para a ${c.company || 'sua empresa'} com investimento previsto de ${formatBRL(c.dealValue)}. Gostaria de alinhar os detalhes com você. Tem 5 minutos hoje?`
-  },
-  {
-    id: 'followup',
-    title: 'Follow-up de Proposta',
-    getText: (c) => `Olá ${c.name || ''}, tudo bem? Passando para checar se você conseguiu avaliar a proposta que enviamos para a ${c.company || 'sua empresa'}. Ficou com alguma dúvida que possamos esclarecer?`
-  },
-  {
-    id: 'meeting',
-    title: 'Agendamento de Reunião',
-    getText: (c) => `Olá ${c.name || ''}, tudo bem? Gostaria de agendar uma breve conversa de 15 minutos esta semana para demonstrar como o EDX Digital pode otimizar a operação da ${c.company || 'sua empresa'}. Qual melhor dia para você?`
-  }
-];
-
-export function getWhatsAppLink(phone, message) {
-  if (!phone) return null;
-  const digits = String(phone).replace(/\D/g, '');
-  if (digits.length < 8) return null;
-  const fullNumber = digits.length <= 11 ? `55${digits}` : digits;
-  const greeting = encodeURIComponent(message || 'Olá, gostaria de falar sobre nossa oportunidade no EDX Digital.');
-  return `https://wa.me/${fullNumber}?text=${greeting}`;
 }
 
 /**
@@ -216,14 +187,22 @@ function renderLeadCard(customer, permissions = {}) {
 
   const meta = [];
   if (customer.assignedTo) {
-    meta.push(`<span title="Responsável: ${escapeHtml(customer.assignedTo.name)}">${escapeHtml(customer.assignedTo.name.split(' ')[0])}</span>`);
+    const owner = customer.assignedTo.name || customer.assignedTo.email || '';
+    if (owner) meta.push(`<span title="Responsável: ${escapeHtml(owner)}">${escapeHtml(owner.split(/[\s@]/)[0])}</span>`);
   }
   if (customer.expectedCloseDate && !isClosed) {
     const closeDate = new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
     meta.push(`<span title="Previsão de fechamento">Fecha em ${closeDate}</span>`);
   }
-  if (pendingTasks.length > 0) {
+  const today = localDateString();
+  const lateTasks = pendingTasks.filter(t => t.dueDate && t.dueDate < today).length;
+  if (lateTasks > 0) {
+    meta.push(`<span class="is-warning">${lateTasks === 1 ? '1 tarefa atrasada' : `${lateTasks} tarefas atrasadas`}</span>`);
+  } else if (pendingTasks.length > 0) {
     meta.push(`<span>${pendingTasks.length} tarefa${pendingTasks.length > 1 ? 's' : ''}</span>`);
+  } else if (!isClosed) {
+    // an open deal with nothing scheduled is the one that gets forgotten
+    meta.push(`<span class="is-quiet" title="Nenhuma tarefa agendada para esta oportunidade">Sem próxima tarefa</span>`);
   }
   if (isRotting) {
     meta.push(`<span class="is-warning" title="Sem nenhuma atualização nesse período">Parado há ${daysIdle} dias</span>`);
@@ -311,7 +290,7 @@ export function renderTable(customers, permissions = {}) {
             ${customer.phone ? `<button type="button" class="link-btn" onclick="window.handleOpenWhatsAppModal('${customer.id}')">WhatsApp</button>` : ''}
           </div>
         </td>
-        <td>${customer.assignedTo ? escapeHtml(customer.assignedTo.name.replace(/\s*\(.*\)$/, '')) : '<span class="muted">Ninguém</span>'}</td>
+        <td>${customer.assignedTo ? escapeHtml((customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '')) : '<span class="muted">Ninguém</span>'}</td>
         <td class="num">
           <div class="cell-value">${formatBRL(customer.dealValue)}</div>
           ${closeDate ? `<div class="cell-sub">fecha em ${closeDate}</div>` : ''}
@@ -350,7 +329,7 @@ export function renderTasksView(tasks, filter, customers) {
   }
 
   // Filter tasks
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateString();
   const filtered = tasks.filter(t => {
     if (filter === 'completed') return t.completed;
     if (filter === 'pending') return !t.completed;
@@ -374,6 +353,7 @@ export function renderTasksView(tasks, filter, customers) {
     const isToday = !task.completed && task.dueDate === todayStr;
     const typeObj = TASK_TYPES.find(t => t.id === task.type) || TASK_TYPES[0];
     const dateText = task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'sem data';
+    const timeText = task.dueTime ? ` às ${escapeHtml(task.dueTime)}` : '';
 
     return `
       <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" data-customer-id="${task.customerId}">
@@ -389,16 +369,39 @@ export function renderTasksView(tasks, filter, customers) {
           </div>
         </div>
         <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}">
-          ${isOverdue ? `Atrasada desde ${dateText}` : isToday ? 'Hoje' : dateText}
+          ${isOverdue ? `Atrasada desde ${dateText}` : isToday ? `Hoje${timeText}` : `${dateText}${timeText}`}
         </span>
       </div>
     `;
   }).join('');
 }
 
+const REPORT_PERIOD_KEY = 'edx_report_period';
+
+function getReportPeriod() {
+  const saved = localStorage.getItem(REPORT_PERIOD_KEY);
+  return REPORT_PERIODS.some(period => period.id === saved) ? saved : 'month';
+}
+
+export function setReportPeriod(periodId) {
+  if (REPORT_PERIODS.some(period => period.id === periodId)) localStorage.setItem(REPORT_PERIOD_KEY, periodId);
+}
+
+function barRow(label, figures, pct, kind = '') {
+  return `
+    <div class="bar-row">
+      <div class="bar-row-head">
+        <span>${label}</span>
+        <span class="bar-row-figures">${figures}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill ${kind}" style="width: ${pct}%"></div></div>
+    </div>
+  `;
+}
+
 /**
- * Renders the reports view. Every number comes from the leads the person can see;
- * nothing here is a fixed target or an invented rate.
+ * Renders the reports view: what happened in the chosen period, then how the funnel stands now.
+ * Every number comes from the opportunities the person can see; nothing is a target or an estimate.
  */
 export function renderDetailedMetrics(metrics, customers = [], permissions = {}) {
   const container = document.getElementById('metrics-content');
@@ -409,77 +412,59 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     return;
   }
 
-  // Value per stage, bars relative to the largest stage
-  const stageRows = STAGES.filter(st => st.id !== 'lost');
+  const periodId = getReportPeriod();
+  const report = periodReport(customers, periodId);
+  const { totals } = report;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  const periodPills = REPORT_PERIODS.map(period => `
+    <button type="button" class="filter-pill ${period.id === periodId ? 'active' : ''}" aria-pressed="${period.id === periodId}"
+            onclick="window.handleReportPeriod('${period.id}')">${period.label}</button>
+  `).join('');
+
+  // Value per stage as it stands now, bars relative to the largest stage
+  const stageRows = STAGES.filter(st => st.id !== 'lost' && st.id !== 'won');
   const maxStage = Math.max(1, ...stageRows.map(st => metrics.stageSums[st.id] || 0));
   const funnelHtml = stageRows.map(st => {
     const value = metrics.stageSums[st.id] || 0;
     const count = metrics.stageCounts[st.id] || 0;
-    const pct = Math.round((value / maxStage) * 100);
-    return `
-      <div class="bar-row">
-        <div class="bar-row-head">
-          <span>${st.name}</span>
-          <span class="bar-row-figures">${count} ${count === 1 ? 'oportunidade' : 'oportunidades'}<strong>${formatBRL(value)}</strong></span>
-        </div>
-        <div class="bar-track"><div class="bar-fill ${st.id === 'won' ? 'won' : ''}" style="width: ${pct}%"></div></div>
-      </div>
-    `;
+    return barRow(escapeHtml(st.name), `${plural(count, 'oportunidade', 'oportunidades')}<strong>${formatBRL(value)}</strong>`, Math.round((value / maxStage) * 100));
   }).join('');
 
-  // Loss reasons
-  const reasons = Object.entries(metrics.lossReasonCounts || {})
-    .map(([id, data]) => ({ id, ...data }))
-    .filter(r => r.count > 0)
-    .sort((a, b) => b.count - a.count);
-  const totalLost = metrics.lostCount || 1;
-  const lossHtml = reasons.length === 0
-    ? '<p class="empty-note">Nenhuma oportunidade perdida.</p>'
-    : reasons.map(r => {
-        const pct = Math.round((r.count / totalLost) * 100);
-        return `
-          <div class="bar-row">
-            <div class="bar-row-head">
-              <span>${escapeHtml(r.label)}</span>
-              <span class="bar-row-figures">${r.count} de ${metrics.lostCount}<strong>${formatBRL(r.totalValue)}</strong></span>
-            </div>
-            <div class="bar-track"><div class="bar-fill lost" style="width: ${pct}%"></div></div>
-          </div>
-        `;
-      }).join('');
-
-  // Per salesperson (only meaningful when the person sees more than their own leads)
-  const byPerson = {};
-  customers.forEach(c => {
-    const key = c.assignedTo?.email || c.assignedTo?.id || 'none';
-    const name = c.assignedTo?.name ? c.assignedTo.name.replace(/\s*\(.*\)$/, '') : 'Sem responsável';
-    const row = byPerson[key] || (byPerson[key] = { name, openCount: 0, openValue: 0, wonCount: 0, wonValue: 0, lostCount: 0 });
-    const value = Number(c.dealValue) || 0;
-    if (c.stage === 'won') { row.wonCount += 1; row.wonValue += value; }
-    else if (c.stage === 'lost') { row.lostCount += 1; }
-    else { row.openCount += 1; row.openValue += value; }
+  // Why the ones lost in the period were lost
+  const reasonCounts = {};
+  report.lost.forEach(c => {
+    const id = getLossReasonId(c.lossReason);
+    const row = reasonCounts[id] || (reasonCounts[id] = { count: 0, value: 0 });
+    row.count += 1;
+    row.value += Number(c.dealValue) || 0;
   });
-  const people = Object.values(byPerson).sort((a, b) => b.wonValue - a.wonValue || b.openValue - a.openValue);
-  const peopleHtml = permissions.isAdmin && people.length > 0 ? `
+  const reasons = LOSS_REASONS.filter(r => reasonCounts[r.id]).map(r => ({ label: r.label, ...reasonCounts[r.id] })).sort((a, b) => b.count - a.count);
+  const lossHtml = reasons.length === 0
+    ? '<p class="empty-note">Nenhuma oportunidade perdida neste período.</p>'
+    : reasons.map(r => barRow(escapeHtml(r.label), `${r.count} de ${totals.lostCount}<strong>${formatBRL(r.value)}</strong>`, Math.round((r.count / totals.lostCount) * 100), 'lost')).join('');
+
+  const peopleHtml = permissions.isAdmin && report.people.length > 0 ? `
     <section class="settings-section">
       <div class="settings-section-head">
         <div>
           <h2>Por vendedor</h2>
-          <p>Oportunidades atribuídas a cada pessoa.</p>
+          <p>Vendas, perdas e novas oportunidades no período escolhido; a carteira em aberto é a de agora.</p>
         </div>
       </div>
       <div class="table-scroll">
         <table class="plain-table">
-          <thead><tr><th>Vendedor</th><th class="num">Em aberto</th><th class="num">Valor em aberto</th><th class="num">Ganhas</th><th class="num">Valor ganho</th><th class="num">Perdidas</th></tr></thead>
+          <thead><tr><th>Vendedor</th><th class="num">Vendas</th><th class="num">Valor vendido</th><th class="num">Perdidas</th><th class="num">Novas</th><th class="num">Em aberto</th><th class="num">Valor em aberto</th></tr></thead>
           <tbody>
-            ${people.map(row => `
+            ${report.people.map(row => `
               <tr>
                 <td>${escapeHtml(row.name)}</td>
-                <td class="num">${row.openCount}</td>
-                <td class="num">${formatBRL(row.openValue)}</td>
                 <td class="num">${row.wonCount}</td>
                 <td class="num">${formatBRL(row.wonValue)}</td>
                 <td class="num">${row.lostCount}</td>
+                <td class="num">${row.created}</td>
+                <td class="num">${row.openCount}</td>
+                <td class="num">${formatBRL(row.openValue)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -489,6 +474,45 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
   ` : '';
 
   container.innerHTML = `
+    <div class="report-period">
+      <h2 class="section-title">No período</h2>
+      <div class="filter-pills" role="group" aria-label="Período do relatório">${periodPills}</div>
+    </div>
+
+    <div class="figure-row">
+      <div class="figure-box">
+        <div class="figure-label">Vendas fechadas</div>
+        <div class="figure-value">${formatBRL(totals.wonValue)}</div>
+        <div class="figure-note">${plural(totals.wonCount, 'venda', 'vendas')}</div>
+      </div>
+      <div class="figure-box">
+        <div class="figure-label">Novas oportunidades</div>
+        <div class="figure-value">${totals.created}</div>
+        <div class="figure-note">Cadastradas no período.</div>
+      </div>
+      <div class="figure-box">
+        <div class="figure-label">Taxa de conversão</div>
+        <div class="figure-value">${report.conversionRate === null ? 'sem dados' : `${report.conversionRate}%`}</div>
+        <div class="figure-note">${report.conversionRate === null ? 'Nada foi ganho nem perdido no período.' : `${totals.wonCount} ganhas de ${totals.wonCount + totals.lostCount} decididas.`}</div>
+      </div>
+      <div class="figure-box">
+        <div class="figure-label">Ticket médio</div>
+        <div class="figure-value">${report.avgTicket === null ? 'sem dados' : formatBRL(report.avgTicket)}</div>
+        <div class="figure-note">Por venda fechada no período.</div>
+      </div>
+    </div>
+
+    ${peopleHtml}
+
+    <section class="settings-section">
+      <div class="settings-section-head"><div><h2>Motivos de perda</h2><p>O que foi registrado nas oportunidades perdidas no período.</p></div></div>
+      <div class="bar-list">${lossHtml}</div>
+    </section>
+
+    <div class="report-period">
+      <h2 class="section-title">Agora</h2>
+    </div>
+
     <div class="figure-pair">
       <div class="figure-box">
         <div class="figure-label">Previsto para fechar este mês</div>
@@ -502,18 +526,10 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
       </div>
     </div>
 
-    <div class="report-columns">
-      <section class="settings-section">
-        <div class="settings-section-head"><div><h2>Valor por etapa do funil</h2><p>Quanto há em cada etapa agora.</p></div></div>
-        <div class="bar-list">${funnelHtml}</div>
-      </section>
-      <section class="settings-section">
-        <div class="settings-section-head"><div><h2>Motivos de perda</h2><p>O que foi registrado ao marcar uma oportunidade como perdida.</p></div></div>
-        <div class="bar-list">${lossHtml}</div>
-      </section>
-    </div>
-
-    ${peopleHtml}
+    <section class="settings-section">
+      <div class="settings-section-head"><div><h2>Valor em aberto por etapa</h2><p>Quanto há em cada etapa do funil neste momento.</p></div></div>
+      <div class="bar-list">${funnelHtml}</div>
+    </section>
   `;
 }
 
@@ -547,12 +563,13 @@ export function renderLeadTimeline(customer) {
             </select>
           </dd>
         </div>
-        ${fact('Responsável', customer.assignedTo ? escapeHtml(customer.assignedTo.name.replace(/\s*\(.*\)$/, '')) : '')}
+        ${fact('Responsável', customer.assignedTo ? escapeHtml((customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '')) : '')}
         ${fact('Previsão de fechamento', closeDate)}
         ${fact('Prioridade', priorityLabel)}
         ${fact('E-mail', customer.email ? `<a href="mailto:${escapeHtml(customer.email)}">${escapeHtml(customer.email)}</a>` : '')}
         ${fact('Telefone', customer.phone ? `<a href="tel:${escapeHtml(customer.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(customer.phone)}</a>` : '')}
         ${fact('Etiquetas', (customer.tags || []).map(escapeHtml).join(', '))}
+        ${customFacts(customer).map(item => fact(escapeHtml(item.label), escapeHtml(item.value))).join('')}
       </dl>
       ${customer.stage === 'lost' && customer.lossReason ? `<p class="fact-note"><strong>Motivo da perda:</strong> ${escapeHtml(getLossReasonLabel(customer.lossReason))}${customer.lossDetails ? `. ${escapeHtml(customer.lossDetails)}` : ''}</p>` : ''}
       ${customer.notes ? `<p class="fact-note">${escapeHtml(customer.notes)}</p>` : ''}

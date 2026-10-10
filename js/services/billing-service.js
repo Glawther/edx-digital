@@ -1,61 +1,56 @@
 /**
- * EDX Digital - Plans
- * The single source for plan names, prices and limits shown in the app.
- * Keep it in step with the plans section of landing.html.
+ * EDX Digital - Plans and their limits
+ * The single source for plan names, prices and limits in the app.
+ * Keep it in step with the plans section of landing.html and with server/billing/billing-service.js.
+ *
+ * The plans differ only in how much they hold: every feature is in every plan.
  */
 
+import { getSavedOrganization } from '../core/config.js';
+
+const NO_LIMIT = Infinity;
+
 export const PLANS = {
-  starter: {
-    id: 'starter',
-    name: 'Starter',
-    badge: 'Iniciante',
-    priceMonthly: 97,
-    priceYearly: 931,
-    maxLeads: 500,
-    maxUsers: 2,
-    aiQuotaMonth: 30,
-    features: [
-      'Até 500 leads ativos',
-      '2 vendedores / consultores',
-      '30 análises de IA (Gemini Flash)/mês',
-      'Kanban comercial drag & drop',
-      'Backup e exportação CSV'
-    ]
-  },
-  pro: {
-    id: 'pro',
-    name: 'Professional',
-    badge: 'Mais Popular',
-    priceMonthly: 197,
-    priceYearly: 1891,
-    maxLeads: 5000,
-    maxUsers: 10,
-    aiQuotaMonth: 150,
-    features: [
-      'Até 5.000 leads ativos',
-      '10 membros da equipe com papéis',
-      '150 análises de IA/mês',
-      'Customização Whitelabel completa',
-      'Sincronização Cloud Firestore',
-      'Notificações Push no navegador'
-    ]
-  },
-  enterprise: {
-    id: 'enterprise',
-    name: 'Enterprise',
-    badge: 'Corporativo',
-    priceMonthly: 497,
-    priceYearly: 4771,
-    maxLeads: 999999,
-    maxUsers: 999,
-    aiQuotaMonth: 9999,
-    features: [
-      'Leads ilimitados',
-      'Equipe e consultores ilimitados',
-      'Cota de IA ilimitada (Gemini BYOK)',
-      'Histórico de auditoria',
-      'Multi-tenant com isolamento total',
-      'Suporte prioritário VIP 24/7'
-    ]
-  }
+  starter: { id: 'starter', name: 'Starter', priceMonthly: 97, maxLeads: 500, maxUsers: 2 },
+  pro: { id: 'pro', name: 'Professional', priceMonthly: 197, maxLeads: 5000, maxUsers: 10 },
+  enterprise: { id: 'enterprise', name: 'Enterprise', priceMonthly: 497, maxLeads: NO_LIMIT, maxUsers: NO_LIMIT }
 };
+
+export class PlanLimitError extends Error {
+  constructor(message) {
+    super(message);
+    this.code = 'plan-limit';
+  }
+}
+
+export function currentPlan(org = getSavedOrganization()) {
+  return PLANS[org.plan] || PLANS.pro;
+}
+
+function room(used, limit) {
+  return { used, limit, unlimited: limit === NO_LIMIT, left: limit === NO_LIMIT ? Infinity : Math.max(0, limit - used) };
+}
+
+export function isOpenOpportunity(customer) {
+  return customer.stage !== 'won' && customer.stage !== 'lost';
+}
+
+/**
+ * Opportunities still in play count toward the plan; won and lost ones do not.
+ * @param {Array} customers - the opportunities this person can see
+ */
+export function leadsRoom(customers, org) {
+  return room(customers.filter(isOpenOpportunity).length, currentPlan(org).maxLeads);
+}
+
+/**
+ * People with access: the signed-in administrator plus everyone who is not blocked.
+ * @param {Array} employees - the team list, which leaves the signed-in person out
+ */
+export function seatsRoom(employees, org) {
+  return room(employees.filter(e => e.status !== 'blocked').length + 1, currentPlan(org).maxUsers);
+}
+
+export function describeLimit(n) {
+  return n === NO_LIMIT ? 'sem limite' : n.toLocaleString('pt-BR');
+}

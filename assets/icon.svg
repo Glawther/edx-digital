@@ -1,39 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <linearGradient id="edxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="50%" stop-color="#1e293b" />
-      <stop offset="100%" stop-color="#0284c7" />
-    </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#2563eb" />
-      <stop offset="100%" stop-color="#38bdf8" />
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#0284c7" flood-opacity="0.35"/>
-    </filter>
-  </defs>
-  
-  <!-- Background Rounded Shield / Tile -->
-  <rect width="512" height="512" rx="112" fill="url(#edxGrad)" />
-  
-  <!-- Outer Decorative Ring -->
-  <circle cx="256" cy="256" r="190" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="4" stroke-dasharray="12 12" />
-  
-  <!-- EDX Digital Central Monogram Shield with Shadow -->
-  <g filter="url(#shadow)">
-    <!-- Interlocking Hexagonal Nodes -->
-    <polygon points="256,96 384,170 384,318 256,392 128,318 128,170" fill="none" stroke="url(#accentGrad)" stroke-width="20" stroke-linejoin="round" />
-    
-    <!-- Central Core -->
-    <polygon points="256,160 326,204 326,290 256,334 186,290 186,204" fill="#ffffff" fill-opacity="0.95" />
-    
-    <!-- Inner Stylized "N" Path -->
-    <path d="M216 290 V210 L296 290 V210" fill="none" stroke="#0f172a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
-  </g>
-  
-  <!-- Orbiting Satellites (Triad of CID & Intelligence) -->
-  <circle cx="256" cy="76" r="14" fill="#38bdf8" />
-  <circle cx="404" cy="330" r="14" fill="#22c55e" />
-  <circle cx="108" cy="330" r="14" fill="#6366f1" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- EDX Digital: a plain E, the last bar in the accent colour -->
+  <rect width="512" height="512" fill="#18212f"/>
+  <rect x="150" y="144" width="48" height="224" fill="#ffffff"/>
+  <rect x="150" y="144" width="212" height="48" fill="#ffffff"/>
+  <rect x="150" y="232" width="140" height="48" fill="#ffffff"/>
+  <rect x="150" y="320" width="212" height="48" fill="#7f9cf0"/>
 </svg>

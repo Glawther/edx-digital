@@ -12,6 +12,27 @@ export const STAGES = [
   { id: 'lost', name: 'Perdido', color: '#dc2626', bg: '#fef2f2' }
 ];
 
+const DEFAULT_STAGE_NAMES = Object.fromEntries(STAGES.map(s => [s.id, s.name]));
+
+export function getDefaultStageNames() {
+  return { ...DEFAULT_STAGE_NAMES };
+}
+
+/**
+ * Each company can call the stages its own way. The ids never change, only the names shown.
+ */
+export function applyStageNames(custom) {
+  STAGES.forEach(stage => {
+    const name = custom && typeof custom[stage.id] === 'string' ? custom[stage.id].trim() : '';
+    stage.name = name || DEFAULT_STAGE_NAMES[stage.id];
+  });
+}
+
+export function getStageName(id) {
+  const stage = STAGES.find(s => s.id === id || (id === 'contacted' && s.id === 'contact'));
+  return stage ? stage.name : String(id || '');
+}
+
 export const PRIORITIES = [
   { id: 'high', label: 'Alta Prioridade', color: '#e11d48' },
   { id: 'medium', label: 'Média Prioridade', color: '#d97706' },
