@@ -42,7 +42,7 @@ export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
-const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'monthlyGoal'];
+const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal'];
 
 let currentUser = null;
 let currentRole = USER_ROLES.EMPLOYEE;
@@ -124,6 +124,8 @@ async function applyFirebaseUser(fbUser) {
     role: currentRole,
     orgId: profile.orgId,
     mustChangePassword: !!profile.mustChangePassword,
+    // on unless the person turned it off
+    emailDigest: profile.emailDigest !== false,
     isOwner: org.ownerUid === fbUser.uid,
     photoURL: null
   };
@@ -435,6 +437,16 @@ export async function updateOwnName(name) {
   if (currentUser) currentUser.name = clean;
   notifyListeners();
   return clean;
+}
+
+/**
+ * Whether the signed-in person wants the morning summary by e-mail
+ */
+export async function setEmailDigest(wanted) {
+  if (sessionKind !== SESSION_KINDS.CLOUD || !currentUser) return;
+  const { db, fsMod } = await getFirebase();
+  await fsMod.updateDoc(fsMod.doc(db, 'users', currentUser.uid), { emailDigest: Boolean(wanted), updatedAt: new Date().toISOString() });
+  currentUser.emailDigest = Boolean(wanted);
 }
 
 /**

@@ -295,8 +295,8 @@
             <button type="button" class="dropdown-item" id="btn-menu-customize">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Funil, campos e meta</span>
-                <span class="dropdown-item-desc">Etapas, campos extras e meta do mês</span>
+                <span class="dropdown-item-title">Funil, campos e mensagens</span>
+                <span class="dropdown-item-desc">Etapas, campos extras, modelos de mensagem e meta</span>
               </div>
             </button>
 
@@ -1147,7 +1147,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
   <dialog id="customize-dialog" class="crm-dialog" style="max-width: 640px; width: 95%;">
     <div class="dialog-header">
-      <h2 class="dialog-title">Funil, campos e meta</h2>
+      <h2 class="dialog-title">Funil, campos e mensagens</h2>
       <button type="button" class="dialog-close" id="btn-close-customize-dialog" aria-label="Fechar">&times;</button>
     </div>
     <form id="customize-form">
@@ -1160,6 +1160,13 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
+
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Mensagens do WhatsApp</h3>
+        <p class="empty-note" style="margin: 0 0 0.5rem;">Os modelos que a equipe vê ao escrever para um cliente. Sem nenhum modelo aqui, valem os quatro modelos padrão do sistema.</p>
+        <p class="empty-note" style="margin: 0 0 0.85rem;" id="customize-template-fields"></p>
+        <div id="customize-templates"></div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-add-template">Adicionar modelo</button>
+        <button type="button" class="link-btn" id="btn-start-from-defaults" style="margin-left: 0.75rem;">Começar pelos modelos padrão</button>
 
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Meta de vendas do mês</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">O valor que a empresa quer vender em cada mês. O andamento aparece em Relatórios, para quem administra. Deixe em branco para não usar meta.</p>
@@ -1418,6 +1425,10 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
           </div>
           <button type="submit" class="btn btn-outline btn-sm">Trocar senha</button>
         </form>
+        <label class="consent-line" style="margin-top: 0.9rem;">
+          <input type="checkbox" id="account-email-digest">
+          <span>Receber por e-mail, de manhã, o resumo do que há para fazer no dia. Só é enviado quando há algo pendente.</span>
+        </label>
       </div>
 
       <div class="account-block" id="account-export-block">

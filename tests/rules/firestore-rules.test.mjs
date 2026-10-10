@@ -597,3 +597,11 @@ test('cada pessoa liga ou desliga o próprio resumo por e-mail, e só o dela', a
   assert.equal(await patch(world.ana, `users/${world.a.owner.uid}`, { emailDigest: false }), DENIED);
   assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: true }), OK);
 });
+
+test('o administrador grava os modelos de mensagem da empresa; lista grande e vendedor são recusados', async () => {
+  const modelos = [{ name: 'Boas-vindas', text: 'Olá, {nome}!' }];
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: modelos }), OK);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: Array.from({ length: 13 }, (_, i) => ({ name: `M${i}`, text: 'x' })) }), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: 'texto' }), DENIED);
+  assert.equal(await patch(world.ana, `organizations/${world.a.orgId}`, { messageTemplates: [] }), DENIED);
+});

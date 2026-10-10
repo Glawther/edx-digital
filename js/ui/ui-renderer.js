@@ -632,15 +632,44 @@ export function exportSellerReport(customers) {
 /**
  * The "Hoje" screen: what needs the person now, in the order to work through it
  */
-export function renderToday(customers = [], permissions = {}) {
+// Whose day an administrator is looking at on the "Hoje" screen ('' = everyone's)
+let todayOwner = '';
+export function setTodayOwner(ownerId) {
+  todayOwner = typeof ownerId === 'string' ? ownerId : '';
+}
+
+const ownerKey = (customer) => (customer.assignedTo && (customer.assignedTo.id || customer.assignedTo.email)) || '';
+
+export function renderToday(allCustomers = [], permissions = {}) {
   const container = document.getElementById('today-content');
   if (!container) return;
 
+  // one line per person who has open opportunities, with what is urgent for them
+  const people = new Map();
+  if (permissions.isAdmin) {
+    allCustomers.forEach(customer => {
+      const key = ownerKey(customer);
+      if (!key || customer.stage === 'won' || customer.stage === 'lost') return;
+      if (!people.has(key)) people.set(key, { id: key, name: (customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, ''), list: [] });
+      people.get(key).list.push(customer);
+    });
+  }
+  if (todayOwner && !people.has(todayOwner)) todayOwner = '';
+  const customers = todayOwner ? people.get(todayOwner).list : allCustomers;
+  const ownerPills = people.size < 2 ? '' : `
+    <div class="filter-pills today-owners" role="group" aria-label="Ver o dia de quem">
+      <button type="button" class="filter-pill ${todayOwner === '' ? 'active' : ''}" aria-pressed="${todayOwner === ''}" data-click="handleTodayOwner" data-a="">Todos</button>
+      ${[...people.values()].sort((a, b) => a.name.localeCompare(b.name)).map(person => {
+        const urgent = todayPanel(person.list).urgent;
+        return `<button type="button" class="filter-pill ${todayOwner === person.id ? 'active' : ''}" aria-pressed="${todayOwner === person.id}" data-click="handleTodayOwner" data-a="${escapeHtml(person.id)}">${escapeHtml(person.name.split(/[\s@]/)[0])}${urgent ? ` <span class="pill-count">${urgent}</span>` : ''}</button>`;
+      }).join('')}
+    </div>`;
+
   const now = new Date();
   const dateText = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const heading = `<p class="today-date">${dateText.charAt(0).toUpperCase()}${dateText.slice(1)}</p>`;
+  const heading = `<div class="today-head"><p class="today-date">${dateText.charAt(0).toUpperCase()}${dateText.slice(1)}</p>${ownerPills}</div>`;
 
-  if (customers.length === 0) {
+  if (allCustomers.length === 0) {
     container.innerHTML = `
       ${heading}
       <section class="settings-section">
@@ -658,7 +687,7 @@ export function renderToday(customers = [], permissions = {}) {
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   // an administrator sees everyone's work, so each line says whose it is
   const owner = (customer) => {
-    if (!permissions.isAdmin || !customer.assignedTo) return '';
+    if (!permissions.isAdmin || todayOwner || !customer.assignedTo) return '';
     const name = (customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '');
     return name ? `<span class="today-owner">${escapeHtml(name.split(/[\s@]/)[0])}</span>` : '';
   };
@@ -706,7 +735,7 @@ export function renderToday(customers = [], permissions = {}) {
     container.innerHTML = `
       ${heading}
       <section class="settings-section">
-        <div class="settings-section-head"><div><h2>Nada pendente</h2><p>Nenhuma tarefa para hoje nem atrasada, e todas as oportunidades em aberto têm próximo passo e foram atualizadas nos últimos dias.</p></div></div>
+        <div class="settings-section-head"><div><h2>Nada pendente</h2><p>${todayOwner ? 'Para esta pessoa: nenhuma' : 'Nenhuma'} tarefa para hoje nem atrasada, e todas as oportunidades em aberto têm próximo passo e foram atualizadas nos últimos dias.</p></div></div>
       </section>`;
     return;
   }

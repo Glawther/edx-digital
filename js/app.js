@@ -3,6 +3,7 @@
  * Wires the screens to the store, the storage and the services
  */
 
+import { setupErrorReporting } from './services/error-report.js';
 import { applyWhitelabelStyles, getSavedOrganization } from './core/config.js';
 import { applyStageNames, crmStore } from './core/crm-store.js';
 import { storage } from './core/storage-manager.js';
@@ -25,6 +26,7 @@ import {
   renderConnectionStatus,
   renderDetailedMetrics,
   renderToday,
+  setTodayOwner,
   exportSellerReport,
   renderFocusPills,
   renderKanban,
@@ -69,6 +71,7 @@ import { setupAuditTrailView, setupEmployeeManagementEvents, setupTeamInviteEven
 async function initApp() {
   try {
     initTheme();
+    setupErrorReporting();
     setupActions();
     registerActions({
       openNewOpportunity: () => document.getElementById('btn-new-lead')?.click(),
@@ -82,6 +85,7 @@ async function initApp() {
       // from the "Hoje" screen: the funnel showing only what one of its lists holds
       openFunnelFocus: (focus) => { window.handleFocus(focus); window.navigateToView('pipeline'); },
       openView: (view) => window.navigateToView(view),
+      handleTodayOwner: (ownerId) => { setTodayOwner(ownerId || ''); crmStore.emitChange(); },
       handleExportSellerReport: () => {
         try {
           exportSellerReport(crmStore.getState().visibleCustomers);

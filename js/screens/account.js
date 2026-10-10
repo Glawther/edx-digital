@@ -21,6 +21,7 @@ import {
   logoutToPortal,
   markActivity,
   registerCompany,
+  setEmailDigest,
   resendEmailVerification,
   sendPasswordReset,
   signIn,
@@ -61,6 +62,8 @@ export function setupAccountDialog() {
     set('account-summary', user ? `${user.name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${org.name}.` : '');
     show('account-terms', cloud);
     show('account-profile-block', cloud);
+    const digestBox = document.getElementById('account-email-digest');
+    if (digestBox) digestBox.checked = !user || user.emailDigest !== false;
     const nameInput = document.getElementById('account-name');
     if (nameInput) nameInput.value = user ? user.name : '';
     document.getElementById('form-account-password')?.reset();
@@ -87,6 +90,17 @@ export function setupAccountDialog() {
       if (summary && user) summary.textContent = `${name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${getSavedOrganization().name}.`;
       showToast('Nome atualizado.', 'success');
     } catch (err) {
+      showToast(err.code ? describeAuthError(err) : err.message, 'error');
+    }
+  });
+
+  document.getElementById('account-email-digest')?.addEventListener('change', async (e) => {
+    const box = e.currentTarget;
+    try {
+      await setEmailDigest(box.checked);
+      showToast(box.checked ? 'Você vai receber o resumo do dia por e-mail.' : 'Você não vai mais receber o resumo por e-mail.', 'success');
+    } catch (err) {
+      box.checked = !box.checked;
       showToast(err.code ? describeAuthError(err) : err.message, 'error');
     }
   });

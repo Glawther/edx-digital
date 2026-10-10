@@ -211,7 +211,7 @@ service cloud.firestore {
       // O plano e a situação do pagamento não são alteráveis pelo aplicativo
       allow update: if isOrgAdmin(orgId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'monthlyGoal', 'updatedAt'])
+             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal', 'updatedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
         && optText(request.resource.data, 'legalName', 300) && optText(request.resource.data, 'cnpj', 40)
@@ -222,6 +222,8 @@ service cloud.firestore {
             || (request.resource.data.stageNames is map && request.resource.data.stageNames.size() <= 6))
         && (!('customFields' in request.resource.data)
             || (request.resource.data.customFields is list && request.resource.data.customFields.size() <= 8))
+        && (!('messageTemplates' in request.resource.data)
+            || (request.resource.data.messageTemplates is list && request.resource.data.messageTemplates.size() <= 12))
         && (!('monthlyGoal' in request.resource.data)
             || (request.resource.data.monthlyGoal is number && request.resource.data.monthlyGoal >= 0));
 
