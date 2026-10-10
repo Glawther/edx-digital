@@ -34,7 +34,7 @@
     })();
   </script>
 </head>
-<body>
+<body class="auth-pending">
 
   <!-- ======================================================================
        PORTAL DE AUTENTICAÇÃO & REGISTRO (Tríade CID & RBAC)
@@ -55,7 +55,7 @@
       <!-- TAB 1: FORMULÁRIO DE LOGIN -->
       <div id="auth-panel-login">
         <!-- Quick 1-Click Role Login Cards -->
-        <div class="auth-demo-label">Conhecer com dados de exemplo</div>
+        <div class="auth-demo-label">Conhecer com dados de exemplo, sem criar conta</div>
         <div class="auth-demo-grid">
           <button type="button" class="auth-demo-btn" id="btn-quick-login-admin">
             <span class="auth-demo-btn-title">Como administrador</span>
@@ -71,21 +71,13 @@
 
         <form id="form-auth-login">
           <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label for="login-input-email">E-mail ou CPF</label>
-            <input type="text" id="login-input-email" class="form-input" placeholder="voce@empresa.com ou 000.000.000-00" required autocomplete="username">
-          </div>
-
-          <div class="form-group" style="margin-bottom: 0.85rem;">
-            <label for="login-input-password">Senha</label>
-            <input type="password" id="login-input-password" class="form-input" required autocomplete="current-password">
+            <label for="login-input-email">E-mail</label>
+            <input type="email" id="login-input-email" class="form-input" placeholder="voce@empresa.com" required autocomplete="username">
           </div>
 
           <div class="form-group" style="margin-bottom: 1.25rem;">
-            <label for="login-select-role">Perfil</label>
-            <select id="login-select-role" class="form-select">
-              <option value="admin">Administrador</option>
-              <option value="employee" selected>Vendedor</option>
-            </select>
+            <label for="login-input-password">Senha</label>
+            <input type="password" id="login-input-password" class="form-input" required autocomplete="current-password">
           </div>
 
           <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
@@ -93,12 +85,7 @@
           </button>
         </form>
 
-        <div style="margin-top: 0.75rem;">
-          <button type="button" class="btn btn-outline" id="btn-login-google-portal" style="width: 100%; justify-content: center;">
-            <svg width="16" height="16" viewBox="0 0 24 24" style="margin-right: 6px;"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-            Entrar com Google
-          </button>
-        </div>
+        <button type="button" class="auth-text-link" id="btn-forgot-password">Esqueci minha senha</button>
       </div>
 
       <!-- TAB 2: FORMULÁRIO DE REGISTRO (CRIAR EMPRESA OU ENTRAR VIA CONVITE) -->
@@ -135,7 +122,7 @@
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
               <label for="reg-input-password">Senha</label>
-              <input type="password" id="reg-input-password" class="form-input" placeholder="Mínimo de 6 caracteres" minlength="6" required autocomplete="new-password">
+              <input type="password" id="reg-input-password" class="form-input" placeholder="Mínimo de 8 caracteres" minlength="8" required autocomplete="new-password">
             </div>
 
             <button type="submit" id="btn-submit-register" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
@@ -153,7 +140,7 @@
           <form id="form-auth-join-team">
             <div class="form-group" style="margin-bottom: 0.85rem;">
               <label for="join-input-code">Código de convite</label>
-              <input type="text" id="join-input-code" class="form-input" placeholder="NX-0000" required style="text-transform: uppercase; letter-spacing: 0.04em;">
+              <input type="text" id="join-input-code" class="form-input" placeholder="NX-XXXXXXXX" required autocomplete="off" style="text-transform: uppercase; letter-spacing: 0.04em;">
             </div>
 
             <div class="form-group" style="margin-bottom: 0.85rem;">
@@ -168,7 +155,7 @@
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
               <label for="join-input-password">Senha</label>
-              <input type="password" id="join-input-password" class="form-input" placeholder="Mínimo de 6 caracteres" minlength="6" required autocomplete="new-password">
+              <input type="password" id="join-input-password" class="form-input" placeholder="Mínimo de 8 caracteres" minlength="8" required autocomplete="new-password">
             </div>
 
             <button type="submit" id="btn-submit-join-team" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
@@ -203,48 +190,48 @@
 
       <ul class="nav-menu">
         <li>
-          <a href="#pipeline" class="nav-item active" data-view="pipeline" data-title="Pipeline de Vendas">
+          <a href="#pipeline" class="nav-item active" data-view="pipeline" data-title="Funil de vendas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
             <span>Funil de Vendas</span>
             <span class="nav-count" id="nav-count-pipeline">0</span>
           </a>
         </li>
         <li>
-          <a href="#customers" class="nav-item" data-view="customers" data-title="Lista de Clientes e Contatos">
+          <a href="#customers" class="nav-item" data-view="customers" data-title="Clientes">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>Clientes &amp; Leads</span>
+            <span>Clientes</span>
             <span class="nav-count" id="nav-count-customers">0</span>
           </a>
         </li>
         <li>
-          <a href="#tasks" class="nav-item" data-view="tasks" data-title="Agenda de Tarefas &amp; Follow-up">
+          <a href="#tasks" class="nav-item" data-view="tasks" data-title="Tarefas">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            <span>Tarefas &amp; Follow-up</span>
+            <span>Tarefas</span>
             <span class="nav-count" id="nav-count-tasks">0</span>
           </a>
         </li>
         <li>
-          <a href="#metrics" class="nav-item" data-view="metrics" data-title="Visão Geral e Indicadores de Desempenho">
+          <a href="#metrics" class="nav-item" data-view="metrics" data-title="Relatórios">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            <span>Métricas &amp; Relatórios</span>
+            <span>Relatórios</span>
           </a>
         </li>
         <li id="nav-item-team" class="nav-admin-only">
-          <a href="#team" class="nav-item" data-view="team" data-title="Equipe & Convites">
+          <a href="#team" class="nav-item" data-view="team" data-title="Equipe">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>Equipe & Convites</span>
+            <span>Equipe</span>
             <span class="nav-count" id="nav-count-team">0</span>
           </a>
         </li>
         <li id="nav-item-audit" class="nav-admin-only">
-          <a href="#audit" class="nav-item" data-view="audit" data-title="Trilha de Auditoria & Logs">
+          <a href="#audit" class="nav-item" data-view="audit" data-title="Auditoria">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span>Auditoria</span>
             <span class="nav-count" id="nav-count-audit">0</span>
           </a>
         </li>
         <li id="nav-item-security" class="nav-admin-only">
-          <a href="#security" class="nav-item" data-view="security" data-title="Segurança, Governança &amp; Tríade CID">
+          <a href="#security" class="nav-item" data-view="security" data-title="Segurança">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             <span>Segurança</span>
             <span class="nav-count" id="nav-count-security" style="display: none;"></span>
@@ -331,7 +318,7 @@
             <button type="button" class="dropdown-item" id="btn-menu-export-audit">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Exportar Auditoria (CID)</span>
+                <span class="dropdown-item-title">Exportar auditoria</span>
                 <span class="dropdown-item-desc">Relatório de integridade e logs</span>
               </div>
             </button>
@@ -722,107 +709,41 @@
       <!-- VIEW 5: Team Management & Invites -->
       <section class="view-section" id="view-team">
         <div class="team-management-layout">
-          <!-- Team Stats Cards -->
-          <div class="team-stats-grid" id="team-stats-grid">
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="stat-total-members">0</div>
-                <div class="team-stat-label">Membros Ativos</div>
-              </div>
+          <div class="team-summary">
+            <div class="team-summary-item">
+              <div class="team-summary-value" id="stat-total-members">1</div>
+              <div class="team-summary-label">Pessoas com acesso</div>
             </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="stat-pending-invites">0</div>
-                <div class="team-stat-label">Convites Pendentes</div>
-              </div>
+            <div class="team-summary-item">
+              <div class="team-summary-value" id="stat-admin-count">1</div>
+              <div class="team-summary-label">Administradores</div>
             </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="stat-accepted-invites">0</div>
-                <div class="team-stat-label">Convites Aceitos</div>
-              </div>
-            </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(139,92,246,0.12); color: #8b5cf6;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="stat-admin-count">1</div>
-                <div class="team-stat-label">Administradores</div>
-              </div>
+            <div class="team-summary-item">
+              <div class="team-summary-value" id="stat-blocked-members">0</div>
+              <div class="team-summary-label">Acessos bloqueados</div>
             </div>
           </div>
 
-          <!-- Card de Código Rápido de Convite da Empresa (Exclusivo do Dono) -->
-          <div class="team-invite-code-card" style="background: linear-gradient(135deg, var(--accent-soft), rgba(59,130,246,0.05)); border: 1px solid var(--accent-line); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--accent); font-size: 0.95rem;">
-                <span>Código de Acesso da sua Equipe</span>
-                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; background: var(--accent-line); color: var(--accent); font-weight: 700;">Dono da Empresa</span>
-              </div>
-              <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 0 0;">
-                Envie este código aos seus consultores e vendedores. Eles só conseguem criar conta no CRM com este código!
-              </p>
+          <div class="team-invite-card">
+            <div class="team-invite-text">
+              <h2>Código de convite da equipe</h2>
+              <p>Quem tiver este código cria a própria conta como vendedor da sua empresa, em Criar conta, opção Tenho um convite. Se o código vazar, gere outro: o antigo para de funcionar.</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span id="display-team-invite-code" style="font-family: monospace; font-size: 1.25rem; font-weight: 800; letter-spacing: 2px; color: #fff; background: rgba(0,0,0,0.45); padding: 8px 18px; border-radius: 8px; border: 1px dashed var(--accent-line);">
-                NX-8492
-              </span>
-              <button type="button" class="btn btn-primary btn-sm" id="btn-copy-team-code" style="gap: 6px; font-weight: 600;">
-                Copiar Código
-              </button>
+            <div class="team-invite-actions">
+              <span class="team-invite-code" id="display-team-invite-code"></span>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-copy-team-code">Copiar convite</button>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-new-team-code">Gerar novo código</button>
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-            <!-- Invite Form -->
-            <div class="table-container" style="padding: 1.5rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
-                <span style="font-size: 1.2rem;"></span>
-                <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Convidar Membro</h2>
-              </div>
-              <form id="form-team-invite">
-                <div class="form-group" style="margin-bottom: 0.85rem;">
-                  <label for="invite-input-name">Nome Completo *</label>
-                  <input type="text" id="invite-input-name" class="form-input" placeholder="Ex: Maria Silva" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 0.85rem;">
-                  <label for="invite-input-email">E-mail Corporativo *</label>
-                  <input type="email" id="invite-input-email" class="form-input" placeholder="maria@empresa.com" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 0.85rem;">
-                  <label for="invite-select-role">Papel de Acesso</label>
-                  <select id="invite-select-role" class="form-select">
-                    <option value="employee" selected>Vendedor / Consultor</option>
-                    <option value="manager">Gerente de Vendas</option>
-                    <option value="admin">Administrador</option>
-                    <option value="viewer">Visualizador (Somente Leitura)</option>
-                  </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 1rem;">
-                  <label for="invite-input-message">Mensagem Personalizada (Opcional)</label>
-                  <textarea id="invite-input-message" class="form-input" rows="2" placeholder="Ex: Bem-vindo(a) à equipe!"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
-                  Enviar Convite
-                </button>
-              </form>
+          <div class="team-invite-card">
+            <div class="team-invite-text">
+              <h2>Cadastrar alguém você mesmo</h2>
+              <p>Você informa os dados e uma senha temporária; a pessoa troca a senha no primeiro acesso. A lista da equipe, com bloqueio e exclusão de acessos, fica em Segurança.</p>
             </div>
-
-            <!-- Invites List -->
-            <div class="table-container" style="padding: 1.5rem;">
-              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="font-size: 1.2rem;"></span>
-                  <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Convites Enviados</h2>
-                </div>
-              </div>
-              <div id="invites-list-container" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto;">
-                <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
-                  Nenhum convite enviado ainda.
-                </div>
-              </div>
+            <div class="team-invite-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.openEmployeeModal()">Cadastrar colaborador</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.navigateToView('security')">Ver a equipe</button>
             </div>
           </div>
         </div>
@@ -981,11 +902,11 @@
 
           <div class="form-group">
             <label for="input-customer-tags">Tags / Etiquetas (separadas por vírgula)</label>
-            <input type="text" id="input-customer-tags" class="form-input" placeholder="Cloud, Enterprise, Q4">
+            <input type="text" id="input-customer-tags" class="form-input" placeholder="Indicação, Varejo, Urgente">
           </div>
 
           <div class="form-group full-width">
-            <label for="input-customer-assigned">Consultor Responsável (Atribuição RBAC / CID)</label>
+            <label for="input-customer-assigned">Responsável</label>
             <select id="input-customer-assigned" class="form-select">
               <option value="lucas.vendas@nexuscrm.com">Lucas Mendes (Consultor de Vendas)</option>
               <option value="mariana.vendas@nexuscrm.com">Mariana Costa (Consultora de Vendas)</option>
@@ -1323,7 +1244,7 @@
             <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700;">Consultor Comercial / Nexus CRM</div>
             <div><strong>Responsável:</strong> <span id="prop-assigned-name">Lucas Mendes</span></div>
             <div><strong>E-mail Comercial:</strong> <span id="prop-assigned-email">lucas.vendas@nexuscrm.com</span></div>
-            <div><strong>Segurança de Dados:</strong> <span style="color: #16a34a; font-weight: 600;">✓ Tríade CID &amp; LGPD</span></div>
+            
           </div>
         </div>
 
@@ -1331,7 +1252,7 @@
         <div class="proposal-section-title">2. Objeto da Proposta &amp; Escopo da Solução</div>
         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.6; color: #334155;">
           <p id="prop-scope-text" style="margin-bottom: 0.75rem;">
-            Fornecimento de solução corporativa integrada Nexus CRM com automação de funil de vendas, módulo de inteligência artificial Gemini para qualificação de oportunidades, conformidade com a Tríade CID (Confidencialidade, Integridade e Disponibilidade) e suporte a sincronização em nuvem Google Cloud.
+            Fornecimento de solução corporativa integrada Nexus CRM com automação de funil de vendas, módulo de inteligência artificial Gemini para qualificação de oportunidades e sincronização em nuvem.
           </p>
           <ul style="padding-left: 1.25rem; color: #475569; font-size: 0.82rem;">
             <li>Licenciamento completo e suporte técnico comercial especializado.</li>
@@ -1485,19 +1406,19 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             <kbd class="kbd-badge">1</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Clientes &amp; Leads</span>
+            <span>Clientes</span>
             <kbd class="kbd-badge">2</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Tarefas &amp; Follow-up</span>
+            <span>Tarefas</span>
             <kbd class="kbd-badge">3</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Métricas &amp; Metas</span>
+            <span>Relatórios</span>
             <kbd class="kbd-badge">4</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Tríade CID (RBAC)</span>
+            <span>Segurança</span>
             <kbd class="kbd-badge">5</kbd>
           </div>
         </div>
@@ -1539,8 +1460,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <div style="display: flex; align-items: center; gap: 0.6rem;">
         <span style="font-size: 1.25rem;"></span>
         <div>
-          <h2 class="dialog-title" id="employee-dialog-title">Cadastrar Novo Colaborador</h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Tríade CID • Emissão de Credencial Segura &amp; RBAC</span>
+          <h2 class="dialog-title" id="employee-dialog-title">Cadastrar colaborador</h2>
         </div>
       </div>
       <button type="button" class="action-btn" id="btn-close-employee-dialog" aria-label="Fechar modal">
@@ -1554,31 +1474,31 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <div class="dialog-body">
         <div class="form-grid">
           <div class="form-group full-width">
-            <label for="emp-input-name">Nome Completo do Colaborador *</label>
+            <label for="emp-input-name">Nome completo</label>
             <input type="text" id="emp-input-name" class="form-input" placeholder="Ex: Rodrigo Fagundes Silva" required>
           </div>
 
           <div class="form-group">
-            <label for="emp-input-cpf">CPF (com validação oficial) *</label>
+            <label for="emp-input-cpf">CPF (opcional)</label>
             <div style="position: relative;">
-              <input type="text" id="emp-input-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" required autocomplete="off">
+              <input type="text" id="emp-input-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" autocomplete="off">
               <span id="cpf-validation-feedback" class="field-feedback-badge"></span>
             </div>
-            <span style="font-size: 0.7rem; color: var(--text-muted);">Mascarado por padrão em relatórios (LGPD).</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">Só administradores veem o CPF.</span>
           </div>
 
           <div class="form-group">
-            <label for="emp-input-email">E-mail Corporativo *</label>
+            <label for="emp-input-email">E-mail (será o login)</label>
             <input type="email" id="emp-input-email" class="form-input" placeholder="rodrigo@suaempresa.com" required>
           </div>
 
           <div class="form-group">
-            <label for="emp-input-phone">Telefone / WhatsApp</label>
+            <label for="emp-input-phone">Telefone</label>
             <input type="tel" id="emp-input-phone" class="form-input" placeholder="(11) 98888-7777">
           </div>
 
           <div class="form-group">
-            <label for="emp-input-job">Cargo / Função *</label>
+            <label for="emp-input-job">Cargo</label>
             <input type="text" id="emp-input-job" class="form-input" placeholder="Ex: Consultor Comercial B2B" required>
           </div>
 
@@ -1594,30 +1514,27 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           </div>
 
           <div class="form-group">
-            <label for="emp-select-role">Papel de Acesso (RBAC) *</label>
+            <label for="emp-select-role">Perfil de acesso</label>
             <select id="emp-select-role" class="form-select">
-              <option value="employee" selected>Consultor de Vendas (Acesso à Própria Carteira)</option>
-              <option value="admin">Administrador do Sistema (Acesso Global 360°)</option>
+              <option value="employee" selected>Vendedor: vê só a própria carteira</option>
+              <option value="admin">Administrador: vê tudo e gerencia a equipe</option>
             </select>
           </div>
 
-          <div class="form-group full-width" style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 0.85rem; border-radius: 8px;">
+          <div class="form-group full-width" id="emp-password-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-              <label for="emp-input-password" style="font-weight: 600; margin: 0; font-size: 0.82rem;">Senha Temporária de Acesso *</label>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-generate-temp-password" style="padding: 3px 8px; font-size: 0.72rem;">
-                Gerar Senha Segura
-              </button>
+              <label for="emp-input-password" style="margin: 0;">Senha temporária</label>
+              <button type="button" class="btn btn-outline btn-sm" id="btn-generate-temp-password">Gerar outra</button>
             </div>
             <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="emp-input-password" class="form-input" style="font-family: monospace; font-weight: 700; letter-spacing: 0.05em;" placeholder="Clique em Gerar Senha" required>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-temp-password-field" title="Copiar senha">
-                
-              </button>
+              <input type="text" id="emp-input-password" class="form-input" style="font-family: var(--font-mono, monospace);" minlength="8" autocomplete="off" required>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-temp-password-field">Copiar</button>
             </div>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">Ela aparece só agora e não fica guardada. Ao salvar, o login e a senha são copiados para você enviar à pessoa.</span>
             <div style="margin-top: 0.6rem;">
-              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; cursor: pointer; color: var(--text-primary);">
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; color: var(--text-primary);">
                 <input type="checkbox" id="emp-check-require-change" checked>
-                <span><strong>Exigir redefinição de senha no primeiro login</strong> (Recomendado pela Tríade CID)</span>
+                <span>Pedir que a pessoa crie a própria senha no primeiro acesso</span>
               </label>
             </div>
           </div>
@@ -1626,7 +1543,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
 
       <div class="dialog-footer">
         <button type="button" class="btn btn-secondary" id="btn-cancel-employee">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-save-employee">Salvar e Emitir Credencial</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-employee">Salvar</button>
       </div>
     </form>
   </dialog>
@@ -1634,40 +1551,48 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ========================================================================
        MODAL: Troca de Senha Obrigatória no Primeiro Acesso
        ======================================================================== -->
-  <dialog id="first-access-password-dialog" class="crm-dialog" style="max-width: 480px;">
+  <dialog id="credentials-dialog" class="crm-dialog" style="max-width: 480px;">
     <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <span style="font-size: 1.25rem;"></span>
-        <div>
-          <h2 class="dialog-title">Primeiro Acesso - Nova Senha</h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Tríade CID • Governança &amp; Confidencialidade</span>
-        </div>
-      </div>
+      <h2 class="dialog-title" id="credentials-title">Acesso criado</h2>
+    </div>
+    <div class="dialog-body">
+      <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 0.75rem 0;">
+        Envie estes dados para a pessoa agora. A senha temporária não fica guardada: depois de fechar esta janela, não dá para vê-la de novo.
+      </p>
+      <textarea id="credentials-text" class="form-input credentials-text" readonly></textarea>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" id="btn-close-credentials">Fechar</button>
+      <button type="button" class="btn btn-primary" id="btn-copy-credentials">Copiar</button>
+    </div>
+  </dialog>
+
+  <dialog id="first-access-password-dialog" class="crm-dialog" style="max-width: 440px;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Crie a sua senha</h2>
     </div>
 
     <form id="form-first-access-password">
       <input type="hidden" id="first-access-employee-id">
 
       <div class="dialog-body">
-        <div style="background: var(--color-contact-bg); border: 1px solid var(--color-contact-border); border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--color-contact); line-height: 1.4;">
-          Olá, <strong id="first-access-employee-name">Colaborador</strong>! Você está acessando com uma <strong>senha temporária</strong>. Para garantir a segurança dos dados da sua carteira, crie sua senha pessoal definitiva.
-        </div>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 1rem 0;">
+          <strong id="first-access-employee-name" style="color: var(--text-primary);"></strong>, você entrou com a senha temporária que recebeu. Troque por uma senha só sua para continuar.
+        </p>
 
         <div class="form-group" style="margin-bottom: 0.85rem;">
-          <label for="first-access-new-password">Nova Senha Pessoal *</label>
-          <input type="password" id="first-access-new-password" class="form-input" placeholder="Mínimo 6 caracteres" minlength="6" required>
+          <label for="first-access-new-password">Nova senha</label>
+          <input type="password" id="first-access-new-password" class="form-input" placeholder="Mínimo de 8 caracteres" minlength="8" required autocomplete="new-password">
         </div>
 
         <div class="form-group">
-          <label for="first-access-confirm-password">Confirme a Nova Senha *</label>
-          <input type="password" id="first-access-confirm-password" class="form-input" placeholder="Repita a nova senha" minlength="6" required>
+          <label for="first-access-confirm-password">Repita a nova senha</label>
+          <input type="password" id="first-access-confirm-password" class="form-input" minlength="8" required autocomplete="new-password">
         </div>
       </div>
 
       <div class="dialog-footer">
-        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px;">
-          Salvar Senha Definitiva e Acessar CRM
-        </button>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Salvar senha</button>
       </div>
     </form>
   </dialog>
@@ -2340,7 +2265,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=2.4.0"></script>
+  <script type="module" src="js/app.js?v=3.1.0"></script>
 
 </body>
 </html>

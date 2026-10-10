@@ -5,6 +5,7 @@
 
 import { STAGES, PRIORITIES, LOSS_REASONS, TASK_TYPES, getLossReasonLabel } from '../core/crm-store.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
+import { isDemoSession, isCloudSession, getCurrentUser } from '../services/auth-service.js';
 
 export function formatBRL(amount) {
   return new Intl.NumberFormat('pt-BR', {
@@ -350,7 +351,7 @@ export function renderTable(customers, permissions = {}) {
             Editar
           </button>
           ${permissions && permissions.canDelete === false ? `
-            <button class="btn btn-outline btn-sm disabled" disabled title="Exclusão restrita ao Administrador (Integridade CID)" style="opacity: 0.35; cursor: not-allowed;">
+            <button class="btn btn-outline btn-sm disabled" disabled title="Só administradores podem excluir" style="opacity: 0.35; cursor: not-allowed;">
               Excluir
             </button>
           ` : `
@@ -596,7 +597,7 @@ export function renderAuthBadge(user) {
   if (!container) return;
 
   const role = user?.role || 'admin';
-  const roleLabel = role === 'admin' ? 'Admin' : 'Funcionário';
+  const roleLabel = (role === 'admin' ? 'Administrador' : 'Vendedor') + (isDemoSession() ? ' (exemplo)' : '');
   const roleClass = role === 'admin' ? 'admin' : 'employee';
 
   if (user) {
@@ -619,12 +620,11 @@ export function renderAuthBadge(user) {
         </div>
         
         <div class="sidebar-user-actions">
-          <!-- Quick Switch Button for Role (Admin vs Employee) -->
-          <button type="button" class="btn-sidebar-user-action" id="btn-toggle-role" title="Trocar entre administrador e vendedor" aria-label="Trocar entre administrador e vendedor">
+          ${isDemoSession() ? `
+          <button type="button" class="btn-sidebar-user-action" id="btn-toggle-role" title="Ver a demonstração com o outro perfil" aria-label="Ver a demonstração com o outro perfil">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-          </button>
+          </button>` : ''}
 
-          <!-- Return to Auth & Registration Portal -->
           <button type="button" class="btn-sidebar-user-action logout" id="btn-portal-logout" title="Sair" aria-label="Sair">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
@@ -653,384 +653,175 @@ export function renderConnectionStatus(mode) {
     pill.className = 'connection-pill online';
     pill.innerHTML = `
       <span class="pulse-dot"></span>
-      <span>Google Cloud</span>
+      <span>Sincronizado</span>
     `;
-    pill.title = 'Conectado em tempo real com o Google Cloud Firestore';
+    pill.title = 'Os dados da empresa são salvos na nuvem e atualizados em tempo real';
   } else {
     pill.className = 'connection-pill local';
     pill.innerHTML = `
-      <span class="pulse-dot" style="background-color: #d97706; box-shadow: 0 0 6px #d97706;"></span>
-      <span>Modo Local</span>
+      <span class="pulse-dot"></span>
+      <span>Dados de exemplo</span>
     `;
-    pill.title = 'Operando em modo local. Clique para sincronizar com Google Cloud';
+    pill.title = 'Demonstração: os dados são de exemplo e ficam só neste navegador';
   }
 }
 
 /**
- * Renders the Dedicated Tríade CID & Governança View
+ * Renders the "Segurança" view: the team and its access, who can do what, backup and recent activity.
+ * Everything stated here is enforced by the database rules, not only by the screen.
  */
 export function renderSecurityView(state) {
   const container = document.getElementById('security-content-container');
   if (!container) return;
 
   const isAdm = state.currentRole === 'admin';
+  const demo = isDemoSession();
+  const employees = getEmployees();
+  const me = getCurrentUser();
+
+  const teamRows = employees.map(emp => {
+    const initials = (emp.name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const isBlocked = emp.status === 'blocked';
+    const jobLine = [emp.jobTitle, emp.department].filter(Boolean).map(escapeHtml).join(', ');
+    return `
+      <tr>
+        <td>
+          <div class="employee-profile-cell">
+            <div class="employee-avatar-circle">${escapeHtml(initials)}</div>
+            <div>
+              <div class="employee-name-title">${escapeHtml(emp.name)}</div>
+              ${jobLine ? `<div class="employee-job-meta">${jobLine}</div>` : ''}
+            </div>
+          </div>
+        </td>
+        <td>${escapeHtml(emp.email)}</td>
+        <td>
+          ${emp.cpf ? `
+            <span class="cpf-text" id="cpf-text-${emp.id}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
+            <button type="button" class="link-btn" onclick="window.handleToggleCPFVisibility('${emp.id}')">mostrar</button>
+          ` : '<span class="muted">não informado</span>'}
+        </td>
+        <td>${emp.role === 'admin' ? 'Administrador' : 'Vendedor'}</td>
+        <td>
+          ${isBlocked
+            ? '<span class="status-text blocked">Bloqueado</span>'
+            : emp.requirePasswordChange
+              ? '<span class="status-text pending">Ainda não trocou a senha temporária</span>'
+              : '<span class="status-text active">Ativo</span>'}
+        </td>
+        <td>
+          <div class="row-actions">
+            <button type="button" class="link-btn" onclick="window.handleEditEmployee('${emp.id}')">Editar</button>
+            ${demo ? '' : `<button type="button" class="link-btn" onclick="window.handleResetEmployeePassword('${emp.id}')" title="Envia um e-mail para a pessoa criar uma nova senha">Nova senha</button>`}
+            <button type="button" class="link-btn" onclick="window.handleToggleEmployeeStatus('${emp.id}')">${isBlocked ? 'Liberar' : 'Bloquear'}</button>
+            <button type="button" class="link-btn danger" onclick="window.handleDeleteEmployee('${emp.id}')">Excluir</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const permissionRows = [
+    ['Ver clientes e oportunidades', 'Todos da empresa', 'Só os atribuídos a si'],
+    ['Cadastrar e editar oportunidades', 'Sim, e atribuir a qualquer pessoa', 'Sim, na própria carteira'],
+    ['Excluir oportunidades', 'Sim', 'Não'],
+    ['Ver faturamento e métricas da empresa', 'Sim', 'Só os próprios números'],
+    ['Cadastrar, bloquear e excluir pessoas da equipe', 'Sim', 'Não'],
+    ['Ver o histórico de atividade', 'Sim', 'Não'],
+    ['Backup e restauração', 'Sim', 'Não']
+  ].map(([what, admin, seller]) => `<tr><td>${what}</td><td>${admin}</td><td>${seller}</td></tr>`).join('');
 
   container.innerHTML = `
-    <div class="cid-status-bar">
-      <div>
-        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
-          <span style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">Segurança &amp; Governança de Redes</span>
-          <span class="cid-role-badge ${state.currentRole}">
-            ${isAdm ? 'Administrador' : 'Consultor de Vendas'}
-          </span>
-        </div>
-        <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">
-          Aplicação das normas de segurança da informação (ISO 27001 / Tríade CID): menor privilégio (RBAC), auditoria imutável e resiliência offline.
-        </p>
+    ${demo ? `
+      <div class="notice-bar">
+        <span>Você está na demonstração, como ${isAdm ? 'administrador' : 'vendedor'}. Os dados são de exemplo e ficam só neste navegador.</span>
+        <button type="button" class="btn btn-outline btn-sm" onclick="window.handleToggleRole()">
+          Ver como ${isAdm ? 'vendedor' : 'administrador'}
+        </button>
       </div>
-      <button type="button" class="btn btn-primary btn-sm" onclick="window.handleToggleRole()">
-        ${isAdm ? 'Simular Visão do Funcionário ' : 'Alternar para Administrador '}
-      </button>
-    </div>
+    ` : ''}
 
-    <!-- Barra de Conformidade com Normas de Segurança de Redes -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
-      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-contact-bg); color: var(--color-contact); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
-        <div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Criptografia em Redes</div>
-          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">TLS 1.3 &amp; AES-256</div>
-        </div>
-      </div>
-      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-proposal-bg); color: var(--color-proposal); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
-        <div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Controle de Acesso</div>
-          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">RBAC Menor Privilégio</div>
-        </div>
-      </div>
-      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-lost-bg); color: var(--color-lost); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
-        <div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Auditoria &amp; LGPD</div>
-          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">Logs Imutáveis &amp; CPF Seguro</div>
-        </div>
-      </div>
-      <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-won-bg); color: var(--color-won); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
-        <div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Disponibilidade</div>
-          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">Zero Downtime (PWA)</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Painel de Gestão de Funcionários & Credenciais Corporativas (CID/RBAC) -->
     ${isAdm ? `
-      <div class="employee-management-section">
-        <div class="employee-section-header">
+      <section class="settings-section">
+        <div class="settings-section-head">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
-              <span style="font-size: 1.15rem;"></span>
-              <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-                Gestão de Colaboradores &amp; Credenciais Corporativas
-              </h3>
-              <span class="badge-status-pending" style="font-size: 0.72rem;">
-                ${getEmployees().length} Cadastrados
-              </span>
-            </div>
-            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">
-              Cadastre funcionários via <strong>CPF</strong> com emissão de <strong>senha temporária</strong> e exigência de troca no primeiro acesso.
-            </p>
+            <h2>Equipe</h2>
+            <p>${employees.length === 0 ? 'Só você tem acesso por enquanto.' : `${employees.length + 1} pessoas com cadastro, contando você${me ? ` (${escapeHtml(me.email || '')})` : ''}.`}</p>
           </div>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-open-employee-modal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span>Cadastrar Novo Funcionário</span>
-          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-open-employee-modal">Cadastrar colaborador</button>
         </div>
+        ${employees.length === 0 ? `
+          <p class="empty-note">Cadastre alguém aqui, ou envie o código de convite que está em Equipe para a pessoa criar a própria conta.</p>
+        ` : `
+          <div class="table-scroll">
+            <table class="plain-table">
+              <thead>
+                <tr><th>Pessoa</th><th>E-mail de login</th><th>CPF</th><th>Perfil</th><th>Situação</th><th></th></tr>
+              </thead>
+              <tbody>${teamRows}</tbody>
+            </table>
+          </div>
+        `}
+      </section>
+    ` : ''}
 
-        <div class="employee-table-wrapper">
-          <table class="employee-table">
-            <thead>
-              <tr>
-                <th>Colaborador</th>
-                <th>CPF (LGPD)</th>
-                <th>E-mail Corporativo</th>
-                <th>Credencial / 1º Acesso</th>
-                <th>Status</th>
-                <th style="text-align: right;">Ações de Governança</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${getEmployees().length === 0 ? `
-                <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                    Nenhum colaborador cadastrado. Clique no botão acima para cadastrar o primeiro funcionário com CPF e senha temporária.
-                  </td>
-                </tr>
-              ` : getEmployees().map(emp => {
-                const initials = emp.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                const isBlocked = emp.status === 'blocked';
-                return `
-                  <tr>
-                    <td>
-                      <div class="employee-profile-cell">
-                        <div class="employee-avatar-circle">${escapeHtml(initials)}</div>
-                        <div>
-                          <div class="employee-name-title">
-                            ${escapeHtml(emp.name)}
-                            ${emp.role === 'admin' ? '<span title="Administrador" style="font-size: 0.75rem;"></span>' : ''}
-                          </div>
-                          <div class="employee-job-meta">${escapeHtml(emp.jobTitle)} • ${escapeHtml(emp.department)}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="cpf-cell-container" id="cpf-container-${emp.id}">
-                        <span class="cpf-text" id="cpf-text-${emp.id}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
-                        <button type="button" class="btn-toggle-cpf" onclick="window.handleToggleCPFVisibility('${emp.id}')" title="Mostrar/Ocultar CPF completo">
-                          
-                        </button>
-                      </div>
-                    </td>
-                    <td style="color: var(--text-secondary); font-size: 0.82rem;">
-                      ${escapeHtml(emp.email)}
-                    </td>
-                    <td>
-                      ${emp.requirePasswordChange ? `
-                        <div>
-                          <span class="temp-password-badge" title="Senha temporária emitida aguardando primeiro login">
-                            ${escapeHtml(emp.tempPassword || '***')}
-                          </span>
-                          <div style="font-size: 0.68rem; color: #b45309; margin-top: 2px;">Troca obrigatória no 1º acesso</div>
-                        </div>
-                      ` : `
-                        <div>
-                          <span class="badge-status-active" style="font-size: 0.72rem;">
-                            ✓ Senha Pessoal Ativa
-                          </span>
-                          <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">1º acesso concluído</div>
-                        </div>
-                      `}
-                    </td>
-                    <td>
-                      ${isBlocked ? `
-                        <span class="badge-status-blocked">Bloqueado</span>
-                      ` : `
-                        <span class="badge-status-active">Ativo</span>
-                      `}
-                    </td>
-                    <td>
-                      <div class="emp-actions-group" style="justify-content: flex-end;">
-                        <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleCopyEmployeeCredentials('${emp.id}')" title="Copiar credenciais prontas para enviar no WhatsApp ou E-mail">
-                          Copiar
-                        </button>
-                        <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleResetEmployeePassword('${emp.id}')" title="Gerar nova senha temporária imediata">
-                          Resetar
-                        </button>
-                        <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleToggleEmployeeStatus('${emp.id}')" title="${isBlocked ? 'Desbloquear acesso' : 'Bloquear acesso do funcionário'}">
-                          ${isBlocked ? 'Liberar' : 'Bloquear'}
-                        </button>
-                        <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleDeleteEmployee('${emp.id}')" title="Excluir colaborador" style="color: var(--color-lost);">
-                          
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    ` : `
-      <div class="employee-management-section">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.5rem;"></span>
-          <div>
-            <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary);">
-              Gestão de Credenciais Corporativas (Menor Privilégio - RBAC)
-            </h3>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">
-              Como Consultor de Vendas, a emissão e revogação de acessos por CPF é centralizada no <strong>Administrador do Sistema</strong>.
-            </p>
-          </div>
-        </div>
-      </div>
-    `}
-
-    <div class="cid-triad-grid">
-      <!-- C: Confidencialidade -->
-      <div class="cid-card">
-        <div class="cid-card-header">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-c"></div>
-            <div>
-              <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">1. Confidencialidade (C)</h3>
-              <span style="font-size: 0.72rem; color: var(--text-secondary);">Isolamento &amp; Menor Privilégio</span>
-            </div>
-          </div>
-          <span style="font-size: 0.7rem; font-weight: 700; color: var(--color-contact); background: var(--color-contact-bg); border: 1px solid var(--color-contact-border); padding: 2px 7px; border-radius: 4px;">
-            ${isAdm ? 'Acesso Global' : 'Acesso Restrito'}
-          </span>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.5rem;">
-          ${isAdm 
-            ? 'Como <strong>Administrador</strong>, você possui visão consolidada de faturamento global e parametrizações de infraestrutura.'
-            : 'Como <strong>Consultor</strong>, você acessa <strong>somente a sua carteira</strong>. Faturamento geral da empresa e chaves de API permanecem confidenciais.'
-          }
-        </p>
-        <table class="rbac-table">
-          <thead>
-            <tr>
-              <th>Recurso / Operação</th>
-              <th>Admin</th>
-              <th>Funcionário</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Visualizar Oportunidades</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">Todos (${state.allCustomers.length})</span></td>
-              <td><span style="color: var(--color-contact); font-weight: 600;">Seus Leads (${state.visibleCustomers.length})</span></td>
-            </tr>
-            <tr>
-              <td>Métricas de Faturamento Geral</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">Total</span></td>
-              <td><span style="color: var(--color-lost); font-weight: 600;">Oculto</span></td>
-            </tr>
-            <tr>
-              <td>Configurações Cloud / IA</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">Liberado</span></td>
-              <td><span style="color: var(--color-lost); font-weight: 600;">Bloqueado</span></td>
-            </tr>
-            <tr>
-              <td>Exportação Geral de Dados</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">Total</span></td>
-              <td><span style="color: var(--color-proposal); font-weight: 600;">Restrito</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- I: Integridade -->
-      <div class="cid-card">
-        <div class="cid-card-header">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-i"></div>
-            <div>
-              <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">2. Integridade (I)</h3>
-              <span style="font-size: 0.72rem; color: var(--text-secondary);">Trilha de Auditoria &amp; Imutabilidade</span>
-            </div>
-          </div>
-          <span style="font-size: 0.7rem; font-weight: 700; color: var(--color-lost); background: var(--color-lost-bg); border: 1px solid var(--color-lost-border); padding: 2px 7px; border-radius: 4px;">
-            Auditado
-          </span>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.5rem;">
-          Garante a precisão e consistência das informações contra exclusões ou fraudes em operações:
-        </p>
-        <ul style="font-size: 0.79rem; color: var(--text-primary); padding-left: 1.1rem; line-height: 1.6; margin: 0.5rem 0;">
-          <li><strong>Bloqueio de Exclusão:</strong> Consultores não podem apagar leads (privilégio exclusivo de Administrador).</li>
-          <li><strong>Assinatura Digital de Ações:</strong> Toda transação é registrada com nome do operador e timestamp.</li>
-          <li><strong>Motivo de Perda Estratégico:</strong> Cancelamentos exigem formalização do motivo.</li>
-        </ul>
-      </div>
-
-      <!-- D: Disponibilidade -->
-      <div class="cid-card">
-        <div class="cid-card-header">
-          <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-d"></div>
-            <div>
-              <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">3. Disponibilidade (D)</h3>
-              <span style="font-size: 0.72rem; color: var(--text-secondary);">Resiliência &amp; Disaster Recovery</span>
-            </div>
-          </div>
-          <span style="font-size: 0.7rem; font-weight: 700; color: var(--color-won); background: var(--color-won-bg); border: 1px solid var(--color-won-border); padding: 2px 7px; border-radius: 4px;">
-            ${state.availability.isOnline ? 'Online' : 'Resiliente'}
-          </span>
-        </div>
-        <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 0.5rem;">
-          Garante operação ininterrupta do time mesmo com instabilidade de rede ou queda de servidor:
-        </p>
-        <div style="margin: 0.6rem 0; padding: 0.75rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 0.8rem; color: var(--text-primary);">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="color: var(--text-secondary);">Status da Conexão:</span>
-            <strong>${state.availability.isOnline ? 'TLS 1.3 Seguro (Online)' : 'Modo Resiliente Offline'}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-            <span style="color: var(--text-secondary);">Banco de Dados:</span>
-            <strong>${state.storageMode === 'firestore' ? 'Google Cloud Firestore' : 'Cache Local / Híbrido'}</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-secondary);">Tolerância a Falhas:</span>
-            <span style="color: var(--color-won); font-weight: 600;">✓ Ativa (Zero Perda de Dados)</span>
-          </div>
-        </div>
-        <div style="display: flex; gap: 0.5rem; margin-top: auto;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleDownloadBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="Apenas Administrador pode exportar backups"'}>
-            Exportar Backup
-          </button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleTriggerRestoreBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="Apenas Administrador pode restaurar backups"'}>
-            Restaurar Banco
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Audit Log Live Feed -->
-    <div class="table-container" style="padding: 1.25rem;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+    <section class="settings-section">
+      <div class="settings-section-head">
         <div>
-          <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">Trilha de Auditoria em Tempo Real (Audit Log)</h3>
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Registro imutável em conformidade com ISO 27001 para auditoria de segurança da informação.</p>
+          <h2>O que cada perfil pode fazer</h2>
+          <p>${isCloudSession() ? 'Estas regras são aplicadas no servidor: não dependem do que a tela mostra.' : 'Numa conta real, estas regras são aplicadas no servidor.'}</p>
         </div>
-        <span class="audit-tag" style="background: var(--color-contact-bg); color: var(--color-contact); border: 1px solid var(--color-contact-border);">
-          ${state.auditLogs.length} eventos registrados
-        </span>
       </div>
-
-      <div style="overflow-x: auto;">
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th style="width: 130px;">Horário</th>
-              <th style="width: 170px;">Ação</th>
-              <th style="width: 180px;">Usuário / Papel</th>
-              <th>Detalhes da Operação</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${state.auditLogs.length === 0 ? `
-              <tr>
-                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">
-                  Nenhum evento registrado nesta sessão. As ações de criação, edição, alteração de estágio e segurança aparecerão aqui em tempo real.
-                </td>
-              </tr>
-            ` : state.auditLogs.map(log => `
-              <tr>
-                <td style="color: var(--text-secondary); font-size: 0.75rem; white-space: nowrap;">
-                  ${new Date(log.timestamp).toLocaleTimeString('pt-BR')} • ${new Date(log.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                </td>
-                <td>
-                  <span class="audit-tag">${escapeHtml(log.action)}</span>
-                </td>
-                <td>
-                  <div style="font-weight: 600; font-size: 0.8rem;">${escapeHtml(log.userName)}</div>
-                  <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                    ${log.userRole === 'admin' ? 'Admin' : 'Funcionário'}
-                  </div>
-                </td>
-                <td style="color: var(--text-secondary); font-size: 0.8rem;">
-                  ${escapeHtml(log.details)}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
+      <div class="table-scroll">
+        <table class="plain-table">
+          <thead><tr><th></th><th>Administrador</th><th>Vendedor</th></tr></thead>
+          <tbody>${permissionRows}</tbody>
         </table>
       </div>
-    </div>
+    </section>
+
+    ${isAdm ? `
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h2>Cópia de segurança</h2>
+            <p>Baixa um arquivo com todos os clientes e oportunidades. Restaurar grava os registros do arquivo de volta na empresa.</p>
+          </div>
+          <div class="row-actions">
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.handleDownloadBackup()">Baixar cópia</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.handleTriggerRestoreBackup()">Restaurar de um arquivo</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h2>Atividade desta sessão</h2>
+            <p>O histórico completo, com filtros e exportação, fica em Auditoria.</p>
+          </div>
+        </div>
+        ${state.auditLogs.length === 0 ? `
+          <p class="empty-note">Nada registrado desde que você entrou.</p>
+        ` : `
+          <div class="table-scroll">
+            <table class="plain-table">
+              <thead><tr><th>Quando</th><th>O quê</th><th>Quem</th><th>Detalhes</th></tr></thead>
+              <tbody>
+                ${state.auditLogs.map(log => `
+                  <tr>
+                    <td class="nowrap muted">${new Date(log.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${new Date(log.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>${escapeHtml(log.action)}</td>
+                    <td>${escapeHtml(log.userName)}</td>
+                    <td class="muted">${escapeHtml(log.details)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </section>
+    ` : ''}
   `;
 }
 

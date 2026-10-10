@@ -36,7 +36,7 @@ export function setLocalOnlyMode(enabled) {
 // Default commercial organization & whitelabel parameters
 export const defaultOrganization = {
   id: 'org_nexus_default',
-  name: 'Nexus CRM Enterprise',
+  name: 'Empresa Exemplo',
   legalName: 'Nexus Soluções Comerciais e Tecnologia Ltda',
   cnpj: '12.345.678/0001-90',
   logoUrl: '', // Base64 or image URL
@@ -130,15 +130,36 @@ export function getSavedOrganization() {
   return defaultOrganization;
 }
 
+let organizationSyncHook = null;
+
+/**
+ * Lets the sign-in layer save company details to the cloud whenever they change here
+ */
+export function setOrganizationSyncHook(hook) {
+  organizationSyncHook = hook;
+}
+
 /**
  * Saves active Organization / Whitelabel settings
+ * @param {Object} options - skipSync: true when the data just came from the cloud
  */
-export function saveOrganization(org) {
+export function saveOrganization(org, options = {}) {
   if (!org || !org.id) throw new Error("Dados de organização inválidos.");
   const updated = { ...defaultOrganization, ...org, updatedAt: new Date().toISOString() };
   localStorage.setItem(STORAGE_KEYS.ORGANIZATION, JSON.stringify(updated));
   applyWhitelabelStyles(updated);
+  if (!options.skipSync && organizationSyncHook) {
+    Promise.resolve(organizationSyncHook(updated)).catch(() => {});
+  }
   return updated;
+}
+
+/**
+ * Forgets the company kept in this browser (used when a real account signs out)
+ */
+export function clearSavedOrganization() {
+  localStorage.removeItem(STORAGE_KEYS.ORGANIZATION);
+  applyWhitelabelStyles(defaultOrganization);
 }
 
 /**
@@ -169,7 +190,7 @@ export function applyWhitelabelStyles(org = null) {
   });
 
   if (currentOrg.name) {
-    document.title = `${currentOrg.name} - Plataforma de Vendas Inteligente`;
+    document.title = `${currentOrg.name} | Nexus CRM`;
   }
 
   // 3. Apply custom logo if set

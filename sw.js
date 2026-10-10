@@ -1,9 +1,9 @@
 /**
- * Nexus CRM - Enterprise Service Worker (PWA & Offline Resilience)
- * Tríade CID: Disponibilidade (D)
+ * Nexus CRM - Service Worker
+ * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'nexus-crm-v3.0.0';
+const CACHE_NAME = 'nexus-crm-v3.1.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -26,6 +26,7 @@ const STATIC_ASSETS = [
   '/js/core/storage-manager.js',
   '/js/core/theme-manager.js',
   '/js/ui/ui-renderer.js',
+  '/js/services/firebase-app.js',
   '/js/services/auth-service.js',
   '/js/services/employee-service.js',
   '/js/services/billing-service.js',
@@ -93,13 +94,15 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Do not intercept or cache Google Cloud / Firebase / Gemini real-time requests
-  if (
-    url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('firebaseio.com') ||
-    url.hostname.includes('identitytoolkit.googleapis.com') ||
-    url.hostname.includes('generativelanguage.googleapis.com')
-  ) {
+  // Only this app's own files are handled here. Everything else (the database, sign-in,
+  // the AI service, fonts) goes straight to the network: intercepting those breaks the
+  // database's live connection, and nothing from them was ever cached anyway.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // The API is never served from cache
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
