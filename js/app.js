@@ -12,6 +12,7 @@ import {
   renderTasksView,
   renderDetailedMetrics,
   renderLeadTimeline,
+  toggleLostColumn,
   renderConnectionStatus,
   renderAuthBadge,
   renderSecurityView,
@@ -191,7 +192,7 @@ async function initApp() {
     // Subscribe state store changes to DOM rendering
     crmStore.subscribe((state) => {
       renderKPIs(state.metrics, state.permissions);
-      renderKanban(state.filteredCustomers, state.metrics, state.permissions);
+      renderKanban(state.filteredCustomers, state.metrics, state.permissions, state.visibleCustomers.length);
       renderTable(state.filteredCustomers, state.permissions);
       renderTasksView(state.tasks, state.taskFilter, state.allCustomers);
       renderDetailedMetrics(state.metrics, state.visibleCustomers, state.permissions);
@@ -205,6 +206,10 @@ async function initApp() {
         const currentCustomer = state.allCustomers.find(c => c.id === activeLeadDetailsCustomerId);
         if (currentCustomer) {
           renderLeadTimeline(currentCustomer);
+        } else {
+          // The opportunity was deleted while its window was open
+          activeLeadDetailsCustomerId = null;
+          document.getElementById('lead-details-dialog')?.close();
         }
       }
     });
@@ -605,8 +610,12 @@ function setupFilterEvents() {
   const filterPills = document.querySelectorAll('.filter-pill[data-priority]');
   filterPills.forEach(pill => {
     pill.addEventListener('click', () => {
-      filterPills.forEach(p => p.classList.remove('active'));
+      filterPills.forEach(p => {
+        p.classList.remove('active');
+        p.setAttribute('aria-pressed', 'false');
+      });
       pill.classList.add('active');
+      pill.setAttribute('aria-pressed', 'true');
       crmStore.setPriorityFilter(pill.dataset.priority);
     });
   });
@@ -692,6 +701,11 @@ window.handleMoveStage = async function(customerId, newStage) {
 // ==========================================================================
 // Kanban Stage Navigation & Viewport Helpers
 // ==========================================================================
+window.handleToggleLostColumn = function() {
+  toggleLostColumn();
+  crmStore.emitChange();
+};
+
 window.scrollToKanbanStage = function(stageId) {
   const container = document.getElementById('pipeline-columns');
   const targetCol = document.querySelector(`.pipeline-column[data-stage="${stageId}"]`);
@@ -1226,7 +1240,22 @@ function setupDialogEvents() {
       fillAssigneeSelect(assignedSelect, getCurrentUser()?.email);
     }
     customerDialog.showModal();
+    document.getElementById('input-customer-name').focus();
   };
+
+  // (11) 98888-7777 while typing; numbers that start with + are left as typed
+  const phoneInput = document.getElementById('input-customer-phone');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', () => {
+      const raw = phoneInput.value;
+      if (raw.trim().startsWith('+')) return;
+      const d = raw.replace(/\D/g, '').slice(0, 11);
+      if (d.length <= 2) phoneInput.value = d;
+      else if (d.length <= 6) phoneInput.value = `(${d.slice(0, 2)}) ${d.slice(2)}`;
+      else if (d.length <= 10) phoneInput.value = `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+      else phoneInput.value = `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    });
+  }
 
   if (btnNewLead) btnNewLead.addEventListener('click', openNewLead);
   if (btnBottomRightLead) btnBottomRightLead.addEventListener('click', openNewLead);

@@ -5,7 +5,7 @@
 
 import { STAGES, TASK_TYPES, getLossReasonLabel } from '../core/crm-store.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
-import { isDemoSession, isCloudSession, getCurrentUser } from '../services/auth-service.js';
+import { isDemoSession, isCloudSession, getCurrentUser, isAdmin } from '../services/auth-service.js';
 
 export function formatBRL(amount) {
   const value = Number(amount) || 0;
@@ -125,62 +125,100 @@ export function renderKPIs(metrics, permissions = {}) {
   `;
 }
 
+const SHOW_LOST_KEY = 'nexus_crm_show_lost';
+
 /**
- * Renders the Kanban Board Columns and Cards with Rotting and Task Badges
+ * Renders the funnel. The "lost" column stays folded until asked for, so the stages that
+ * are still in play fit on a laptop screen without sideways scrolling.
  */
-export function renderKanban(customers, metrics, permissions = {}) {
+export function renderKanban(customers, metrics, permissions = {}, totalCount = customers.length) {
   const container = document.getElementById('pipeline-columns');
   if (!container) return;
+
+  // A brand-new account sees what to do first instead of six empty columns
+  const emptyState = document.getElementById('pipeline-empty');
+  const bar = document.querySelector('#view-pipeline .pipeline-actions-bar');
+  const isFirstRun = totalCount === 0;
+  document.body.classList.toggle('is-first-run', isFirstRun);
+  if (emptyState) emptyState.hidden = !isFirstRun;
+  if (bar) bar.style.display = isFirstRun ? 'none' : '';
+  container.style.display = isFirstRun ? 'none' : '';
+  const teamButton = document.getElementById('first-run-team');
+  if (teamButton) teamButton.style.display = permissions.isAdmin ? '' : 'none';
+  if (isFirstRun) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const showLost = localStorage.getItem(SHOW_LOST_KEY) === '1';
 
   container.innerHTML = STAGES.map(stage => {
     const stageCustomers = customers.filter(c => (c.stage || 'lead') === stage.id);
     const stageSum = metrics.stageSums[stage.id] || 0;
+    const dropAttrs = `data-stage="${stage.id}" ondragover="event.preventDefault(); this.classList.add('is-drop-target')" ondragleave="if (!this.contains(event.relatedTarget)) this.classList.remove('is-drop-target')" ondrop="this.classList.remove('is-drop-target'); window.handleDropCard(event, '${stage.id}')"`;
+
+    if (stage.id === 'lost' && !showLost) {
+      return `
+        <button type="button" class="pipeline-column is-folded" ${dropAttrs} onclick="window.handleToggleLostColumn()"
+                title="Mostrar as oportunidades perdidas" aria-label="Mostrar as ${stageCustomers.length} oportunidades perdidas">
+          <span class="column-indicator" style="background-color: ${stage.color};"></span>
+          <span class="folded-count">${stageCustomers.length}</span>
+          <span class="folded-label">Perdidas</span>
+        </button>
+      `;
+    }
 
     return `
-      <div class="pipeline-column" data-stage="${stage.id}" ondragover="event.preventDefault()" ondrop="window.handleDropCard(event, '${stage.id}')">
+      <div class="pipeline-column" ${dropAttrs}>
         <div class="column-header">
           <div class="column-title-wrap">
             <span class="column-indicator" style="background-color: ${stage.color};"></span>
             <h3 class="column-title">${stage.name}</h3>
             <span class="column-count">${stageCustomers.length}</span>
           </div>
-          <span class="column-amount">${formatBRL(stageSum)}</span>
+          ${stage.id === 'lost'
+            ? `<button type="button" class="link-btn" onclick="window.handleToggleLostColumn()">Recolher</button>`
+            : `<span class="column-amount">${formatBRL(stageSum)}</span>`}
         </div>
 
         <div class="cards-container">
-          ${stageCustomers.length === 0 ? `
-            <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface-elevated);">
-              Nenhum lead nesta etapa
-            </div>
-          ` : stageCustomers.map(customer => renderLeadCard(customer, permissions)).join('')}
+          ${stageCustomers.length === 0
+            ? `<div class="column-empty">Nada aqui</div>`
+            : stageCustomers.map(customer => renderLeadCard(customer, permissions)).join('')}
         </div>
       </div>
     `;
   }).join('');
 }
 
+export function toggleLostColumn() {
+  const next = localStorage.getItem(SHOW_LOST_KEY) === '1' ? '0' : '1';
+  localStorage.setItem(SHOW_LOST_KEY, next);
+}
+
+function daysWithoutUpdate(customer) {
+  const updatedTime = new Date(customer.updatedAt || customer.createdAt || Date.now()).getTime();
+  return Math.floor((Date.now() - updatedTime) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * One card: what you need to recognise the deal, nothing to click by accident.
+ * The card itself opens the opportunity, where every action lives.
+ */
 function renderLeadCard(customer, permissions = {}) {
   const priorityClass = customer.priority || 'medium';
   const priorityLabel = { high: 'Alta', medium: 'Média', low: 'Baixa' }[priorityClass] || 'Média';
-  const tagsHtml = (customer.tags || []).map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join('');
-
-  // Deal Rotting calculation (> 3 days idle in open stage)
   const isClosed = customer.stage === 'won' || customer.stage === 'lost';
-  const updatedTime = new Date(customer.updatedAt || customer.createdAt || Date.now()).getTime();
-  const daysIdle = Math.floor((Date.now() - updatedTime) / (1000 * 60 * 60 * 24));
+  const daysIdle = daysWithoutUpdate(customer);
   const isRotting = !isClosed && daysIdle >= 3;
-
-  // Pending tasks count
   const pendingTasks = (customer.tasks || []).filter(t => !t.completed);
-
   const company = [customer.company, customer.role].filter(Boolean).map(escapeHtml).join(', ');
 
-  // One quiet line of facts instead of a stack of badges
   const meta = [];
   if (customer.assignedTo) {
     meta.push(`<span title="Responsável: ${escapeHtml(customer.assignedTo.name)}">${escapeHtml(customer.assignedTo.name.split(' ')[0])}</span>`);
   }
-  if (customer.expectedCloseDate) {
+  if (customer.expectedCloseDate && !isClosed) {
     const closeDate = new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
     meta.push(`<span title="Previsão de fechamento">Fecha em ${closeDate}</span>`);
   }
@@ -188,19 +226,22 @@ function renderLeadCard(customer, permissions = {}) {
     meta.push(`<span>${pendingTasks.length} tarefa${pendingTasks.length > 1 ? 's' : ''}</span>`);
   }
   if (isRotting) {
-    meta.push(`<span class="is-warning" title="Sem contato registrado há mais de 3 dias">Parado há ${daysIdle} dias</span>`);
+    meta.push(`<span class="is-warning" title="Sem nenhuma atualização nesse período">Parado há ${daysIdle} dias</span>`);
   }
+
+  const open = `window.handleOpenLeadDetails('${customer.id}')`;
 
   return `
     <div class="lead-card ${isRotting ? 'is-rotting' : ''}"
-         draggable="true"
+         draggable="true" tabindex="0" role="button"
+         aria-label="${escapeHtml(customer.name)}, ${formatBRL(customer.dealValue)}. Abrir a oportunidade."
          ondragstart="window.handleDragStartCard(event, '${customer.id}')"
+         onclick="if (!event.target.closest('select, button, a')) ${open}"
+         onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
          data-id="${customer.id}">
       <div class="lead-card-header">
-        <div class="lead-name" onclick="window.handleOpenLeadDetails('${customer.id}')" style="cursor: pointer;" title="Ver histórico completo">
-          ${escapeHtml(customer.name)}
-        </div>
-        <span class="priority-badge ${priorityClass}" title="Prioridade">${priorityLabel}</span>
+        <div class="lead-name">${escapeHtml(customer.name)}</div>
+        ${priorityClass === 'medium' ? '' : `<span class="priority-badge ${priorityClass}" title="Prioridade ${priorityLabel.toLowerCase()}">${priorityLabel}</span>`}
       </div>
 
       ${company ? `<div class="lead-company">${company}</div>` : ''}
@@ -209,53 +250,19 @@ function renderLeadCard(customer, permissions = {}) {
 
       ${meta.length > 0 ? `<div class="lead-meta">${meta.join('')}</div>` : ''}
 
-      ${customer.tags && customer.tags.length > 0 ? `<div class="lead-tags">${tagsHtml}</div>` : ''}
-
       ${customer.stage === 'lost' && customer.lossReason ? `
         <div class="lead-loss">Motivo: ${escapeHtml(getLossReasonLabel(customer.lossReason))}</div>
       ` : ''}
 
-      ${customer.notes ? `<div class="lead-note" title="${escapeHtml(customer.notes)}">${escapeHtml(customer.notes)}</div>` : ''}
-
       <div class="card-footer">
-        <div class="card-footer-row">
-          <select class="move-stage-select" onchange="window.handleMoveStage('${customer.id}', this.value)" title="Mover estágio">
-            ${STAGES.map(s => `
-              <option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>
-                ${s.name}
-              </option>
-            `).join('')}
-          </select>
-
-          ${customer.phone ? `
-            <button type="button" class="btn-wa" onclick="window.handleOpenWhatsAppModal('${customer.id}')" title="Mensagens rápidas no WhatsApp">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-              <span>Whats</span>
-            </button>
-          ` : ''}
-        </div>
-
-        <div class="card-actions">
-
-          <button class="action-btn" onclick="window.handleOpenProposalModal('${customer.id}')" title="Gerar proposta comercial">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <select class="move-stage-select" onchange="window.handleMoveStage('${customer.id}', this.value)" aria-label="Mover ${escapeHtml(customer.name)} para outra etapa">
+          ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+        </select>
+        ${customer.phone ? `
+          <button type="button" class="card-icon-btn wa" onclick="window.handleOpenWhatsAppModal('${customer.id}')" title="Mensagem pelo WhatsApp" aria-label="Mensagem pelo WhatsApp para ${escapeHtml(customer.name)}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
           </button>
-          <button class="action-btn" onclick="window.handleOpenLeadDetails('${customer.id}')" title="Histórico e Linha do Tempo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </button>
-          <button class="action-btn" onclick="window.handleAnalyzeWithAI('${customer.id}')" title="Analisar com IA">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          </button>
-          <button class="action-btn" onclick="window.handleOpenEditCustomer('${customer.id}')" title="Editar oportunidade">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </button>
-
-          ${permissions && permissions.canDelete === false ? '' : `
-            <button class="action-btn delete-btn" onclick="window.handleDeleteCustomer('${customer.id}')" title="Excluir oportunidade">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          `}
-        </div>
+        ` : ''}
       </div>
     </div>
   `;
@@ -520,9 +527,47 @@ export function renderLeadTimeline(customer) {
   if (!container || !customer) return;
 
   if (nameEl) nameEl.textContent = customer.name;
-  if (metaEl) {
-    const stageObj = STAGES.find(s => s.id === customer.stage) || STAGES[0];
-    metaEl.textContent = `${customer.company || 'Sem empresa'}, ${formatBRL(customer.dealValue)}, em ${stageObj.name}`;
+  if (metaEl) metaEl.textContent = [customer.company, customer.role].filter(Boolean).join(', ');
+
+  const summaryEl = document.getElementById('lead-details-summary');
+  if (summaryEl) {
+    const closeDate = customer.expectedCloseDate
+      ? new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+      : '';
+    const priorityLabel = { high: 'Alta', medium: 'Média', low: 'Baixa' }[customer.priority] || 'Média';
+    const fact = (label, value) => value ? `<div class="fact"><dt>${label}</dt><dd>${value}</dd></div>` : '';
+    summaryEl.innerHTML = `
+      <dl class="fact-grid">
+        ${fact('Valor', `<strong>${formatBRL(customer.dealValue)}</strong>`)}
+        <div class="fact">
+          <dt><label for="lead-details-stage">Etapa</label></dt>
+          <dd>
+            <select id="lead-details-stage" class="form-select form-select-sm" onchange="window.handleMoveStage('${customer.id}', this.value)">
+              ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+          </dd>
+        </div>
+        ${fact('Responsável', customer.assignedTo ? escapeHtml(customer.assignedTo.name.replace(/\s*\(.*\)$/, '')) : '')}
+        ${fact('Previsão de fechamento', closeDate)}
+        ${fact('Prioridade', priorityLabel)}
+        ${fact('E-mail', customer.email ? `<a href="mailto:${escapeHtml(customer.email)}">${escapeHtml(customer.email)}</a>` : '')}
+        ${fact('Telefone', customer.phone ? `<a href="tel:${escapeHtml(customer.phone.replace(/[^\d+]/g, ''))}">${escapeHtml(customer.phone)}</a>` : '')}
+        ${fact('Etiquetas', (customer.tags || []).map(escapeHtml).join(', '))}
+      </dl>
+      ${customer.stage === 'lost' && customer.lossReason ? `<p class="fact-note"><strong>Motivo da perda:</strong> ${escapeHtml(getLossReasonLabel(customer.lossReason))}${customer.lossDetails ? `. ${escapeHtml(customer.lossDetails)}` : ''}</p>` : ''}
+      ${customer.notes ? `<p class="fact-note">${escapeHtml(customer.notes)}</p>` : ''}
+    `;
+  }
+
+  const actionsEl = document.getElementById('lead-details-actions');
+  if (actionsEl) {
+    actionsEl.innerHTML = `
+      <button type="button" class="btn btn-primary btn-sm" onclick="window.handleOpenEditCustomer('${customer.id}')">Editar</button>
+      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenWhatsAppModal('${customer.id}')">WhatsApp</button>` : ''}
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal('${customer.id}')">Proposta</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI('${customer.id}')">Analisar com IA</button>
+      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" onclick="window.handleDeleteCustomer('${customer.id}')">Excluir</button>` : ''}
+    `;
   }
 
   const activities = (customer.activities || []).slice().reverse();
@@ -568,7 +613,7 @@ export function renderAuthBadge(user) {
   if (!container) return;
 
   const role = user?.role || 'admin';
-  const roleLabel = (role === 'admin' ? 'Administrador' : 'Vendedor') + (isDemoSession() ? ' (exemplo)' : '');
+  const roleLabel = role === 'admin' ? 'Administrador' : 'Vendedor';
   const roleClass = role === 'admin' ? 'admin' : 'employee';
 
   if (user) {

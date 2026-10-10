@@ -21,11 +21,11 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=2.0.0">
-  <link rel="stylesheet" href="css/layout.css?v=2.0.0">
-  <link rel="stylesheet" href="css/components.css?v=2.0.0">
-  <link rel="stylesheet" href="css/animations.css?v=2.0.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.3.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.4.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.4.0">
+  <link rel="stylesheet" href="css/components.css?v=3.4.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.4.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.4.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -454,30 +454,25 @@
       <!-- VIEW 1: Pipeline Kanban -->
       <section class="view-section active" id="view-pipeline">
         <div class="pipeline-actions-bar">
-          <div class="filter-pills">
-            <span class="filter-pill active" data-priority="all">Todas Prioridades</span>
-            <span class="filter-pill" data-priority="high">Alta Prioridade</span>
-            <span class="filter-pill" data-priority="medium">Média Prioridade</span>
-            <span class="filter-pill" data-priority="low">Baixa Prioridade</span>
+          <div class="filter-group">
+            <span class="filter-label" id="priority-filter-label">Prioridade</span>
+            <div class="filter-pills" role="group" aria-labelledby="priority-filter-label">
+              <button type="button" class="filter-pill active" data-priority="all" aria-pressed="true">Todas</button>
+              <button type="button" class="filter-pill" data-priority="high" aria-pressed="false">Alta</button>
+              <button type="button" class="filter-pill" data-priority="medium" aria-pressed="false">Média</button>
+              <button type="button" class="filter-pill" data-priority="low" aria-pressed="false">Baixa</button>
+            </div>
           </div>
-          <div class="pipeline-nav-controls">
-            <div class="kanban-stage-pills" id="kanban-stage-pills" aria-label="Navegação rápida por estágio">
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('lead')" title="Ir para Novo Lead">Novo Lead</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('contact')" title="Ir para Primeiro Contato">Contato</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('proposal')" title="Ir para Proposta Enviada">Proposta</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('negotiation')" title="Ir para Em Negociação">Negociação</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('won')" title="Ir para Fechado Ganho">Ganho</button>
-              <button type="button" class="stage-nav-pill" onclick="window.scrollToKanbanStage('lost')" title="Ir para Perdido">Perdido</button>
-            </div>
-            
-            <div class="kanban-scroll-arrows">
-              <button type="button" class="kanban-scroll-btn" id="btn-kanban-scroll-left" onclick="window.scrollKanbanHorizontally(-300)" title="Rolar Kanban para a esquerda">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <button type="button" class="kanban-scroll-btn" id="btn-kanban-scroll-right" onclick="window.scrollKanbanHorizontally(300)" title="Rolar Kanban para a direita">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
+          <span class="pipeline-hint">Arraste um cartão para mudar de etapa. Clique nele para ver tudo.</span>
+        </div>
+
+        <div class="first-run" id="pipeline-empty" hidden>
+          <h2>Seu funil está vazio</h2>
+          <p>Comece cadastrando uma oportunidade, ou traga os contatos que você já tem em uma planilha.</p>
+          <div class="first-run-actions">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-new-lead').click()">Cadastrar a primeira oportunidade</button>
+            <button type="button" class="btn btn-outline" onclick="document.getElementById('btn-menu-import').click()">Importar de uma planilha</button>
+            <button type="button" class="btn btn-outline" id="first-run-team" onclick="window.navigateToView('team')">Convidar a equipe</button>
           </div>
         </div>
 
@@ -517,10 +512,10 @@
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
               <h2 class="section-title">Tarefas</h2>
               <div class="filter-pills" id="task-filter-pills">
-                <span class="filter-pill active" data-task-filter="pending">Pendentes</span>
-                <span class="filter-pill" data-task-filter="today">Hoje</span>
-                <span class="filter-pill" data-task-filter="all">Todas</span>
-                <span class="filter-pill" data-task-filter="completed">Concluídas</span>
+                <button type="button" class="filter-pill active" data-task-filter="pending">Pendentes</button>
+                <button type="button" class="filter-pill" data-task-filter="today">Hoje</button>
+                <button type="button" class="filter-pill" data-task-filter="all">Todas</button>
+                <button type="button" class="filter-pill" data-task-filter="completed">Concluídas</button>
               </div>
             </div>
 
@@ -702,7 +697,7 @@
 
           <div class="form-group">
             <label for="input-customer-phone">Telefone ou WhatsApp</label>
-            <input type="tel" id="input-customer-phone" class="form-input" placeholder="+55 11 98888-7777">
+            <input type="tel" id="input-customer-phone" class="form-input" placeholder="(11) 98888-7777" inputmode="tel" autocomplete="off">
           </div>
 
           <div class="form-group">
@@ -815,7 +810,7 @@
   <!-- ========================================================================
        MODAL: Lead Details & Activity Timeline Dialog
        ======================================================================== -->
-  <dialog id="lead-details-dialog" class="crm-dialog" style="max-width: 680px;">
+  <dialog id="lead-details-dialog" class="crm-dialog" style="max-width: 720px; width: 95%;">
     <div class="dialog-header">
       <div>
         <h2 class="dialog-title" id="lead-details-name">Detalhes da Oportunidade</h2>
@@ -827,7 +822,10 @@
     </div>
 
     <div class="dialog-body">
-      <!-- Quick Action Toolbar -->
+      <div id="lead-details-summary"></div>
+      <div class="lead-details-actions" id="lead-details-actions"></div>
+
+      <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
       <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
           Registrar ligação
@@ -1755,7 +1753,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.3.0"></script>
+  <script type="module" src="js/app.js?v=3.4.0"></script>
 
 </body>
 </html>
