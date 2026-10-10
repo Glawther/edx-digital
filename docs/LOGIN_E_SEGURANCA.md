@@ -59,7 +59,7 @@ npm run test:rules
 
 - **Só arquivos públicos**: o servidor entrega as páginas, `js/`, `css/` e `assets/`. O código dele, a pasta de dados, configurações e arquivos ocultos respondem "não encontrado". A lista fica em `server/controllers/static-controller.js`.
 - **Rotas em uso**: cobrança (`/api/billing`), caixa de entrada de formulários (`/api/webhook/leads`) e `/health`. Qualquer outro endereço em `/api` responde 404.
-- **API antiga desligada**: o código em `server/routes/api-v1.js` e os módulos que ele usa continuam no repositório, com os testes deles, mas não estão ligados ao servidor. O aplicativo nunca usou essa API, e a rota de token dela entregava sessão sem conferir quem pedia.
+- **API antiga removida**: existia uma `/api/v1` que o aplicativo nunca usou, com uma rota de token que entregava sessão sem conferir quem pedia. O código e os testes dela saíram do repositório; o endereço responde 404, e `server/tests/server-surface.test.js` confere isso.
 - **Caixa de entrada de formulários**: cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
 
 ## Proteções do banco
