@@ -134,6 +134,9 @@ h1, h2, h3, h4 {
   box-shadow: var(--shadow-lg) !important;
 }
 
+/* Buttons and fields do not take the page's typeface on their own */
+button, input, select, textarea { font-family: inherit; }
+
 .tools-group-title,
 [data-theme="light"] .tools-group-title {
   color: var(--text-muted);
