@@ -13,10 +13,24 @@ const WEBHOOK_CONFIG_KEY = 'nexus_webhook_config';
 /**
  * Gets or initializes the webhook configuration
  */
+function newWebhookToken() {
+  const bytes = new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return 'nxwh_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function getWebhookConfig() {
   try {
     const raw = localStorage.getItem(WEBHOOK_CONFIG_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      // Older tokens were short and guessable; they are replaced on first use
+      if (!/^nxwh_[0-9a-f]{40}$/.test(saved.token || '')) {
+        saved.token = newWebhookToken();
+        saveWebhookConfig(saved);
+      }
+      return saved;
+    }
   } catch (e) {
     console.warn('[Webhook] Error loading config:', e);
   }
@@ -24,7 +38,7 @@ export function getWebhookConfig() {
   // Default configuration
   const defaultConfig = {
     enabled: true,
-    token: 'nx_wh_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36),
+    token: newWebhookToken(),
     autoAssignRole: 'employee',
     notifyOnIngest: true,
     lastIngestCheck: null
@@ -45,7 +59,7 @@ export function saveWebhookConfig(config) {
  */
 export function regenerateWebhookToken() {
   const cfg = getWebhookConfig();
-  cfg.token = 'nx_wh_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now().toString(36);
+  cfg.token = newWebhookToken();
   saveWebhookConfig(cfg);
   logAudit(AUDIT_ACTIONS.SECURITY_ALERT, { action: 'webhook_token_regenerated' });
   return cfg.token;
@@ -63,7 +77,8 @@ function getBase() {
  */
 export async function pollWebhookInbox() {
   try {
-    const res = await fetch(getBase() + '/api/webhook/leads');
+    const token = getWebhookConfig().token;
+    const res = await fetch(getBase() + '/api/webhook/leads', { headers: { 'x-webhook-token': token } });
     if (!res.ok) return { count: 0, leads: [] };
     const data = await res.json();
     if (!data.leads || data.leads.length === 0) return { count: 0, leads: [] };
@@ -143,7 +158,7 @@ export async function pollWebhookInbox() {
     if (acknowledgedIds.length > 0) {
       fetch(getBase() + '/api/webhook/leads/ack', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-webhook-token': token },
         body: JSON.stringify({ leadIds: acknowledgedIds })
       }).catch(e => console.warn('[Webhook] ACK failed:', e));
     }

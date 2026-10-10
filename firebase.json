@@ -17,7 +17,16 @@
       "firestore.rules",
       ".env*",
       "*.log",
-      "**/*.log"
+      "**/*.log",
+      "tests/**",
+      "docs/**",
+      "HISTORICO_DO_PROJETO.md",
+      "Dockerfile",
+      "docker-compose.yml",
+      "render.yaml",
+      "railway.json",
+      "Procfile",
+      "deploy-cloudrun.*"
     ],
     "headers": [
       {
@@ -94,5 +103,19 @@
   },
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
   }
 }

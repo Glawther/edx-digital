@@ -7,7 +7,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
-const DATA_DIR = path.join(ROOT_DIR, 'data');
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, 'data');
 const WEBHOOK_FILE = path.join(DATA_DIR, 'webhook_leads.json');
 
 const MIME_TYPES = {
