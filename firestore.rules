@@ -207,6 +207,14 @@ service cloud.firestore {
         && orgOwner(resource.data.orgId) == request.auth.uid;
     }
 
+    // ---------------------------------------------------------------- cobranças
+
+    // Criadas e alteradas só pelo servidor de cobrança. O administrador pode ver as da sua empresa.
+    match /payments/{paymentId} {
+      allow read: if isOrgAdmin(resource.data.orgId);
+      allow write: if false;
+    }
+
     // Tudo o que não está listado acima fica fechado (inclusive as coleções antigas
     // employees e system_config, que eram públicas).
     match /{document=**} {

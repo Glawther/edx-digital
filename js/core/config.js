@@ -156,6 +156,29 @@ export function applyWhitelabelStyles(org = null) {
   }
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+export const TRIAL_DAYS = 14;
+
+/**
+ * Where the company's plan stands today:
+ *   trial        still inside the free period
+ *   trial_ended  free period over, nothing paid yet
+ *   active       paid, with days left
+ *   expired      paid before, period over
+ */
+export function getPlanState(org = getSavedOrganization()) {
+  const now = Date.now();
+  if (org.planStatus === 'active' && org.paidUntil) {
+    const daysLeft = Math.ceil((Date.parse(org.paidUntil) - now) / DAY_MS);
+    return daysLeft > 0
+      ? { status: 'active', daysLeft, until: org.paidUntil }
+      : { status: 'expired', daysLeft: 0, until: org.paidUntil };
+  }
+  const created = Date.parse(org.createdAt) || now;
+  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor((now - created) / DAY_MS));
+  return daysLeft > 0 ? { status: 'trial', daysLeft } : { status: 'trial_ended', daysLeft: 0 };
+}
+
 /**
  * Retrieves AI usage metrics for the active organization
  */

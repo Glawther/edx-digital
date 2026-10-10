@@ -25,7 +25,8 @@ import {
   getSavedOrganization, 
   saveOrganization, 
   applyWhitelabelStyles, 
-  getAiUsageMetrics 
+  getAiUsageMetrics,
+  getPlanState
 } from './core/config.js';
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from './services/gemini-service.js';
 import {
@@ -50,7 +51,9 @@ import {
   deleteCompany,
   isCompanyOwner,
   markActivity,
-  isIdleTooLong
+  isIdleTooLong,
+  getIdToken,
+  refreshOrganization
 } from './services/auth-service.js';
 import { describeAuthError } from './services/firebase-app.js';
 import {
@@ -261,6 +264,7 @@ async function enterSession({ resumed = false } = {}) {
   initAuditFirestore(isCloudSession() ? getFirestoreDb() : null);
 
   if (typeof window.refreshTeamInviteCard === 'function') window.refreshTeamInviteCard();
+  if (typeof window.refreshPlanPill === 'function') window.refreshPlanPill();
   if (typeof window.navigateToView === 'function') window.navigateToView('pipeline');
   crmStore.emitChange();
 
@@ -465,10 +469,6 @@ function applyRoleUIRestrictions(permissions) {
 
   // Oculta área de faturamento e configuração de PIX para funcionários
 
-  const adminSettingsSection = document.getElementById('chk-admin-settings-section');
-  // Where subscription payments go is the platform operator's setting, not each customer's
-  const isPlatformOwner = localStorage.getItem('nexus_platform_owner') === '1';
-  if (adminSettingsSection) adminSettingsSection.style.display = (isAdmin && isPlatformOwner) ? 'block' : 'none';
 
   // 3. Configurações de Nuvem & IA (Gemini / Firebase)
   if (permissions.canAccessCloudConfig) {
@@ -3195,13 +3195,14 @@ function setupBillingEvents() {
 
     const planNames = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
     const plan = PLANS[org.plan] || PLANS.pro;
-    const onTrial = org.planStatus === 'trial';
+    const planState = getPlanState(org);
+    const onTrial = planState.status === 'trial' || planState.status === 'trial_ended';
     const unlimited = org.plan === 'enterprise';
     const limit = (n) => (unlimited ? 'sem limite' : n.toLocaleString('pt-BR'));
     const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
     set('billing-plan-name', planNames[org.plan] || 'Professional');
-    set('billing-plan-badge', onTrial ? `Período de teste: ${org.trialDaysLeft ?? 14} dias restantes` : 'Assinatura ativa');
+    set('billing-plan-badge', describePlanState(planState));
 
     const used = metrics.used || 0;
     const quota = plan.aiQuotaMonth;
@@ -3215,8 +3216,9 @@ function setupBillingEvents() {
     // During the trial every plan can still be subscribed to, including the current one
     document.querySelectorAll('.btn-plan-select').forEach(btn => {
       const isCurrent = btn.dataset.plan === org.plan;
-      btn.disabled = isCurrent && !onTrial;
-      btn.textContent = isCurrent && !onTrial ? 'Plano atual' : `Assinar ${planNames[btn.dataset.plan] || btn.dataset.plan}`;
+      const renew = isCurrent && !onTrial;
+      btn.disabled = false;
+      btn.textContent = renew ? `Renovar ${planNames[btn.dataset.plan]}` : `Assinar ${planNames[btn.dataset.plan] || btn.dataset.plan}`;
     });
   }
 
@@ -3511,179 +3513,147 @@ function setupNotificationCenter() {
 // ==========================================================================
 // Commercial Subscription & 1-Click PIX Checkout Engine
 // ==========================================================================
+// Plain words for where the plan stands
+function describePlanState(state) {
+  const days = (n) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+  if (state.status === 'trial') return `Período de teste: ${days(state.daysLeft)} restantes`;
+  if (state.status === 'trial_ended') return 'Período de teste encerrado';
+  if (state.status === 'active') return `Ativo até ${new Date(state.until).toLocaleDateString('pt-BR')}`;
+  return `Vencido em ${new Date(state.until).toLocaleDateString('pt-BR')}`;
+}
+
+// The pill in the header: quiet while all is well, visible when something needs doing
+function refreshPlanPill() {
+  const pill = document.getElementById('trial-header-pill');
+  const text = document.getElementById('trial-pill-text');
+  if (!pill || !text) return;
+  const state = getPlanState();
+  let label = '';
+  if (state.status === 'trial') label = `Teste: ${state.daysLeft} ${state.daysLeft === 1 ? 'dia' : 'dias'} restantes`;
+  else if (state.status === 'trial_ended') label = 'Teste encerrado. Assinar';
+  else if (state.status === 'expired') label = 'Plano vencido. Renovar';
+  else if (state.daysLeft <= 5) label = `Plano vence em ${state.daysLeft} ${state.daysLeft === 1 ? 'dia' : 'dias'}`;
+  text.textContent = label;
+  pill.style.display = label && isAdmin() ? '' : 'none';
+  pill.classList.toggle('needs-attention', state.status === 'trial_ended' || state.status === 'expired');
+}
+window.refreshPlanPill = refreshPlanPill;
+
+// ==========================================================================
+// Subscribing: a PIX charge is created on the billing server, and this window
+// watches until the payment is confirmed. The plan is released by the server.
+// ==========================================================================
 function setupCheckoutModalEvents() {
   const modal = document.getElementById('modal-checkout');
-  const btnCloseModal = document.getElementById('btn-close-checkout-modal');
-  const btnCloseFooter = document.getElementById('btn-close-checkout-footer');
-  const btnCopyPix = document.getElementById('btn-copy-pix-code');
-  const pixInput = document.getElementById('chk-pix-copypaste-input');
-  const pixQrImg = document.getElementById('chk-pix-qrcode-img');
-  const gatewayCardLink = document.getElementById('chk-gateway-card-link');
-  const whatsappLink = document.getElementById('chk-whatsapp-receipt-link');
-  const currentPlanBadge = document.getElementById('chk-current-plan-badge');
-  const trialDaysBadge = document.getElementById('chk-trial-days-badge');
-  const quotaUsers = document.getElementById('chk-quota-users');
-  const quotaLeads = document.getElementById('chk-quota-leads');
-  const trialPillText = document.getElementById('trial-pill-text');
+  if (!modal) return;
 
-  // Admin settings elements
-  const btnToggleAdmin = document.getElementById('btn-toggle-payment-settings');
-  const adminDrawer = document.getElementById('chk-admin-settings-drawer');
-  const cfgPixKey = document.getElementById('cfg-pix-key');
-  const cfgPixName = document.getElementById('cfg-pix-name');
-  const cfgSupportWhatsapp = document.getElementById('cfg-support-whatsapp');
-  const cfgBackendUrl = document.getElementById('cfg-backend-url');
-  const btnSaveSettings = document.getElementById('btn-save-payment-settings');
+  const el = (id) => document.getElementById(id);
+  const planNames = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
+  let activePlan = 'pro';
+  let activePaymentId = null;
+  let pollTimer = null;
+  let requestSeq = 0;
 
-  let activeSelectedPlan = 'pro';
+  const stopPolling = () => {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  };
 
-  async function loadCheckoutData(plan = 'pro') {
-    activeSelectedPlan = plan;
-    const token = localStorage.getItem('nexus_jwt_token');
-
-    const prices = { starter: 97, pro: 197, enterprise: 497 };
-    const amount = prices[plan] || 197;
-    const customPixKey = localStorage.getItem('nexus_custom_pix_key') || 'contato@nexuscrm.com.br';
-    const customPixName = localStorage.getItem('nexus_custom_pix_name') || 'NEXUS CRM ENTERPRISE';
-    const customWhatsapp = localStorage.getItem('nexus_custom_whatsapp') || '5511999999999';
-
-    const fallbackPix = `00020126580014br.gov.bcb.pix0136${customPixKey}520400005303986540${amount}.005802BR5916${customPixName.substring(0, 16).toUpperCase()}6009SAO PAULO62070503***6304ABCD`;
-
-    if (pixInput) pixInput.value = fallbackPix;
-    if (pixQrImg) pixQrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(fallbackPix)}`;
-    if (gatewayCardLink) gatewayCardLink.href = `/checkout?plan=${plan}&cycle=monthly`;
-    if (whatsappLink) {
-      const cleanWa = customWhatsapp.replace(/\D/g, '');
-      const waTarget = cleanWa.startsWith('55') ? cleanWa : `55${cleanWa}`;
-      whatsappLink.href = `https://wa.me/${waTarget}?text=${encodeURIComponent(`Olá! Realizei o pagamento PIX do Plano ${plan.toUpperCase()} (R$ ${amount},00) do Nexus CRM. Segue o comprovante em anexo para ativação da conta!`)}`;
+  // One of: a message (loading, demo, error), the PIX code, or the confirmation
+  const show = (state, text = '', canRetry = false) => {
+    el('chk-state-message').hidden = state !== 'message';
+    el('chk-state-ready').hidden = state !== 'ready';
+    el('chk-state-approved').hidden = state !== 'approved';
+    if (state === 'message') {
+      el('chk-state-text').textContent = text;
+      el('chk-retry').hidden = !canRetry;
     }
+  };
 
-    try {
-      const baseUrl = window.getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/api/v1/commercial/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          plan,
-          billingCycle: 'monthly',
-          customer: {
-            pixKey: customPixKey,
-            pixName: customPixName
-          }
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.pix) {
-          if (pixInput) pixInput.value = data.pix.copyPaste;
-          if (pixQrImg) pixQrImg.src = data.pix.qrCodeUrl;
-        }
-        if (data.cardCheckoutUrl && gatewayCardLink) {
-          gatewayCardLink.href = data.cardCheckoutUrl;
-        }
-        if (data.whatsappConfirmationUrl && whatsappLink) {
-          whatsappLink.href = data.whatsappConfirmationUrl;
-        }
-      }
-    } catch {
-      // Local fallback mode
-    }
-  }
-
-  async function refreshSubscriptionInfo() {
-    const token = localStorage.getItem('nexus_jwt_token');
+  const renderCurrentPlan = () => {
     const org = getSavedOrganization();
-    let planName = ({ starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' })[org.plan] || 'Professional';
-    let daysRemaining = org.trialDaysLeft ?? 14;
-    const onTrial = org.planStatus === 'trial';
-    if (currentPlanBadge) currentPlanBadge.textContent = planName;
-    if (trialDaysBadge) trialDaysBadge.textContent = onTrial ? `Período de teste: ${daysRemaining} dias restantes` : 'Assinatura ativa';
+    el('chk-current-plan-badge').textContent = planNames[org.plan] || 'Professional';
+    el('chk-trial-days-badge').textContent = describePlanState(getPlanState(org));
+  };
 
+  const api = async (path, options = {}) => {
+    const token = await getIdToken();
+    const res = await fetch(`${window.getApiBaseUrl()}${path}`, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(options.headers || {}) }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.message || 'Não foi possível concluir.');
+      err.code = data.error;
+      throw err;
+    }
+    return data;
+  };
+
+  const onApproved = async (result) => {
+    stopPolling();
+    activePaymentId = null;
+    await refreshOrganization().catch(() => {});
+    renderCurrentPlan();
+    refreshPlanPill();
+    const until = result.paidUntil ? new Date(result.paidUntil).toLocaleDateString('pt-BR') : '';
+    el('chk-approved-text').textContent = `O plano ${planNames[result.plan] || ''} está ativo${until ? ` até ${until}` : ''}.`;
+    show('approved');
+    logAudit(AUDIT_ACTIONS.PLAN_CHANGED, { plan: result.plan });
+    showToast('Pagamento confirmado. Plano liberado.', 'success');
+    if (crmStore) crmStore.emitChange();
+  };
+
+  const checkPayment = async () => {
+    if (!activePaymentId) return;
     try {
-      if (token) {
-        const baseUrl = window.getApiBaseUrl();
-        const res = await fetch(`${baseUrl}/api/v1/commercial/subscription`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.data) {
-            planName = data.data.planName || data.data.plan || planName;
-            daysRemaining = data.data.trialDaysRemaining ?? 7;
-            if (currentPlanBadge) currentPlanBadge.textContent = planName;
-            if (trialDaysBadge) trialDaysBadge.textContent = `Período de teste: ${daysRemaining} dias restantes`;
-            if (quotaUsers && data.data.quotas) quotaUsers.textContent = `${data.data.quotas.users.used} / ${data.data.quotas.users.limit}`;
-            if (quotaLeads && data.data.quotas) quotaLeads.textContent = `${data.data.quotas.leads.used} / ${data.data.quotas.leads.limit.toLocaleString()}`;
-          }
-        }
+      const result = await api(`/api/billing/pix/${activePaymentId}`);
+      if (result.status === 'approved') {
+        await onApproved(result);
+      } else if (result.status !== 'pending') {
+        stopPolling();
+        show('message', 'Esta cobrança foi cancelada ou venceu. Gere outra para pagar.', true);
       }
     } catch {
-      // Local fallback
+      // A failed check is not a failed payment: keep waiting
+    }
+  };
+
+  const loadCharge = async (plan) => {
+    activePlan = plan;
+    stopPolling();
+    activePaymentId = null;
+    const seq = ++requestSeq;
+
+    if (!isCloudSession()) {
+      show('message', 'Na demonstração não há cobrança. Crie uma conta para assinar um plano.');
+      return;
+    }
+    if (!isAdmin()) {
+      show('message', 'Só quem administra a empresa pode assinar um plano.');
+      return;
     }
 
-    if (trialPillText) {
-      trialPillText.textContent = onTrial ? `Teste: ${daysRemaining} dias restantes` : '';
-      const pill = trialPillText.closest('button, a, div');
-      if (pill) pill.style.display = onTrial ? '' : 'none';
-    }
-  }
-
-  // Populate admin settings drawer fields
-  if (cfgPixKey) cfgPixKey.value = localStorage.getItem('nexus_custom_pix_key') || '';
-  if (cfgPixName) cfgPixName.value = localStorage.getItem('nexus_custom_pix_name') || '';
-  if (cfgSupportWhatsapp) cfgSupportWhatsapp.value = localStorage.getItem('nexus_custom_whatsapp') || '';
-  if (cfgBackendUrl) cfgBackendUrl.value = localStorage.getItem('nexus_cloud_backend_url') || 'https://nexus-crm-yfof.onrender.com';
-
-  if (btnToggleAdmin && adminDrawer) {
-    btnToggleAdmin.addEventListener('click', () => {
-      adminDrawer.style.display = adminDrawer.style.display === 'none' ? 'block' : 'none';
-    });
-  }
-
-  if (btnSaveSettings) {
-    btnSaveSettings.addEventListener('click', async () => {
-      const pixKey = cfgPixKey?.value.trim() || '';
-      const pixName = cfgPixName?.value.trim() || '';
-      const supportWhatsapp = cfgSupportWhatsapp?.value.trim() || '';
-      const backendUrl = cfgBackendUrl?.value.trim() || '';
-
-      if (pixKey) localStorage.setItem('nexus_custom_pix_key', pixKey);
-      if (pixName) localStorage.setItem('nexus_custom_pix_name', pixName);
-      if (supportWhatsapp) localStorage.setItem('nexus_custom_whatsapp', supportWhatsapp);
-      if (backendUrl) localStorage.setItem('nexus_cloud_backend_url', backendUrl);
-
-      // Attempt to sync with backend if logged in
-      const token = localStorage.getItem('nexus_jwt_token');
-      if (token) {
-        try {
-          const baseUrl = window.getApiBaseUrl();
-          await fetch(`${baseUrl}/api/v1/commercial/payment-settings`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ pixKey, pixName, supportWhatsapp })
-          });
-        } catch (e) {
-          console.warn('[Billing Config] Local save preserved, backend sync deferred:', e);
-        }
+    // The billing server may be asleep; the first answer can take a while
+    show('message', 'Gerando o PIX. Isso pode levar até um minuto.');
+    try {
+      const charge = await api('/api/billing/pix', { method: 'POST', body: JSON.stringify({ plan }) });
+      if (seq !== requestSeq) return; // another plan was chosen meanwhile
+      activePaymentId = charge.paymentId;
+      el('chk-pix-copypaste-input').value = charge.copyPaste;
+      el('chk-pix-qrcode-img').src = charge.qrCodeBase64 ? `data:image/png;base64,${charge.qrCodeBase64}` : '';
+      el('chk-pix-qrcode-img').closest('.pix-qr').style.display = charge.qrCodeBase64 ? '' : 'none';
+      el('chk-pix-amount').textContent = formatBRL(charge.amount);
+      show('ready');
+      pollTimer = setInterval(checkPayment, 5000);
+    } catch (err) {
+      if (seq !== requestSeq) return;
+      if (err.code === 'billing_not_configured') {
+        show('message', 'A cobrança automática ainda não está disponível. Fale com o suporte para assinar.');
+      } else {
+        show('message', err.message || 'Não foi possível gerar o PIX. Tente de novo.', true);
       }
-
-      showToast('Recebimento salvo.', 'success');
-      loadCheckoutData(activeSelectedPlan);
-    });
-  }
-
-  window.openCheckoutModal = function(plan = 'pro') {
-    if (!isSessionActive()) return;
-    if (modal) {
-      modal.showModal();
-      window.selectCheckoutPlan(plan);
-      refreshSubscriptionInfo();
     }
   };
 
@@ -3691,7 +3661,15 @@ function setupCheckoutModalEvents() {
     document.querySelectorAll('.checkout-plan-card').forEach(card => {
       card.classList.toggle('active', card.dataset.plan === plan);
     });
-    loadCheckoutData(plan);
+    loadCharge(plan);
+  };
+
+  window.openCheckoutModal = function(plan) {
+    if (!isSessionActive()) return;
+    const org = getSavedOrganization();
+    renderCurrentPlan();
+    if (!modal.open) modal.showModal();
+    window.selectCheckoutPlan(planNames[plan] ? plan : (planNames[org.plan] ? org.plan : 'pro'));
   };
 
   // One way to subscribe: plan buttons and links from the plans page all land here
@@ -3701,23 +3679,31 @@ function setupCheckoutModalEvents() {
     window.openCheckoutModal(plan);
   };
 
-  if (btnCloseModal) btnCloseModal.addEventListener('click', () => modal?.close());
-  if (btnCloseFooter) btnCloseFooter.addEventListener('click', () => modal?.close());
+  const close = () => {
+    stopPolling();
+    requestSeq += 1;
+    if (modal.open) modal.close();
+  };
+  el('btn-close-checkout-modal')?.addEventListener('click', close);
+  el('btn-close-checkout-footer')?.addEventListener('click', close);
+  modal.addEventListener('close', stopPolling);
+  el('chk-retry')?.addEventListener('click', () => loadCharge(activePlan));
 
-  if (btnCopyPix && pixInput) {
-    btnCopyPix.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(pixInput.value);
-        showToast('Código PIX copiado. Cole no aplicativo do seu banco.', 'success');
-        btnCopyPix.textContent = 'Copiado!';
-        setTimeout(() => { btnCopyPix.textContent = 'Copiar'; }, 3000);
-      } catch {
-        pixInput.select();
-        document.execCommand('copy');
-        showToast('Código PIX copiado!', 'success');
-      }
-    });
-  }
+  el('btn-copy-pix-code')?.addEventListener('click', async () => {
+    const input = el('chk-pix-copypaste-input');
+    try {
+      await navigator.clipboard.writeText(input.value);
+      showToast('Código PIX copiado. Cole no aplicativo do seu banco.', 'success');
+    } catch {
+      input.select();
+      showToast('Selecione o código e copie com Ctrl+C.', 'info');
+    }
+  });
 
-  refreshSubscriptionInfo();
+  // Coming back to the tab after paying in the bank app: check right away
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && activePaymentId) checkPayment();
+  });
+
+  refreshPlanPill();
 }

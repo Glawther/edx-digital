@@ -34,7 +34,7 @@ const ACTIVITY_KEY = 'nexus_crm_last_activity';
 
 // Version of the Terms of Use and Privacy Policy a person accepts when creating an account.
 // Change it whenever termos.html or privacidade.html change in substance.
-export const LEGAL_VERSION = '2026-10-10';
+export const LEGAL_VERSION = '2026-10-11';
 
 // A signed-in account left untouched for this long is signed out
 export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
@@ -407,6 +407,26 @@ export async function deleteCompany(password) {
   clearSavedOrganization();
   notifyRoleListeners();
   notifyListeners();
+}
+
+/**
+ * Token that proves to the billing server who is asking
+ */
+export async function getIdToken() {
+  if (sessionKind !== SESSION_KINDS.CLOUD) return null;
+  const { auth } = await getFirebase();
+  return auth.currentUser ? auth.currentUser.getIdToken() : null;
+}
+
+/**
+ * Reads the company record again (after a payment, the plan has changed on the server)
+ */
+export async function refreshOrganization() {
+  if (sessionKind !== SESSION_KINDS.CLOUD || !currentUser) return getSavedOrganization();
+  const { db, fsMod } = await getFirebase();
+  const snap = await fsMod.getDoc(fsMod.doc(db, 'organizations', currentUser.orgId));
+  if (!snap.exists()) return getSavedOrganization();
+  return saveOrganization({ ...snap.data(), id: currentUser.orgId }, { skipSync: true });
 }
 
 /**
