@@ -103,7 +103,8 @@ import { getFirestoreDb } from './services/firebase-service.js';
 import {
   generateInviteShareText,
   getCompanyTeamInviteCode,
-  replaceCompanyTeamInviteCode
+  replaceCompanyTeamInviteCode,
+  inviteShareLinks
 } from './services/team-invite-service.js';
 import {
   requestNotificationPermission,
@@ -3187,6 +3188,16 @@ function setupTeamInviteEvents() {
     }
     if (displayTeamCode) displayTeamCode.textContent = full ? 'pausado' : (getCompanyTeamInviteCode() || 'sem código');
     if (btnCopyTeamCode) btnCopyTeamCode.disabled = full;
+    // the same invite, already written in the person's e-mail program or WhatsApp
+    const code = getCompanyTeamInviteCode();
+    const canShare = !!code && !full && !isDemoSession();
+    const links = canShare ? inviteShareLinks(code) : null;
+    for (const [id, href] of [['link-invite-email', links && links.email], ['link-invite-whatsapp', links && links.whatsapp]]) {
+      const link = document.getElementById(id);
+      if (!link) continue;
+      link.hidden = !canShare;
+      link.href = href || '#';
+    }
     if (btnNewTeamCode) btnNewTeamCode.style.display = isCloudSession() ? '' : 'none';
   }
   window.refreshTeamInviteCard = renderTeamView;

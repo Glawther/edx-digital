@@ -49,3 +49,16 @@ export function generateInviteShareText(code) {
     `3. Use o código ${code}`
   ].join('\n');
 }
+
+/**
+ * Ready-made links that open the person's own e-mail program or WhatsApp with the invite written.
+ * Nothing is sent by the CRM itself: the administrator chooses who receives it.
+ */
+export function inviteShareLinks(code) {
+  const org = getSavedOrganization();
+  const text = generateInviteShareText(code);
+  return {
+    email: `mailto:?subject=${encodeURIComponent(`Convite para o CRM da ${org.name || 'nossa empresa'}`)}&body=${encodeURIComponent(text)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(text)}`
+  };
+}
