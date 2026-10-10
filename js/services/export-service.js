@@ -52,30 +52,3 @@ export function exportCustomersToCSV(customers, filename = 'edx-digital-oportuni
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-
-export function exportAuditLogsToCSV(logs, filename = 'edx-digital-audit-logs.csv') {
-  if (!logs || logs.length === 0) {
-    throw new Error("Nenhum log de auditoria para exportação.");
-  }
-
-  const headers = ["Data e Hora", "Ação", "Usuário", "Papel", "Detalhes"];
-  const rows = logs.map(l => [
-    `"${new Date(l.timestamp).toLocaleString('pt-BR')}"`,
-    `"${(l.action || '').replace(/"/g, '""')}"`,
-    `"${(l.userName || '').replace(/"/g, '""')}"`,
-    `"${(l.userRole || '').replace(/"/g, '""')}"`,
-    `"${(l.details || '').replace(/"/g, '""')}"`
-  ]);
-
-  const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-

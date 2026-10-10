@@ -69,6 +69,7 @@ export const TASK_TYPES = [
 ];
 
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';
+import { matchesFocus, countAttention } from './attention.js';
 
 export const SALES_TEAM = [
   { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com', role: 'employee' },
@@ -82,6 +83,7 @@ class CRMStore {
     this.storageMode = 'local';
     this.searchQuery = '';
     this.selectedPriority = 'all';
+    this.focus = 'all'; // 'all' | 'stalled' | 'noTask' | 'lateTask'
     this.selectedSalesperson = 'all'; // Admin filter: 'all' | employee email
     this.activeView = 'pipeline'; // 'pipeline' | 'customers' | 'tasks' | 'metrics' | 'security'
     this.taskFilter = 'pending'; // 'pending' | 'today' | 'all' | 'completed'
@@ -137,6 +139,11 @@ class CRMStore {
 
   setPriorityFilter(priority) {
     this.selectedPriority = priority;
+    this.emitChange();
+  }
+
+  setFocus(focus) {
+    this.focus = focus;
     this.emitChange();
   }
 
@@ -217,6 +224,7 @@ class CRMStore {
       if (this.selectedPriority !== 'all' && c.priority !== this.selectedPriority) {
         return false;
       }
+      if (!matchesFocus(c, this.focus)) return false;
       // Search filter
       if (this.searchQuery) {
         const target = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
@@ -253,6 +261,8 @@ class CRMStore {
       activeView: this.activeView,
       searchQuery: this.searchQuery,
       selectedPriority: this.selectedPriority,
+      focus: this.focus,
+      attention: countAttention(baseCustomers),
       selectedSalesperson: this.selectedSalesperson,
       storageMode: this.storageMode,
       permissions,
@@ -353,7 +363,7 @@ class CRMStore {
 
     const totalDecided = wonCount + lostCount;
     const conversionRate = totalDecided > 0 ? ((wonCount / totalDecided) * 100).toFixed(1) : "0.0";
-    const avgTicket = wonCount > 0 ? (wonTotal / wonCount) : (this.customers.length > 0 ? (pipelineTotal / this.customers.length) : 0);
+    const avgTicket = wonCount > 0 ? wonTotal / wonCount : null;
 
     return {
       pipelineTotal,

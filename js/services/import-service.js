@@ -152,6 +152,18 @@ const digitsOf = (value) => String(value || '').replace(/\D/g, '');
 const phoneKey = (value) => digitsOf(value).replace(/^55(?=\d{10,11}$)/, '');
 
 /**
+ * The opportunity that already has this e-mail or this phone, if any
+ */
+export function findDuplicate(customers, { email, phone, exceptId } = {}) {
+  const emailKey = plain(email);
+  const phoneId = phoneKey(phone);
+  if (!emailKey && phoneId.length < 8) return null;
+  return customers.find(c => c.id !== exceptId && (
+    (emailKey && plain(c.email) === emailKey) || (phoneId.length >= 8 && phoneKey(c.phone) === phoneId)
+  )) || null;
+}
+
+/**
  * Turns the table into opportunities, saying what is wrong with each row.
  *   problems: the row cannot be imported (no name, invalid e-mail)
  *   notes:    it can, but something was adjusted or looks odd

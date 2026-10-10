@@ -53,7 +53,7 @@ O primeiro roda a lógica do aplicativo e do servidor, sem rede. O segundo sobe 
 npm run deploy
 ```
 
-O comando roda o build e depois publica as regras do banco e o site. O build junta o JavaScript num arquivo só, minifica JavaScript e CSS e grava tudo em `dist/`, que é a única pasta enviada. Os arquivos de origem não mudam. Publicar com `firebase deploy` direto, sem o build antes, enviaria uma `dist/` antiga ou vazia.
+O comando roda o build e depois publica as regras e os índices do banco e o site. O build junta o JavaScript num arquivo só, minifica JavaScript e CSS e grava tudo em `dist/`, que é a única pasta enviada. Os arquivos de origem não mudam. Publicar com `firebase deploy` direto, sem o build antes, enviaria uma `dist/` antiga ou vazia.
 
 O servidor é publicado pelo Render a cada alteração na branch `main`.
 

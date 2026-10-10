@@ -447,3 +447,55 @@ test('uma oportunidade só é criada com identificador de caracteres simples', a
   assert.equal(await put(world.ana, `customers/${'a'.repeat(121)}`, lead(world.a.orgId, world.ana)), DENIED);
   assert.equal(await put(world.ana, `customers/lead-ok-${RUN}`, lead(world.a.orgId, world.ana)), OK);
 });
+
+// ---------------------------------------------------------------- registros malformados e abuso
+
+test('oportunidade com tipos trocados ou tamanho absurdo é recusada', async () => {
+  // um registro assim travaria a tela de quem administra
+  const base = lead(world.a.orgId, world.ana);
+  const id = `customers/tipos-${RUN}`;
+  assert.equal(await put(world.ana, id, { ...base, tags: 'não é lista' }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, tasks: 'não é lista' }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, activities: 7 }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, notes: 'x'.repeat(20001) }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, company: 12 }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, custom: 'texto' }), DENIED);
+  assert.equal(await put(world.ana, id, { ...base, tags: ['ok'], tasks: [], activities: [], notes: 'ok', company: '', lossReason: null, custom: {} }), OK);
+});
+
+test('quem foi bloqueado não apaga o próprio perfil para voltar pelo convite', async () => {
+  const company = await registerCompany('bloqueio');
+  const person = await join('escapista', company);
+  assert.equal(await patch(company.owner, `users/${person.uid}`, { status: 'blocked' }), OK);
+  assert.equal(await del(person, `users/${person.uid}`), DENIED);
+  assert.equal(await get(person, `organizations/${company.orgId}`), DENIED, 'bloqueado não lê a empresa, nem o convite novo');
+
+  assert.equal(await patch(company.owner, `users/${person.uid}`, { status: 'active' }), OK);
+  assert.equal(await del(person, `users/${person.uid}`), OK, 'quem está ativo pode excluir a própria conta');
+});
+
+test('o nome no perfil tem tamanho também ao alterar', async () => {
+  assert.equal(await patch(world.bruno, `users/${world.bruno.uid}`, { name: 'x'.repeat(201) }), DENIED);
+  assert.equal(await patch(world.bruno, `users/${world.bruno.uid}`, { name: '' }), DENIED);
+  assert.equal(await patch(world.bruno, `users/${world.bruno.uid}`, { name: 'Bruno Renomeado' }), OK);
+});
+
+test('no histórico, ninguém se passa por administrador nem grava volume', async () => {
+  const entry = { orgId: world.a.orgId, userId: world.ana.uid, action: 'lead_created', timestamp: new Date().toISOString(), userRole: 'employee', details: { nome: 'x' } };
+  assert.equal(await put(world.ana, `audit_logs/h1-${RUN}`, entry), OK);
+  assert.equal(await put(world.ana, `audit_logs/h2-${RUN}`, { ...entry, userRole: 'admin' }), DENIED, 'papel falso');
+  assert.equal(await put(world.ana, `audit_logs/h3-${RUN}`, { ...entry, action: 'A'.repeat(81) }), DENIED, 'ação enorme');
+  assert.equal(await put(world.ana, `audit_logs/h4-${RUN}`, { ...entry, anexo: 'x' }), DENIED, 'campo que não existe');
+  assert.equal(await put(world.ana, `audit_logs/h5-${RUN}`, { ...entry, details: 'texto' }), DENIED);
+  assert.equal(await put(world.ana, `audit_logs/h6-${RUN}`, { ...entry, userId: world.a.owner.uid }), DENIED, 'em nome de outra pessoa');
+});
+
+test('dados da empresa: meta numérica, nome obrigatório, logotipo com limite', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  assert.equal(await patch(world.a.owner, org, { monthlyGoal: 5000 }), OK);
+  assert.equal(await patch(world.a.owner, org, { monthlyGoal: -1 }), DENIED);
+  assert.equal(await patch(world.a.owner, org, { monthlyGoal: 'muito' }), DENIED);
+  assert.equal(await patch(world.a.owner, org, { name: '' }), DENIED);
+  assert.equal(await patch(world.a.owner, org, { logoUrl: 'x'.repeat(400001) }), DENIED);
+  assert.equal(await patch(world.ana, org, { monthlyGoal: 1 }), DENIED, 'vendedor não define a meta');
+});

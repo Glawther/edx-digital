@@ -8,6 +8,8 @@ import { REPORT_PERIODS, periodReport } from '../core/report.js';
 import { localDateString } from '../services/reminder-service.js';
 import { customFacts } from './customize-dialog.js';
 import { escapeHtml, jsArg, safeImageUrl } from '../core/html.js';
+import { FOCUS_OPTIONS } from '../core/attention.js';
+import { getSavedOrganization } from '../core/config.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
 import { isDemoSession, isCloudSession, getCurrentUser, isAdmin } from '../services/auth-service.js';
 
@@ -68,7 +70,7 @@ export function renderKPIs(metrics, permissions = {}) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
       </div>
-      <div class="kpi-value">${metrics.conversionRate}%</div>
+      <div class="kpi-value">${metrics.wonCount + metrics.lostCount === 0 ? 'sem dados' : `${Math.round(Number(metrics.conversionRate))}%`}</div>
       <div class="kpi-subtext">
         ${metrics.wonCount} ganhas de ${metrics.wonCount + metrics.lostCount} decididas
       </div>
@@ -81,9 +83,9 @@ export function renderKPIs(metrics, permissions = {}) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
         </div>
       </div>
-      <div class="kpi-value">${formatBRL(metrics.avgTicket)}</div>
+      <div class="kpi-value">${metrics.avgTicket === null ? 'sem vendas' : formatBRL(metrics.avgTicket)}</div>
       <div class="kpi-subtext">
-        ${metrics.wonCount > 0 ? 'Por venda fechada' : 'Estimado pelo funil em aberto'}
+        ${metrics.avgTicket === null ? 'Aparece depois da primeira venda' : 'Por venda fechada'}
       </div>
     </div>
   `;
@@ -152,6 +154,19 @@ export function renderKanban(customers, metrics, permissions = {}, totalCount = 
         </div>
       </div>
     `;
+  }).join('');
+}
+
+/**
+ * The "Atenção" filter above the funnel, each option with how many opportunities it holds
+ */
+export function renderFocusPills(focus, counts = {}) {
+  const container = document.getElementById('focus-filter-pills');
+  if (!container) return;
+  container.innerHTML = FOCUS_OPTIONS.map(option => {
+    const count = option.id === 'all' ? '' : ` <span class="pill-count">${counts[option.id] || 0}</span>`;
+    return `<button type="button" class="filter-pill ${focus === option.id ? 'active' : ''}" aria-pressed="${focus === option.id}"
+              onclick="window.handleFocus('${option.id}')">${option.label}${count}</button>`;
   }).join('');
 }
 
@@ -244,20 +259,50 @@ function renderLeadCard(customer, permissions = {}) {
 /**
  * Renders the Customer Data Table View with Salesperson attribution
  */
-export function renderTable(customers, permissions = {}) {
+const customersView = { stage: 'all', sort: 'recent' };
+
+export function setCustomersView(change) {
+  Object.assign(customersView, change);
+}
+
+const SORTERS = {
+  recent: (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0),
+  name: (a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'),
+  value: (a, b) => (Number(b.dealValue) || 0) - (Number(a.dealValue) || 0),
+  // the ones with a date first, soonest on top
+  close: (a, b) => (a.expectedCloseDate || '9999').localeCompare(b.expectedCloseDate || '9999')
+};
+
+export function renderTable(allCustomers, permissions = {}) {
   const tbody = document.getElementById('customer-table-body');
   if (!tbody) return;
 
+  const stageSelect = document.getElementById('customers-stage-filter');
+  if (stageSelect) {
+    const options = [['all', 'Todas'], ['open', 'Em aberto'], ...STAGES.map(st => [st.id, st.name])];
+    stageSelect.innerHTML = options.map(([id, label]) => `<option value="${id}" ${customersView.stage === id ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
+  }
+  const sortSelect = document.getElementById('customers-sort');
+  if (sortSelect) sortSelect.value = customersView.sort;
+
+  const customers = allCustomers
+    .filter(c => customersView.stage === 'all'
+      || (customersView.stage === 'open' ? c.stage !== 'won' && c.stage !== 'lost' : c.stage === customersView.stage))
+    .sort(SORTERS[customersView.sort] || SORTERS.recent);
+
   const countEl = document.getElementById('customers-count-label');
   if (countEl) {
-    countEl.textContent = customers.length === 1 ? '1 cliente' : `${customers.length} clientes`;
+    const total = customers.length === 1 ? '1 cliente' : `${customers.length} clientes`;
+    countEl.textContent = customers.length === allCustomers.length ? total : `${total} de ${allCustomers.length}`;
   }
 
   if (customers.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" class="table-empty">
-          Nenhum cliente aqui ainda. Use "Nova oportunidade" para cadastrar o primeiro, ou limpe a busca.
+          ${allCustomers.length === 0
+            ? 'Nenhum cliente aqui ainda. Use "Nova oportunidade" para cadastrar o primeiro, ou limpe a busca.'
+            : 'Nenhum cliente nesta etapa. Escolha outra em Etapa.'}
         </td>
       </tr>
     `;
@@ -268,7 +313,7 @@ export function renderTable(customers, permissions = {}) {
     const stageObj = STAGES.find(s => s.id === customer.stage) || STAGES[0];
     const priorityLabel = { high: 'Alta', medium: 'Média', low: 'Baixa' }[customer.priority] || 'Média';
     const closeDate = customer.expectedCloseDate
-      ? new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      ? new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
       : '';
 
     return `
@@ -364,6 +409,7 @@ export function renderTasksView(tasks, filter, customers) {
         </div>
         <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}">
           ${isOverdue ? `Atrasada desde ${dateText}` : isToday ? `Hoje${timeText}` : `${dateText}${timeText}`}
+          <button type="button" class="link-btn danger task-delete" onclick="window.handleDeleteTask(${jsArg(task.customerId)}, ${jsArg(task.id)})" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
         </span>
       </div>
     `;
@@ -467,6 +513,17 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     </section>
   ` : '';
 
+  // The month's goal is the company's: shown to whoever administers
+  const goal = Number(getSavedOrganization().monthlyGoal) || 0;
+  const soldThisMonth = periodId === 'month' ? totals.wonValue : periodReport(customers, 'month').totals.wonValue;
+  const goalPct = goal > 0 ? Math.round((soldThisMonth / goal) * 100) : 0;
+  const goalHtml = permissions.isAdmin && goal > 0 ? `
+    <section class="settings-section">
+      <div class="settings-section-head"><div><h2>Meta do mês</h2><p>${goalPct >= 100 ? 'Meta batida.' : `Faltam ${formatBRL(goal - soldThisMonth)} para a meta.`}</p></div></div>
+      <div class="bar-list">${barRow('Vendido neste mês', `${goalPct}%<strong>${formatBRL(soldThisMonth)} de ${formatBRL(goal)}</strong>`, Math.min(100, goalPct), goalPct >= 100 ? 'won' : '')}</div>
+    </section>
+  ` : '';
+
   container.innerHTML = `
     <div class="report-period">
       <h2 class="section-title">No período</h2>
@@ -506,6 +563,8 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     <div class="report-period">
       <h2 class="section-title">Agora</h2>
     </div>
+
+    ${goalHtml}
 
     <div class="figure-pair">
       <div class="figure-box">
@@ -579,6 +638,31 @@ export function renderLeadTimeline(customer) {
       <button type="button" class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI(${jsArg(customer.id)})">Analisar com IA</button>
       ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" onclick="window.handleDeleteCustomer(${jsArg(customer.id)})">Excluir</button>` : ''}
     `;
+  }
+
+  const tasksEl = document.getElementById('lead-details-tasks');
+  if (tasksEl) {
+    const today = localDateString();
+    const tasks = (customer.tasks || []).slice().sort((a, b) => Number(a.completed) - Number(b.completed) || (a.dueDate || '').localeCompare(b.dueDate || ''));
+    const pending = tasks.filter(task => !task.completed);
+    const done = tasks.filter(task => task.completed).slice(-3);
+    tasksEl.innerHTML = pending.length + done.length === 0
+      ? '<p class="empty-note" style="margin: 0 0 0.75rem;">Nenhuma tarefa. Agende o próximo passo para esta oportunidade não ficar esquecida.</p>'
+      : [...pending, ...done].map(task => {
+          const late = !task.completed && task.dueDate && task.dueDate < today;
+          const when = task.dueDate
+            ? `${task.dueDate === today ? 'Hoje' : new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}${task.dueTime ? ` às ${escapeHtml(task.dueTime)}` : ''}`
+            : 'sem data';
+          return `
+            <div class="lead-task ${task.completed ? 'completed' : ''}">
+              <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
+                     onchange="window.handleToggleTask(${jsArg(customer.id)}, ${jsArg(task.id)})">
+              <span class="lead-task-title">${escapeHtml(task.title)}</span>
+              <span class="task-due-date ${late ? 'is-overdue' : ''}">${late ? `Atrasada desde ${when}` : when}</span>
+              <button type="button" class="link-btn danger task-delete" onclick="window.handleDeleteTask(${jsArg(customer.id)}, ${jsArg(task.id)})" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
+            </div>
+          `;
+        }).join('');
   }
 
   const activities = (customer.activities || []).slice().reverse();
@@ -706,10 +790,17 @@ export function renderSecurityView(state) {
   const employees = getEmployees();
   const me = getCurrentUser();
 
+  // how many opportunities in play each person holds
+  const openBy = {};
+  (state.allCustomers || []).forEach(c => {
+    if (c.assignedTo && c.assignedTo.id && c.stage !== 'won' && c.stage !== 'lost') openBy[c.assignedTo.id] = (openBy[c.assignedTo.id] || 0) + 1;
+  });
+
   const teamRows = employees.map(emp => {
     const initials = (emp.name || '?').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     const isBlocked = emp.status === 'blocked';
     const jobLine = [emp.jobTitle, emp.department].filter(Boolean).map(escapeHtml).join(', ');
+    const open = openBy[emp.id] || 0;
     return `
       <tr>
         <td>
@@ -729,6 +820,7 @@ export function renderSecurityView(state) {
           ` : '<span class="muted">não informado</span>'}
         </td>
         <td>${emp.role === 'admin' ? 'Administrador' : 'Vendedor'}</td>
+        <td class="num">${open}${open > 0 ? ` <button type="button" class="link-btn" onclick="window.handleReassignLeads(${jsArg(emp.id)})">transferir</button>` : ''}</td>
         <td>
           ${isBlocked
             ? '<span class="status-text blocked">Bloqueado</span>'
@@ -758,6 +850,32 @@ export function renderSecurityView(state) {
     ['Backup e restauração', 'Sim', 'Não']
   ].map(([what, admin, seller]) => `<tr><td>${what}</td><td>${admin}</td><td>${seller}</td></tr>`).join('');
 
+  const teamContainer = document.getElementById('team-list-container');
+  if (teamContainer) {
+    teamContainer.innerHTML = !isAdm ? '' : `
+      <section class="settings-section">
+        <div class="settings-section-head">
+          <div>
+            <h2>Quem tem acesso</h2>
+            <p>${employees.length === 0 ? 'Só você tem acesso por enquanto.' : `${employees.length + 1} pessoas com cadastro, contando você${me ? ` (${escapeHtml(me.email || '')})` : ''}. Você tem ${openBy[me?.uid] || 0} ${(openBy[me?.uid] || 0) === 1 ? 'oportunidade em aberto' : 'oportunidades em aberto'}.`}</p>
+          </div>
+        </div>
+        ${employees.length === 0 ? `
+          <p class="empty-note">Cadastre alguém acima, ou envie o código de convite para a pessoa criar a própria conta.</p>
+        ` : `
+          <div class="table-scroll">
+            <table class="plain-table">
+              <thead>
+                <tr><th>Pessoa</th><th>E-mail de login</th><th>CPF</th><th>Perfil</th><th class="num">Em aberto</th><th>Situação</th><th></th></tr>
+              </thead>
+              <tbody>${teamRows}</tbody>
+            </table>
+          </div>
+        `}
+      </section>
+    `;
+  }
+
   container.innerHTML = `
     ${demo ? `
       <div class="notice-bar">
@@ -766,30 +884,6 @@ export function renderSecurityView(state) {
           Ver como ${isAdm ? 'vendedor' : 'administrador'}
         </button>
       </div>
-    ` : ''}
-
-    ${isAdm ? `
-      <section class="settings-section">
-        <div class="settings-section-head">
-          <div>
-            <h2>Equipe</h2>
-            <p>${employees.length === 0 ? 'Só você tem acesso por enquanto.' : `${employees.length + 1} pessoas com cadastro, contando você${me ? ` (${escapeHtml(me.email || '')})` : ''}.`}</p>
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-open-employee-modal">Cadastrar colaborador</button>
-        </div>
-        ${employees.length === 0 ? `
-          <p class="empty-note">Cadastre alguém aqui, ou envie o código de convite que está em Equipe para a pessoa criar a própria conta.</p>
-        ` : `
-          <div class="table-scroll">
-            <table class="plain-table">
-              <thead>
-                <tr><th>Pessoa</th><th>E-mail de login</th><th>CPF</th><th>Perfil</th><th>Situação</th><th></th></tr>
-              </thead>
-              <tbody>${teamRows}</tbody>
-            </table>
-          </div>
-        `}
-      </section>
     ` : ''}
 
     <section class="settings-section">

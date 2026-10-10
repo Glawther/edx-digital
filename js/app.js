@@ -13,7 +13,9 @@ import {
   renderDetailedMetrics,
   renderLeadTimeline,
   toggleLostColumn,
+  renderFocusPills,
   setReportPeriod,
+  setCustomersView,
   renderConnectionStatus,
   renderAuthBadge,
   renderSecurityView,
@@ -22,6 +24,7 @@ import {
   escapeHtml
 } from './ui/ui-renderer.js';
 import { jsArg, safeImageUrl } from './core/html.js';
+import { passwordProblem } from './core/attention.js';
 import { 
   getSavedOrganization, 
   saveOrganization, 
@@ -49,6 +52,8 @@ import {
   logoutToPortal,
   deleteOwnAccount,
   deleteCompany,
+  changePassword,
+  updateOwnName,
   isCompanyOwner,
   markActivity,
   isIdleTooLong,
@@ -58,8 +63,7 @@ import {
 } from './services/auth-service.js';
 import { describeAuthError } from './services/firebase-app.js';
 import {
-  exportCustomersToCSV,
-  exportAuditLogsToCSV
+  exportCustomersToCSV
 } from './services/export-service.js';
 import { 
   formatCPF, 
@@ -86,7 +90,7 @@ import {
   AUDIT_ACTIONS,
   AUDIT_SEVERITY,
   initAuditFirestore,
-  getLocalAuditLogs,
+  getAuditLogs,
   getAuditStats,
   formatAuditAction,
   exportAuditToCSV,
@@ -110,7 +114,7 @@ import {
   notify
 } from './services/notification-service.js';
 import { startTaskReminders, stopTaskReminders, localDateString } from './services/reminder-service.js';
-import { parseMoney } from './services/import-service.js';
+import { parseMoney, findDuplicate } from './services/import-service.js';
 import { setupImportDialog } from './ui/import-dialog.js';
 import {
   setupCustomizeDialog,
@@ -222,6 +226,7 @@ async function initApp() {
     crmStore.subscribe((state) => {
       renderKPIs(state.metrics, state.permissions);
       renderKanban(state.filteredCustomers, state.metrics, state.permissions, state.visibleCustomers.length);
+      renderFocusPills(state.focus, state.attention);
       renderTable(state.filteredCustomers, state.permissions);
       renderTasksView(state.tasks, state.taskFilter, state.allCustomers);
       renderDetailedMetrics(state.metrics, state.visibleCustomers, state.permissions);
@@ -299,7 +304,7 @@ async function enterSession({ resumed = false } = {}) {
     showToast("Não foi possível carregar os dados da empresa. Verifique a conexão e recarregue a página.", "error");
   }
 
-  logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: resumed ? 'session_resume' : (isCloudSession() ? 'email_password' : 'demo') });
+  if (!resumed) logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: isCloudSession() ? 'email_password' : 'demo' });
 
   startTaskReminders({
     getContext: () => (isSessionActive() ? { customers: storage.getCustomers(), user: getCurrentUser(), isAdmin: isAdmin() } : null),
@@ -343,6 +348,10 @@ function setupAccountDialog() {
 
     set('account-summary', user ? `${user.name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${org.name}.` : '');
     show('account-terms', cloud);
+    show('account-profile-block', cloud);
+    const nameInput = document.getElementById('account-name');
+    if (nameInput) nameInput.value = user ? user.name : '';
+    document.getElementById('form-account-password')?.reset();
     show('account-export-block', isAdmin());
     show('account-delete-block', cloud);
     show('account-demo-note', !cloud);
@@ -355,6 +364,43 @@ function setupAccountDialog() {
       set('account-delete-phrase-label', owner ? `Digite o nome da empresa: ${confirmationPhrase()}` : 'Digite EXCLUIR');
     }
     dialog.showModal();
+  });
+
+  document.getElementById('form-account-name')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const name = await updateOwnName(document.getElementById('account-name').value);
+      const user = getCurrentUser();
+      const summary = document.getElementById('account-summary');
+      if (summary && user) summary.textContent = `${name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${getSavedOrganization().name}.`;
+      showToast('Nome atualizado.', 'success');
+    } catch (err) {
+      showToast(err.code ? describeAuthError(err) : err.message, 'error');
+    }
+  });
+
+  document.getElementById('form-account-password')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const passwordForm = e.currentTarget;
+    const current = document.getElementById('account-current-password').value;
+    const next = document.getElementById('account-new-password').value;
+    const weak = passwordProblem(next, { email: getCurrentUser()?.email, name: getCurrentUser()?.name });
+    if (weak) {
+      showToast(weak, 'error');
+      return;
+    }
+    if (next === current) {
+      showToast('A nova senha é igual à atual.', 'error');
+      return;
+    }
+    try {
+      await changePassword(current, next);
+      passwordForm.reset();
+      showToast('Senha trocada.', 'success');
+    } catch (err) {
+      const wrong = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(err.code);
+      showToast(wrong ? 'A senha atual não confere.' : describeAuthError(err), 'error');
+    }
   });
 
   document.getElementById('btn-account-export')?.addEventListener('click', () => {
@@ -599,8 +645,8 @@ function updateNavCounters(state) {
   // Update team counter
   const teamCount = document.getElementById('nav-count-team');
   if (teamCount) {
-    const employees = getEmployees();
-    teamCount.textContent = employees.length;
+    // the signed-in administrator is not in the list
+    teamCount.textContent = getEmployees().length + 1;
   }
 
   // Update audit counter
@@ -1192,8 +1238,31 @@ function setupLeadDetailsEvents() {
 
     activeLeadDetailsCustomerId = customerId;
     renderLeadTimeline(customer);
-    dialog.showModal();
+    const taskForm = document.getElementById('lead-task-form');
+    if (taskForm) {
+      taskForm.reset();
+      document.getElementById('lead-task-date').value = localDateString();
+    }
+    document.getElementById('quick-activity-form-container').style.display = 'none';
+    if (!dialog.open) dialog.showModal();
   };
+
+  document.getElementById('lead-task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeLeadDetailsCustomerId) return;
+    const title = sanitizeInput(document.getElementById('lead-task-title').value);
+    const dueDate = document.getElementById('lead-task-date').value;
+    const dueTime = document.getElementById('lead-task-time').value;
+    if (!title || !dueDate) return;
+    try {
+      await storage.addTask(activeLeadDetailsCustomerId, { title, type: 'followup', dueDate, ...(dueTime ? { dueTime } : {}) });
+      e.target.reset();
+      document.getElementById('lead-task-date').value = localDateString();
+      showToast('Tarefa agendada.', 'success');
+    } catch (err) {
+      reportError('Não foi possível agendar a tarefa', err);
+    }
+  });
 
   // Quick activity logging buttons
   const quickFormContainer = document.getElementById('quick-activity-form-container');
@@ -1215,9 +1284,9 @@ function setupLeadDetailsEvents() {
   const btnLogMeeting = document.getElementById('btn-quick-log-meeting');
   const btnLogNote = document.getElementById('btn-quick-log-note');
 
-  if (btnLogCall) btnLogCall.addEventListener('click', () => openQuickForm('call', 'Registrar Ligação Telefônica'));
-  if (btnLogMeeting) btnLogMeeting.addEventListener('click', () => openQuickForm('meeting', 'Registrar Reunião Comercial'));
-  if (btnLogNote) btnLogNote.addEventListener('click', () => openQuickForm('note', 'Adicionar Nota Interna'));
+  if (btnLogCall) btnLogCall.addEventListener('click', () => openQuickForm('call', 'Registrar ligação'));
+  if (btnLogMeeting) btnLogMeeting.addEventListener('click', () => openQuickForm('meeting', 'Registrar reunião'));
+  if (btnLogNote) btnLogNote.addEventListener('click', () => openQuickForm('note', 'Adicionar nota'));
 
   if (btnCancelQuick) {
     btnCancelQuick.addEventListener('click', () => {
@@ -1230,27 +1299,25 @@ function setupLeadDetailsEvents() {
       if (!activeLeadDetailsCustomerId) return;
       const text = quickText.value.trim();
       if (!text) {
-        showToast("Digite o conteúdo da interação.", "error");
+        showToast("Escreva o que foi conversado.", "error");
+        quickText.focus();
         return;
       }
 
       const type = quickType.value;
-      const titleMap = {
-        call: 'Ligação Telefônica Realizada',
-        meeting: 'Reunião Comercial Realizada',
-        note: 'Nota Interna Adicionada'
-      };
+      const titleMap = { call: 'Ligação', meeting: 'Reunião', note: 'Nota' };
 
-      await storage.addActivity(activeLeadDetailsCustomerId, {
-        type,
-        title: titleMap[type] || 'Interação',
-        text
-      });
+      try {
+        await storage.addActivity(activeLeadDetailsCustomerId, { type, title: titleMap[type] || 'Contato', text: sanitizeInput(text) });
+      } catch (err) {
+        reportError('Não foi possível registrar', err);
+        return;
+      }
 
       quickFormContainer.style.display = 'none';
       const updatedCustomer = storage.getCustomer(activeLeadDetailsCustomerId);
       if (updatedCustomer) renderLeadTimeline(updatedCustomer);
-      showToast("Interação registrada com sucesso!", "success");
+      showToast("Registrado no histórico.", "success");
     });
   }
 }
@@ -1298,6 +1365,17 @@ function setupTasksEvents() {
     const dateInput = document.getElementById('task-input-date');
     if (dateInput) dateInput.value = localDateString();
   }
+
+  window.handleDeleteTask = async function(customerId, taskId) {
+    const task = (storage.getCustomer(customerId)?.tasks || []).find(item => item.id === taskId);
+    if (!task || !confirm(`Excluir a tarefa "${task.title}"?`)) return;
+    try {
+      await storage.deleteTask(customerId, taskId);
+      showToast('Tarefa excluída.', 'info');
+    } catch (err) {
+      reportError('Não foi possível excluir a tarefa', err);
+    }
+  };
 
   window.handleToggleTask = async function(customerId, taskId) {
     try {
@@ -1445,6 +1523,11 @@ function setupDialogEvents() {
 
       if (id) {
         customerPayload.id = id;
+      } else {
+        const twin = findDuplicate(storage.getCustomers(), { email, phone });
+        if (twin && !confirm(`Já existe uma oportunidade com este ${twin.email && twin.email.toLowerCase() === email.toLowerCase() && email ? 'e-mail' : 'telefone'}: ${twin.name}${twin.company ? `, ${twin.company}` : ''}, na etapa ${STAGES.find(st => st.id === twin.stage)?.name || twin.stage}.\n\nCadastrar outra mesmo assim?`)) {
+          return;
+        }
       }
 
       try {
@@ -1474,6 +1557,15 @@ function fillStageSelect() {
   const select = document.getElementById('input-deal-stage');
   if (select) select.innerHTML = STAGES.map(stage => `<option value="${stage.id}">${escapeHtml(stage.name)}</option>`).join('');
 }
+
+window.handleFocus = function(focus) {
+  crmStore.setFocus(focus);
+};
+
+window.handleCustomersView = function(change) {
+  setCustomersView(change);
+  crmStore.emitChange();
+};
 
 window.handleReportPeriod = function(periodId) {
   setReportPeriod(periodId);
@@ -1698,15 +1790,26 @@ function setupWhitelabelEvents() {
   if (fileLogo) {
     fileLogo.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const base64 = evt.target.result;
-          if (inputLogo) inputLogo.value = base64;
-          updatePreview(inputName?.value, base64, inputColor?.value);
-        };
-        reader.readAsDataURL(file);
+      if (!file) return;
+      if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+        showToast('Escolha uma imagem de até 5 MB.', 'error');
+        return;
       }
+      // Drawn at 256 px at most: sharp in the sidebar and on the proposal, small in the database
+      const image = new Image();
+      image.onload = () => {
+        const scale = Math.min(1, 256 / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        const reduced = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(image.src);
+        if (inputLogo) inputLogo.value = reduced;
+        updatePreview(inputName?.value, reduced, inputColor?.value);
+      };
+      image.onerror = () => showToast('Não foi possível ler essa imagem.', 'error');
+      image.src = URL.createObjectURL(file);
     });
   }
 
@@ -1886,7 +1989,8 @@ function setupProposalModalEvents() {
     set('prop-client-role', customer.role ? `, ${customer.role}` : '');
     set('prop-client-company', customer.company || '');
     set('prop-client-contact', [customer.email, customer.phone].filter(Boolean).join(', '));
-    set('prop-scope-text', customer.notes || 'Escreva nas anotações da oportunidade o que está sendo proposto: esse texto aparece aqui.');
+    set('prop-scope-text', customer.notes || 'Nada escrito ainda. Edite a oportunidade e descreva em Anotações o que está sendo proposto: o texto aparece aqui. Este aviso não sai na impressão.');
+    document.getElementById('prop-scope-text')?.classList.toggle('is-placeholder', !customer.notes);
     set('prop-price-display', formatBRL(customer.dealValue));
     set('prop-assigned-name', (customer.assignedTo?.name || user?.name || '').replace(/\s*\(.*\)$/, ''));
     set('prop-assigned-email', customer.assignedTo?.email || user?.email || '');
@@ -2105,8 +2209,9 @@ function setupAuthPortalEvents() {
         showToast("Preencha todos os campos.", "error");
         return;
       }
-      if (password.length < 8) {
-        showToast("A senha precisa ter pelo menos 8 caracteres.", "warning");
+      const weak = passwordProblem(password, { email, name });
+      if (weak) {
+        showToast(weak, "error");
         return;
       }
 
@@ -2140,8 +2245,9 @@ function setupAuthPortalEvents() {
         showToast("Preencha todos os campos.", "error");
         return;
       }
-      if (password.length < 8) {
-        showToast("A senha precisa ter pelo menos 8 caracteres.", "warning");
+      const weak = passwordProblem(password, { email, name });
+      if (weak) {
+        showToast(weak, "error");
         return;
       }
 
@@ -2257,188 +2363,40 @@ function setupCommandPalette() {
   function renderPaletteItems(query) {
     const q = (query || '').toLowerCase().trim();
     const state = crmStore.getState();
-    const customers = state.allCustomers || [];
+    const customers = state.visibleCustomers || [];
 
     const isUserAdmin = !!state.permissions?.isAdmin;
 
+    const go = (view) => () => { window.closeCommandPalette(); window.navigateToView(view); };
+    const click = (id) => () => { window.closeCommandPalette(); document.getElementById(id)?.click(); };
     const allActions = [
-      {
-        id: 'action-toggle-theme',
-        icon: '',
-        title: 'Alternar Modo Noturno / Claro (Doctor+)',
-        hint: 'Atalho: Alt + T',
-        category: 'Aparência & Interface',
-        run: () => {
-          window.closeCommandPalette();
-          const newTheme = toggleTheme();
-          showToast(newTheme === 'dark' ? 'Modo Noturno Doctor+ ativado' : 'Modo Claro ativado', 'info');
-        }
-      },
-      {
-        id: 'action-new-lead',
-        icon: '',
-        title: 'Nova Oportunidade / Lead',
-        hint: 'Atalho: N',
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          document.getElementById('btn-new-lead')?.click();
-        }
-      },
-      {
-        id: 'action-import-csv',
-        icon: '',
-        title: 'Importar Leads (CSV / Excel)',
-        hint: 'Atalho: I',
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          document.getElementById('btn-open-import-modal')?.click();
-        }
-      },
-      {
-        id: 'action-export-csv',
-        icon: '',
-        title: 'Exportar Base de Clientes (Excel CSV)',
-        hint: 'Download UTF-8',
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          document.getElementById('btn-export-csv')?.click();
-        }
-      },
-      {
-        id: 'action-export-audit',
-        icon: '',
-        title: 'Exportar relatório de auditoria',
-        hint: 'Logs imutáveis',
-        adminOnly: true,
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          try {
-            exportAuditLogsToCSV(state.auditLogs);
-            showToast("Relatório de auditoria exportado com sucesso!", "success");
-          } catch (err) {
-            showToast("Erro ao exportar logs: " + err.message, "error");
-          }
-        }
-      },
-      {
-        id: 'action-toggle-role',
-        icon: '',
-        title: 'Alternar Papel (Administrador / Funcionário)',
-        hint: 'Equipe',
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          window.handleToggleRole();
-        }
-      },
-      {
-        id: 'action-shortcuts',
-        icon: '',
-        title: 'Guia de Atalhos do Teclado',
-        hint: 'Atalho: ?',
-        category: 'Ações Rápidas',
-        run: () => {
-          window.closeCommandPalette();
-          document.getElementById('shortcuts-dialog')?.showModal();
-        }
-      },
-      {
-        id: 'nav-pipeline',
-        icon: '',
-        title: 'Ir para Funil de Vendas (Kanban)',
-        hint: 'Atalho: 1',
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('pipeline') : (window.location.hash = 'pipeline');
-        }
-      },
-      {
-        id: 'nav-customers',
-        icon: '',
-        title: 'Ir para Clientes & Leads',
-        hint: 'Atalho: 2',
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('customers') : (window.location.hash = 'customers');
-        }
-      },
-      {
-        id: 'nav-tasks',
-        icon: '',
-        title: 'Ir para Tarefas & Follow-up',
-        hint: 'Atalho: 3',
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('tasks') : (window.location.hash = 'tasks');
-        }
-      },
-      {
-        id: 'nav-metrics',
-        icon: '',
-        title: 'Ir para Métricas, Metas Q4 e Comissões',
-        hint: 'Atalho: 4',
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('metrics') : (window.location.hash = 'metrics');
-        }
-      },
-      {
-        id: 'nav-team',
-        icon: '',
-        title: 'Ir para Equipe & Convites',
-        hint: 'Gestão de Time',
-        adminOnly: true,
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('team') : (window.location.hash = 'team');
-        }
-      },
-      {
-        id: 'nav-audit',
-        icon: '',
-        title: 'Ir para Trilha de Auditoria & Logs',
-        hint: 'Auditoria',
-        adminOnly: true,
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('audit') : (window.location.hash = 'audit');
-        }
-      },
-      {
-        id: 'nav-security',
-        icon: '',
-        title: 'Ir para Segurança',
-        hint: 'Atalho: 5',
-        adminOnly: true,
-        category: 'Navegação',
-        run: () => {
-          window.closeCommandPalette();
-          window.navigateToView ? window.navigateToView('security') : (window.location.hash = 'security');
-        }
-      }
-    ];
+      { id: 'action-new-lead', title: 'Nova oportunidade', hint: 'N', category: 'Ações', run: click('btn-new-lead') },
+      { id: 'action-import-csv', title: 'Importar contatos de uma planilha', hint: 'I', category: 'Ações', run: click('btn-open-import-modal') },
+      { id: 'action-export-csv', title: 'Exportar clientes para planilha', hint: '', category: 'Ações', run: click('btn-export-csv') },
+      { id: 'action-export-audit', title: 'Exportar o histórico de atividade', hint: '', adminOnly: true, category: 'Ações', run: () => { window.closeCommandPalette(); window.handleExportAudit(); } },
+      { id: 'action-toggle-theme', title: 'Trocar entre tema claro e escuro', hint: '', category: 'Ações', run: () => { window.closeCommandPalette(); toggleTheme(); } },
+      { id: 'action-toggle-role', title: 'Ver a demonstração com o outro perfil', hint: '', demoOnly: true, category: 'Ações', run: () => { window.closeCommandPalette(); window.handleToggleRole(); } },
+      { id: 'action-shortcuts', title: 'Atalhos de teclado', hint: '?', category: 'Ações', run: () => { window.closeCommandPalette(); document.getElementById('shortcuts-dialog')?.showModal(); } },
+      { id: 'nav-pipeline', title: 'Funil de vendas', hint: '1', category: 'Ir para', run: go('pipeline') },
+      { id: 'nav-customers', title: 'Clientes', hint: '2', category: 'Ir para', run: go('customers') },
+      { id: 'nav-tasks', title: 'Tarefas', hint: '3', category: 'Ir para', run: go('tasks') },
+      { id: 'nav-metrics', title: 'Relatórios', hint: '4', category: 'Ir para', run: go('metrics') },
+      { id: 'nav-team', title: 'Equipe', hint: '', adminOnly: true, category: 'Ir para', run: go('team') },
+      { id: 'nav-audit', title: 'Auditoria', hint: '', adminOnly: true, category: 'Ir para', run: go('audit') },
+      { id: 'nav-security', title: 'Segurança', hint: '5', adminOnly: true, category: 'Ir para', run: go('security') }
+    ].map(action => ({ icon: '', ...action }));
 
-    const defaultActions = allActions.filter(a => !a.adminOnly || isUserAdmin);
+        const defaultActions = allActions.filter(a => (!a.adminOnly || isUserAdmin) && (!a.demoOnly || isDemoSession()));
 
     let html = '';
 
     if (!q) {
-      const categories = ['Ações Rápidas', 'Navegação'];
+      const categories = ['Ações', 'Ir para'];
       categories.forEach(cat => {
         const items = defaultActions.filter(a => a.category === cat);
         html += `<div class="command-group-title">${cat}</div>`;
         items.forEach((item, idx) => {
-          const isFirst = cat === 'Ações Rápidas' && idx === 0;
+          const isFirst = cat === 'Ações' && idx === 0;
           html += `
             <div class="command-item ${isFirst ? 'active' : ''}" data-action-id="${escapeHtml(item.id)}">
               <div class="command-item-left">
@@ -2465,7 +2423,7 @@ function setupCommandPalette() {
       ).slice(0, 8);
 
       if (matchedActions.length > 0) {
-        html += `<div class="command-group-title">Ações do Sistema</div>`;
+        html += `<div class="command-group-title">Ações</div>`;
         matchedActions.forEach((item, idx) => {
           html += `
             <div class="command-item ${idx === 0 ? 'active' : ''}" data-action-id="${escapeHtml(item.id)}">
@@ -2480,7 +2438,7 @@ function setupCommandPalette() {
       }
 
       if (matchedCustomers.length > 0) {
-        html += `<div class="command-group-title">Oportunidades &amp; Clientes (${matchedCustomers.length})</div>`;
+        html += `<div class="command-group-title">Oportunidades</div>`;
         matchedCustomers.forEach((c, idx) => {
           const isAct = matchedActions.length === 0 && idx === 0;
           html += `
@@ -2489,10 +2447,10 @@ function setupCommandPalette() {
                 <span class="command-item-icon"></span>
                 <div>
                   <div style="font-weight: 600; font-size: 0.82rem;">${escapeHtml(c.name)}</div>
-                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(c.company || 'Sem empresa')} • ${formatBRL(c.dealValue)}</div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml([c.company, formatBRL(c.dealValue)].filter(Boolean).join(', '))}</div>
                 </div>
               </div>
-              <span class="command-item-hint">Ver Detalhes ↵</span>
+              <span class="command-item-hint">Abrir</span>
             </div>
           `;
         });
@@ -2501,7 +2459,7 @@ function setupCommandPalette() {
       if (matchedActions.length === 0 && matchedCustomers.length === 0) {
         html = `
           <div style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-            Nenhum resultado encontrado para "<strong>${escapeHtml(q)}</strong>".
+            Nada encontrado para "<strong>${escapeHtml(q)}</strong>".
           </div>
         `;
       }
@@ -2553,51 +2511,30 @@ function setupKeyboardShortcuts() {
       return;
     }
 
-    // Do not trigger single-key shortcuts while typing in inputs
+    // Single keys only act inside the app, with no window open and no modifier held:
+    // otherwise "n" on the sign-in screen opened a form, and Alt+N or Ctrl+I were swallowed
     const activeEl = document.activeElement;
-    const isTyping = activeEl && (
-      activeEl.tagName === 'INPUT' ||
-      activeEl.tagName === 'TEXTAREA' ||
-      activeEl.tagName === 'SELECT' ||
-      activeEl.isContentEditable
-    );
-
+    const isTyping = activeEl && (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName) || activeEl.isContentEditable);
     if (isTyping) {
       if (e.key === 'Escape') activeEl.blur();
       return;
     }
+    if (e.ctrlKey || e.metaKey || e.altKey || !isSessionActive() || document.querySelector('dialog[open]')) return;
 
-    // Global Single-Key Shortcuts
+    const key = e.key.toLowerCase();
+    const views = { '1': 'pipeline', '2': 'customers', '3': 'tasks', '4': 'metrics', '5': 'security' };
     if (e.key === '?') {
       e.preventDefault();
       if (shortcutsDialog) shortcutsDialog.showModal();
-    } else if (e.key.toLowerCase() === 'n') {
+    } else if (key === 'n') {
+      // the same path as the button: plan limit, read-only mode and a clean form
       e.preventDefault();
-      const customerDialog = document.getElementById('customer-dialog');
-      if (customerDialog) {
-        document.getElementById('customer-form')?.reset();
-        document.getElementById('dialog-customer-id').value = '';
-        document.getElementById('customer-dialog-title').textContent = 'Nova Oportunidade / Lead';
-        customerDialog.showModal();
-      }
-    } else if (e.key.toLowerCase() === 'i') {
+      document.getElementById('btn-new-lead')?.click();
+    } else if (key === 'i') {
       e.preventDefault();
-      const importDialog = document.getElementById('import-dialog');
-      if (importDialog) importDialog.showModal();
-    } else if (e.key === '1') {
-      window.navigateToView ? window.navigateToView('pipeline') : (window.location.hash = 'pipeline');
-    } else if (e.key === '2') {
-      window.navigateToView ? window.navigateToView('customers') : (window.location.hash = 'customers');
-    } else if (e.key === '3') {
-      window.navigateToView ? window.navigateToView('tasks') : (window.location.hash = 'tasks');
-    } else if (e.key === '4') {
-      window.navigateToView ? window.navigateToView('metrics') : (window.location.hash = 'metrics');
-    } else if (e.key === '5') {
-      if (crmStore.getState().permissions?.isAdmin) {
-        window.navigateToView ? window.navigateToView('security') : (window.location.hash = 'security');
-      } else {
-        showToast('A tela de Segurança é só para administradores.', 'warning');
-      }
+      document.getElementById('btn-open-import-modal')?.click();
+    } else if (views[e.key]) {
+      window.navigateToView(views[e.key]);
     }
   });
 }
@@ -2736,13 +2673,7 @@ function setupHeaderToolsMenu() {
   if (btnMenuExportAudit) {
     btnMenuExportAudit.addEventListener('click', () => {
       closeMenu();
-      try {
-        const state = crmStore.getState();
-        exportAuditLogsToCSV(state.auditLogs);
-        showToast("Relatório de auditoria exportado com sucesso!", "success");
-      } catch (err) {
-        showToast("Erro ao exportar logs: " + err.message, "error");
-      }
+      window.handleExportAudit();
     });
   }
 
@@ -2982,8 +2913,9 @@ function setupEmployeeManagementEvents() {
       const newPass = inputFirstAccessNew.value;
       const confirmPass = inputFirstAccessConfirm.value;
 
-      if (!newPass || newPass.length < 8) {
-        showToast('A senha precisa ter pelo menos 8 caracteres.', 'error');
+      const weak = passwordProblem(newPass, { email: getCurrentUser()?.email, name: getCurrentUser()?.name });
+      if (weak) {
+        showToast(weak, 'error');
         return;
       }
       if (newPass !== confirmPass) {
@@ -3062,16 +2994,80 @@ function setupEmployeeManagementEvents() {
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_STATUS_CHANGED, { empId, name: emp.name, status: res.status }, AUDIT_SEVERITY.WARNING);
-    showToast(res.status === 'active' ? `Acesso de ${emp.name} liberado.` : `Acesso de ${emp.name} bloqueado.`, 'info');
+    const rotated = res.status === 'blocked' && await retireInviteCode();
+    showToast(res.status === 'active'
+      ? `Acesso de ${emp.name} liberado.`
+      : `Acesso de ${emp.name} bloqueado.${rotated ? ' O código de convite foi trocado, porque essa pessoa conhecia o antigo.' : ''}`, 'info');
     renderSecurityView(crmStore.getState());
   };
+
+  // Whoever leaves knew the invite code and could come back with it: a new one is issued
+  async function retireInviteCode() {
+    if (!isCloudSession()) return false;
+    const result = await replaceCompanyTeamInviteCode();
+    if (!result.success) return false;
+    recheckInviteWithSeats();
+    logAudit(AUDIT_ACTIONS.TEAM_INVITE_REPLACED, { reason: 'saída de pessoa da equipe' });
+    if (typeof window.refreshTeamInviteCard === 'function') window.refreshTeamInviteCard();
+    return true;
+  }
+
+  const myself = () => {
+    const me = getCurrentUser();
+    return { id: me.uid || 'admin-user-01', name: me.name, email: me.email };
+  };
+  const openLeadsOf = (personId) => storage.getCustomers().filter(c => c.assignedTo?.id === personId && c.stage !== 'won' && c.stage !== 'lost').length;
+
+  const reassignDialog = document.getElementById('reassign-dialog');
+  let reassignFrom = null;
+  window.handleReassignLeads = function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
+    const count = openLeadsOf(empId);
+    if (!emp || !reassignDialog || count === 0) return;
+    reassignFrom = emp;
+    document.getElementById('reassign-text').textContent = `${emp.name} tem ${count === 1 ? '1 oportunidade em aberto' : `${count} oportunidades em aberto`}. As ganhas e as perdidas continuam no nome dessa pessoa, para o histórico.`;
+    const targets = [myself(), ...getEmployees().filter(e => e.id !== empId && e.status !== 'blocked')];
+    document.getElementById('reassign-target').innerHTML = targets.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
+    reassignDialog.showModal();
+  };
+  const closeReassign = () => reassignDialog?.close();
+  document.getElementById('btn-close-reassign-dialog')?.addEventListener('click', closeReassign);
+  document.getElementById('btn-cancel-reassign')?.addEventListener('click', closeReassign);
+  document.getElementById('reassign-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!reassignFrom) return;
+    const targetId = document.getElementById('reassign-target').value;
+    const target = [myself(), ...getEmployees()].find(t => t.id === targetId);
+    if (!target) return;
+    try {
+      const moved = await storage.reassignCustomers(reassignFrom.id, { id: target.id, name: target.name, email: target.email });
+      logAudit(AUDIT_ACTIONS.LEADS_REASSIGNED, { de: reassignFrom.name, para: target.name, quantidade: moved }, AUDIT_SEVERITY.WARNING);
+      closeReassign();
+      showToast(`${moved === 1 ? '1 oportunidade transferida' : `${moved} oportunidades transferidas`} para ${target.name}.`, 'success');
+    } catch (err) {
+      reportError('Não foi possível transferir', err);
+    }
+  });
 
   window.handleDeleteEmployee = async function(empId) {
     const emp = getEmployees().find(e => e.id === empId);
     if (!emp) return;
 
-    if (!confirm(`Excluir o cadastro de ${emp.name}? A pessoa perde o acesso aos dados da empresa. Os leads dela continuam no sistema.`)) {
+    const open = openLeadsOf(empId);
+    const portfolio = open === 0 ? '' : ` ${open === 1 ? 'A oportunidade em aberto dela passa' : `As ${open} oportunidades em aberto dela passam`} para você.`;
+    if (!confirm(`Excluir o cadastro de ${emp.name}? A pessoa perde o acesso aos dados da empresa.${portfolio}`)) {
       return;
+    }
+
+    // The portfolio is handed over first: once the person is gone nobody would be looking after it
+    if (open > 0 && !isReadOnly()) {
+      try {
+        await storage.reassignCustomers(empId, myself());
+        logAudit(AUDIT_ACTIONS.LEADS_REASSIGNED, { de: emp.name, para: getCurrentUser().name, quantidade: open }, AUDIT_SEVERITY.WARNING);
+      } catch (err) {
+        reportError('Não foi possível transferir a carteira', err);
+        return;
+      }
     }
 
     const res = await deleteEmployee(empId);
@@ -3081,7 +3077,8 @@ function setupEmployeeManagementEvents() {
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_DELETED, { empId, name: emp.name }, AUDIT_SEVERITY.CRITICAL);
-    showToast(`Cadastro de ${emp.name} excluído.`, 'info');
+    const rotated = await retireInviteCode();
+    showToast(`Cadastro de ${emp.name} excluído.${rotated ? ' O código de convite foi trocado, porque essa pessoa conhecia o antigo.' : ''}`, 'info');
     renderSecurityView(crmStore.getState());
   };
 }
@@ -3220,10 +3217,19 @@ function setupTeamInviteEvents() {
 // ==========================================================================
 // Audit Trail View & Rendering
 // ==========================================================================
+// Who did it comes from the team list (by account id); the name stored with the record is only a fallback,
+// because that one is written by whoever made the record
+function auditAuthor(log) {
+  const me = getCurrentUser();
+  if (me && log.userId === me.uid) return me.name;
+  const colleague = getEmployees().find(e => e.id === log.userId);
+  return colleague ? colleague.name : (log.userName || 'Pessoa removida');
+}
+
 function setupAuditTrailView() {
   function renderAuditView() {
     const stats = getAuditStats();
-    const logs = getLocalAuditLogs(100);
+    const logs = getAuditLogs(150);
 
     const statTotal = document.getElementById('audit-stat-total');
     const statToday = document.getElementById('audit-stat-today');
@@ -3247,26 +3253,32 @@ function setupAuditTrailView() {
       fromRole: 'de', toRole: 'para', role: 'perfil', status: 'situação', plan: 'plano', type: 'tipo',
       leadName: 'lead', source: 'origem', value: 'valor', empId: 'colaborador', cpf: 'CPF', reason: 'motivo'
     };
-    const hiddenDetails = ['userAgent', 'screenSize', 'method', 'action'];
+    const valueLabels = {
+      blocked: 'bloqueado', active: 'liberado', admin: 'administrador', employee: 'vendedor',
+      lead: 'novo lead', contact: 'primeiro contato', proposal: 'proposta', negotiation: 'negociação', won: 'ganho', lost: 'perdido',
+      customers_csv: 'planilha de clientes', audit_csv: 'planilha do histórico', starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise'
+    };
+    // ids mean nothing to the reader; the names next to them already say which record it was
+    const hiddenDetails = ['userAgent', 'screenSize', 'method', 'action', 'customerId', 'leadId', 'empId'];
     const methodLabels = {
       session_resume: 'sessão retomada', email_password: 'e-mail e senha', demo: 'demonstração',
       invite_code: 'código de convite', webhook_api: 'recebido por webhook'
     };
 
-    tbody.innerHTML = logs.slice(0, 50).map(log => {
+    tbody.innerHTML = logs.map(log => {
       const date = new Date(log.timestamp);
-      const when = `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-      const details = log.details || {};
+      const when = isNaN(date) ? 'sem data' : `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      const details = log.details && typeof log.details === 'object' ? log.details : {};
       const parts = Object.entries(details)
-        .filter(([k, v]) => !hiddenDetails.includes(k) && v !== undefined && v !== null && v !== '')
-        .map(([k, v]) => `${detailLabels[k] || k}: ${v}`);
+        .filter(([k, v]) => !hiddenDetails.includes(k) && v !== undefined && v !== null && v !== '' && v !== 'user_action' && typeof v !== 'object')
+        .map(([k, v]) => `${detailLabels[k] || k}: ${valueLabels[v] || v}`);
       if (details.method && methodLabels[details.method]) parts.unshift(methodLabels[details.method]);
       const needsAttention = log.severity === 'warning' || log.severity === 'critical';
 
       return `<tr>
         <td class="nowrap muted">${when}</td>
-        <td>${escapeHtml(formatAuditAction(log.action))}${needsAttention ? ' <span class="status-text blocked">(atenção)</span>' : ''}</td>
-        <td>${escapeHtml(log.userName || '')}<div class="cell-sub">${log.userRole === 'admin' ? 'Administrador' : 'Vendedor'}</div></td>
+        <td>${escapeHtml(formatAuditAction(log.action).slice(0, 60))}${needsAttention ? ' <span class="status-text blocked">(atenção)</span>' : ''}</td>
+        <td>${escapeHtml(auditAuthor(log))}<div class="cell-sub">${log.userRole === 'admin' ? 'Administrador' : 'Vendedor'}</div></td>
         <td class="muted">${escapeHtml(parts.join(', ').substring(0, 120))}</td>
       </tr>`;
     }).join('');
@@ -3275,17 +3287,24 @@ function setupAuditTrailView() {
   // Export audit CSV
   const btnExport = document.getElementById('btn-export-audit-csv');
   if (btnExport) {
-    btnExport.addEventListener('click', () => {
-      const csv = exportAuditToCSV();
-      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `edx_digital_audit_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-      showToast('Histórico exportado.', 'success');
-      logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'audit_csv' });
-    });
+    btnExport.addEventListener('click', () => window.handleExportAudit());
   }
+
+  window.handleExportAudit = function() {
+    if (!isAdmin()) return;
+    if (getAuditLogs(1).length === 0) {
+      showToast('Ainda não há nada no histórico para exportar.', 'info');
+      return;
+    }
+    const blob = new Blob(['\ufeff' + exportAuditToCSV(auditAuthor)], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `edx-digital-historico-${localDateString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast('Histórico exportado.', 'success');
+    logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'audit_csv' });
+  };
 
   // Subscribe to audit events for live rendering
   onAuditLog(() => renderAuditView());

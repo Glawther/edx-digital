@@ -21,11 +21,11 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.12.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.12.0">
-  <link rel="stylesheet" href="css/components.css?v=3.12.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.12.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.12.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.13.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.13.0">
+  <link rel="stylesheet" href="css/components.css?v=3.13.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.13.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.13.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -287,8 +287,8 @@
             <button type="button" class="dropdown-item" id="btn-menu-customize">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Funil e campos</span>
-                <span class="dropdown-item-desc">Nomes das etapas e campos extras</span>
+                <span class="dropdown-item-title">Funil, campos e meta</span>
+                <span class="dropdown-item-desc">Etapas, campos extras e meta do mês</span>
               </div>
             </button>
 
@@ -476,6 +476,10 @@
               <button type="button" class="filter-pill" data-priority="low" aria-pressed="false">Baixa</button>
             </div>
           </div>
+          <div class="filter-group">
+            <span class="filter-label" id="focus-filter-label">Atenção</span>
+            <div class="filter-pills" id="focus-filter-pills" role="group" aria-labelledby="focus-filter-label"></div>
+          </div>
           <span class="pipeline-hint">Arraste um cartão para mudar de etapa. Clique nele para ver tudo.</span>
         </div>
 
@@ -499,6 +503,19 @@
         <div class="table-container">
           <div class="table-header-bar">
             <h2 id="customers-count-label">Clientes</h2>
+            <div class="table-tools">
+              <label class="inline-field" for="customers-stage-filter">Etapa
+                <select id="customers-stage-filter" class="form-select form-select-sm" onchange="window.handleCustomersView({ stage: this.value })"></select>
+              </label>
+              <label class="inline-field" for="customers-sort">Ordenar por
+                <select id="customers-sort" class="form-select form-select-sm" onchange="window.handleCustomersView({ sort: this.value })">
+                  <option value="recent">Alteração mais recente</option>
+                  <option value="name">Nome</option>
+                  <option value="value">Maior valor</option>
+                  <option value="close">Previsão de fechamento</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div style="overflow-x: auto;">
             <table class="crm-table">
@@ -620,13 +637,14 @@
           <div class="team-invite-card">
             <div class="team-invite-text">
               <h2>Cadastrar alguém você mesmo</h2>
-              <p>Você informa os dados e uma senha temporária; a pessoa troca a senha no primeiro acesso. A lista da equipe, com bloqueio e exclusão de acessos, fica em Segurança.</p>
+              <p>Você informa os dados e uma senha temporária; a pessoa troca a senha no primeiro acesso.</p>
             </div>
             <div class="team-invite-actions">
               <button type="button" class="btn btn-outline btn-sm" onclick="window.openEmployeeModal()">Cadastrar colaborador</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.navigateToView('security')">Ver a equipe</button>
             </div>
           </div>
+
+          <div id="team-list-container"></div>
         </div>
       </section>
 
@@ -847,6 +865,15 @@
       <div id="lead-details-summary"></div>
       <div class="lead-details-actions" id="lead-details-actions"></div>
 
+      <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Tarefas</h3>
+      <div id="lead-details-tasks"></div>
+      <form id="lead-task-form" class="lead-task-form">
+        <input type="text" id="lead-task-title" class="form-input" placeholder="Próximo passo, por exemplo: ligar para confirmar" required maxlength="300" aria-label="O que precisa ser feito">
+        <input type="date" id="lead-task-date" class="form-input" required aria-label="Para quando">
+        <input type="time" id="lead-task-time" class="form-input" aria-label="Horário (opcional)">
+        <button type="submit" class="btn btn-outline btn-sm">Agendar</button>
+      </form>
+
       <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
       <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
@@ -862,7 +889,7 @@
 
       <!-- Quick Note Form (Collapsible) -->
       <div id="quick-activity-form-container" style="display: none; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
-        <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);" id="quick-activity-title">Registrar Interação</h4>
+        <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);" id="quick-activity-title">Registrar contato</h4>
         <input type="hidden" id="quick-activity-type" value="note">
         <textarea id="quick-activity-text" class="form-textarea" placeholder="O que foi conversado" style="min-height: 70px; margin-bottom: 0.75rem;"></textarea>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
@@ -1112,7 +1139,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
   <dialog id="customize-dialog" class="crm-dialog" style="max-width: 640px; width: 95%;">
     <div class="dialog-header">
-      <h2 class="dialog-title">Funil e campos</h2>
+      <h2 class="dialog-title">Funil, campos e meta</h2>
       <button type="button" class="dialog-close" id="btn-close-customize-dialog" aria-label="Fechar">&times;</button>
     </div>
     <form id="customize-form">
@@ -1125,6 +1152,13 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
+
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Meta de vendas do mês</h3>
+        <p class="empty-note" style="margin: 0 0 0.85rem;">O valor que a empresa quer vender em cada mês. O andamento aparece em Relatórios, para quem administra. Deixe em branco para não usar meta.</p>
+        <div class="form-group" style="max-width: 240px;">
+          <label for="customize-goal">Meta (R$)</label>
+          <input type="text" id="customize-goal" class="form-input" inputmode="decimal" placeholder="0,00" autocomplete="off">
+        </div>
       </div>
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-customize">Cancelar</button>
@@ -1319,6 +1353,26 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <!-- ========================================================================
        MODAL: Troca de Senha Obrigatória no Primeiro Acesso
        ======================================================================== -->
+  <dialog id="reassign-dialog" class="crm-dialog" style="max-width: 460px; width: 95%;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Transferir carteira</h2>
+      <button type="button" class="dialog-close" id="btn-close-reassign-dialog" aria-label="Fechar">&times;</button>
+    </div>
+    <form id="reassign-form">
+      <div class="dialog-body">
+        <p id="reassign-text" style="font-size: 0.9rem; line-height: 1.5; margin: 0 0 1rem; color: var(--text-primary);"></p>
+        <div class="form-group">
+          <label for="reassign-target">Transferir para</label>
+          <select id="reassign-target" class="form-select" required></select>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button type="button" class="btn btn-outline" id="btn-cancel-reassign">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Transferir</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="account-dialog" class="crm-dialog" style="max-width: 560px; width: 95%;">
     <div class="dialog-header">
       <h2 class="dialog-title">Minha conta e privacidade</h2>
@@ -1330,6 +1384,28 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p id="account-summary"></p>
         <p id="account-terms" class="muted"></p>
         <p><a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a></p>
+      </div>
+
+      <div class="account-block" id="account-profile-block">
+        <h3 class="section-title">Seus dados de acesso</h3>
+        <form id="form-account-name" class="inline-form">
+          <div class="form-group">
+            <label for="account-name">Seu nome</label>
+            <input type="text" id="account-name" class="form-input" required minlength="2" maxlength="200" autocomplete="name">
+          </div>
+          <button type="submit" class="btn btn-outline btn-sm">Salvar nome</button>
+        </form>
+        <form id="form-account-password" class="inline-form">
+          <div class="form-group">
+            <label for="account-current-password">Senha atual</label>
+            <input type="password" id="account-current-password" class="form-input" required autocomplete="current-password">
+          </div>
+          <div class="form-group">
+            <label for="account-new-password">Nova senha (8 caracteres ou mais)</label>
+            <input type="password" id="account-new-password" class="form-input" required minlength="8" maxlength="128" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-outline btn-sm">Trocar senha</button>
+        </form>
       </div>
 
       <div class="account-block" id="account-export-block">
@@ -1738,7 +1814,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.12.0"></script>
+  <script type="module" src="js/app.js?v=3.13.0"></script>
 
 </body>
 </html>
