@@ -36,14 +36,14 @@ const ACTIVITY_KEY = 'edx_last_activity';
 
 // Version of the Terms of Use and Privacy Policy a person accepts when creating an account.
 // Change it whenever termos.html or privacidade.html change in substance.
-export const LEGAL_VERSION = '2026-10-11';
+export const LEGAL_VERSION = '2026-10-12';
 
 // A signed-in account left untouched for this long is signed out
 export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
-const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor'];
+const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields'];
 
 let currentUser = null;
 let currentRole = USER_ROLES.EMPLOYEE;
@@ -201,7 +201,7 @@ export async function registerCompany({ name, email, company, password, plan = '
 
   const slug = companyName.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').substring(0, 20);
   const orgId = `org_${slug || 'empresa'}_${randomCode(8).toLowerCase()}`;
-  const inviteCode = 'NX-' + randomCode(8);
+  const inviteCode = 'EDX-' + randomCode(8);
 
   // Order matters: the security rules only accept an administrator profile for a company
   // this same account owns, so the company record has to exist first.
@@ -248,6 +248,9 @@ export async function joinCompany({ inviteCode, name, email, password }) {
 
   // Checked before creating the account, so a wrong code leaves nothing behind
   const inviteSnap = await fsMod.getDoc(fsMod.doc(db, 'invites', code)).catch(() => null);
+  if (inviteSnap && inviteSnap.exists() && inviteSnap.data().active !== true && inviteSnap.data().pausedBy === 'team-full') {
+    throw authError('edx/team-full');
+  }
   if (!inviteSnap || !inviteSnap.exists() || inviteSnap.data().active !== true) {
     throw authError('edx/invalid-invite');
   }
@@ -304,7 +307,7 @@ export async function regenerateTeamInviteCode() {
   const { db, fsMod } = await getFirebase();
   const org = getSavedOrganization();
   const now = new Date().toISOString();
-  const newCode = 'NX-' + randomCode(8);
+  const newCode = 'EDX-' + randomCode(8);
 
   await fsMod.setDoc(fsMod.doc(db, 'invites', newCode), {
     orgId: org.id,
@@ -319,6 +322,21 @@ export async function regenerateTeamInviteCode() {
   await fsMod.updateDoc(fsMod.doc(db, 'organizations', org.id), { teamInviteCode: newCode, updatedAt: now });
   saveOrganization({ ...org, teamInviteCode: newCode }, { skipSync: true });
   return newCode;
+}
+
+/**
+ * Opens or pauses the invite code. Used when the team reaches the number of people the plan holds.
+ */
+export async function setTeamInviteOpen(open) {
+  if (sessionKind !== SESSION_KINDS.CLOUD || !isAdmin()) return;
+  const org = getSavedOrganization();
+  if (!org.teamInviteCode) return;
+  const { db, fsMod } = await getFirebase();
+  await fsMod.updateDoc(fsMod.doc(db, 'invites', org.teamInviteCode), {
+    active: open,
+    pausedBy: open ? null : 'team-full',
+    updatedAt: new Date().toISOString()
+  });
 }
 
 // ==========================================================================

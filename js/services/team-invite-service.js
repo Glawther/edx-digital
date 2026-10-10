@@ -9,7 +9,7 @@
 import { getSavedOrganization } from '../core/config.js';
 import { isCloudSession, regenerateTeamInviteCode } from './auth-service.js';
 
-const DEMO_INVITE_CODE = 'NX-EXEMPLO';
+const DEMO_INVITE_CODE = 'EDX-EXEMPLO';
 
 /**
  * The company's current invite code. The demo has a placeholder that opens nothing.

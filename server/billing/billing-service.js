@@ -14,6 +14,8 @@ const PLAN_NAMES = { starter: 'Starter', pro: 'Professional', enterprise: 'Enter
 const PERIOD_DAYS = 30;
 const CHARGE_VALID_MINUTES = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
+// What Mercado Pago reports when the whole amount went back to the payer
+const REVERSED = ['refunded', 'charged_back'];
 
 class BillingError extends Error {
   constructor(code, message, status = 400) {
@@ -127,11 +129,17 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
       // Not a charge this server created: nothing to release
       throw new BillingError('unknown_payment', 'Cobrança desconhecida.', 404);
     }
-    if (record.status === 'approved') {
-      return { status: 'approved', plan: record.plan, paidUntil: record.paidUntil || null, alreadyApplied: true };
+    if (record.status === 'refunded') {
+      return { status: 'refunded', plan: record.plan, alreadyApplied: true };
     }
 
     const payment = await gateway.getPayment(paymentId);
+
+    if (record.status === 'approved') {
+      // A payment that had released a period and was later given back takes that period away
+      if (REVERSED.includes(payment.status)) return revokePayment(paymentId, record, payment.status);
+      return { status: 'approved', plan: record.plan, paidUntil: record.paidUntil || null, alreadyApplied: true };
+    }
 
     if (payment.status !== 'approved') {
       const closed = ['cancelled', 'rejected', 'refunded', 'charged_back', 'expired'].includes(payment.status);
@@ -175,6 +183,38 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
     });
 
     return { status: 'approved', plan: record.plan, paidUntil };
+  }
+
+  /**
+   * Takes back the period a refunded (or charged back) payment had released.
+   * Other periods paid for stay; with none left, the company goes back to where the
+   * free trial stands, which usually means read-only mode.
+   */
+  async function revokePayment(paymentId, record, providerStatus) {
+    const current = now();
+    // Marked first, so a repeated notice cannot take a second period away
+    await store.updatePayment(paymentId, { status: 'refunded', providerStatus, refundedAt: new Date(current).toISOString() });
+
+    const org = await store.getOrganization(record.orgId);
+    if (!org) return { status: 'refunded', plan: record.plan };
+
+    const paidUntilNow = Number(org.paidUntilMs) || (org.paidUntil ? Date.parse(org.paidUntil) : 0);
+    const remainingMs = paidUntilNow - PERIOD_DAYS * DAY_MS;
+    const updatedAt = new Date(current).toISOString();
+
+    if (org.planStatus === 'active' && remainingMs > current) {
+      await store.updateOrganization(record.orgId, { paidUntilMs: remainingMs, paidUntil: new Date(remainingMs).toISOString(), updatedAt });
+    } else if (org.planStatus === 'active') {
+      await store.updateOrganization(record.orgId, {
+        planStatus: 'trial',
+        paidUntil: null,
+        paidUntilMs: null,
+        // a company from before the trial end was recorded would otherwise be free for good
+        trialEndsAtMs: typeof org.trialEndsAtMs === 'number' ? org.trialEndsAtMs : current,
+        updatedAt
+      });
+    }
+    return { status: 'refunded', plan: record.plan };
   }
 
   /**

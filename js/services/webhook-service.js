@@ -5,7 +5,7 @@
 
 import { storage } from '../core/storage-manager.js';
 import { crmStore } from '../core/crm-store.js';
-import { addInAppNotification, NOTIFICATION_TYPES } from './notification-service.js';
+import { notify } from './notification-service.js';
 import { logAudit, AUDIT_ACTIONS } from './audit-service.js';
 
 const WEBHOOK_CONFIG_KEY = 'edx_webhook_config';
@@ -106,24 +106,24 @@ export async function pollWebhookInbox() {
 
       const newCustomer = {
         id: 'wh-lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-        name: item.name || 'Lead Anônimo',
+        name: item.name || 'Contato sem nome',
         email: item.email || '',
         phone: item.phone || '',
-        company: item.company || 'Empresa Direta',
+        company: item.company || '',
         dealValue: Number(item.value) || 0,
         stage: 'lead',
-        priority: 'high',
-        tags: [item.source ? item.source.split(' ')[0] : 'Webhook', 'Inbound'],
-        notes: item.notes || `Capturado via Webhook: ${item.source || 'Tráfego Pago'}`,
+        priority: 'medium',
+        tags: [item.source ? item.source.split(' ')[0] : 'Formulário'],
+        notes: item.notes || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         activities: [
           {
             id: 'act-' + Date.now(),
             type: 'note',
-            title: 'Lead Ingerido via Webhook',
-            text: `Origem: ${item.source || 'Endpoint Webhook'}. Ingestão automática em tempo real.`,
-            author: 'Webhook System',
+            title: 'Recebido por formulário',
+            text: item.source ? `Origem: ${item.source}.` : '',
+            author: 'Integração',
             timestamp: new Date().toISOString()
           }
         ],
@@ -133,13 +133,7 @@ export async function pollWebhookInbox() {
       await storage.saveCustomer(newCustomer);
       newlyIngested.push(newCustomer);
 
-      // Trigger In-App Notification
-      addInAppNotification({
-        type: NOTIFICATION_TYPES.LEAD_UPDATE,
-        title: `Novo Lead Recebido! (${item.source || 'Webhook'})`,
-        body: `${newCustomer.name} (${newCustomer.company}) cadastrado automaticamente no funil!`,
-        data: { leadId: newCustomer.id }
-      });
+      notify('Novo contato recebido', `${newCustomer.name}${newCustomer.company ? ', ' + newCustomer.company : ''} entrou no funil${item.source ? ' por ' + item.source : ''}.`, { view: 'pipeline' });
 
       // Audit log
       logAudit(AUDIT_ACTIONS.LEAD_CREATED, {

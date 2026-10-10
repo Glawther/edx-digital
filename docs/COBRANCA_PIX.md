@@ -84,12 +84,12 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 ## Limites conhecidos
 
 - **Servidor gratuito do Render dorme** depois de um tempo sem uso. O primeiro PIX depois disso pode levar até um minuto para ser gerado, e o aviso do Mercado Pago pode chegar com atraso (ele tenta de novo sozinho). A tela do cliente também consulta o pagamento a cada 5 segundos, o que acorda o servidor. Um plano pago do Render elimina a espera.
-- **Limites do plano** (pessoas, oportunidades) são mostrados, mas não impedidos.
-- **Reembolso** é feito por você no painel do Mercado Pago. O sistema não desfaz o período automaticamente; ajuste `paidUntil` da empresa no console do Firebase se precisar.
+- **Limites do plano** (pessoas com acesso, oportunidades em aberto) são conferidos pelo aplicativo, não pelas regras do banco. Na conta de quem administra a contagem de oportunidades é exata; a de um vendedor conta só a própria carteira. Com a equipe completa, o código de convite fica pausado.
+- **Reembolso**: você devolve o valor no painel do Mercado Pago e o sistema tira sozinho os 30 dias daquele pagamento, quando o Mercado Pago avisa (estorno total ou contestação). Sem outro período pago, a empresa volta para onde o teste está, em geral modo de leitura. Devolução parcial não muda nada: ajuste `paidUntilMs` e `paidUntil` no console do Firebase se precisar.
 - **Nota fiscal** não é emitida pelo sistema.
 
 ## Desenvolvimento
 
-Testes da lógica (sem rede): `npm test`, arquivo `server/tests/billing-pix.test.js`.
+Testes da lógica (sem rede): `npm test`. A cobrança está em `server/tests/billing-pix.test.js`; importação, lembretes, relatório e personalização estão em `tests/unit/`.
 
 Para rodar de ponta a ponta sem tocar em nada real: emuladores do Firebase (`npm run emulators`) e o servidor com `FIREBASE_PROJECT_ID=demo-edx-digital`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST` e `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira. Os emuladores são ignorados quando `NODE_ENV=production`.

@@ -7,7 +7,6 @@ const STORAGE_KEYS = {
   ACTIVITIES_DATA: 'edx_local_activities',
   APP_PREFS: 'edx_preferences',
   ORGANIZATION: 'edx_organization_config',
-  AI_METRICS: 'edx_ai_usage_metrics',
   STORAGE_MODE: 'edx_storage_mode'
 };
 
@@ -41,13 +40,7 @@ export const defaultOrganization = {
   logoUrl: '', // Base64 or image URL
   brandColor: '#3b82f6', // Hex color
   plan: 'pro', // 'starter' | 'pro' | 'enterprise'
-  planName: 'EDX Digital Pro',
-  planStatus: 'trial', // 'active' | 'trial' | 'past_due'
-  trialDaysLeft: 14,
-  maxLeads: 5000,
-  maxUsers: 10,
-  aiQuotaMonth: 150,
-  aiUsedThisMonth: 14,
+  planStatus: 'trial', // 'active' | 'trial'
   currency: 'BRL',
   createdAt: new Date().toISOString()
 };
@@ -100,6 +93,7 @@ export function saveOrganization(org, options = {}) {
   const updated = { ...defaultOrganization, ...org, updatedAt: new Date().toISOString() };
   localStorage.setItem(STORAGE_KEYS.ORGANIZATION, JSON.stringify(updated));
   applyWhitelabelStyles(updated);
+  announceOrganization(updated);
   if (!options.skipSync && organizationSyncHook) {
     Promise.resolve(organizationSyncHook(updated)).catch(() => {});
   }
@@ -112,6 +106,14 @@ export function saveOrganization(org, options = {}) {
 export function clearSavedOrganization() {
   localStorage.removeItem(STORAGE_KEYS.ORGANIZATION);
   applyWhitelabelStyles(defaultOrganization);
+  announceOrganization(defaultOrganization);
+}
+
+// Lets the screens that depend on the company (stage names, extra fields) redraw
+function announceOrganization(org) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('edx-organization-changed', { detail: org }));
+  }
 }
 
 /**
@@ -151,7 +153,7 @@ export function applyWhitelabelStyles(org = null) {
     if (currentOrg.logoUrl) {
       brandIconEl.innerHTML = `<img src="${currentOrg.logoUrl}" alt="${currentOrg.name}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px;">`;
     } else {
-      brandIconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`;
+      brandIconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="4" height="18"/><rect x="4" y="3" width="17" height="4"/><rect x="4" y="10" width="11" height="4"/><rect x="4" y="17" width="17" height="4"/></svg>`;
     }
   }
 }
@@ -193,46 +195,6 @@ export function getPlanState(org = getSavedOrganization()) {
   return now < trialEndsAtMs
     ? { status: 'trial', daysLeft: Math.ceil((trialEndsAtMs - now) / DAY_MS), readOnly: false }
     : { status: 'trial_ended', daysLeft: 0, readOnly: true };
-}
-
-/**
- * Retrieves AI usage metrics for the active organization
- */
-export function getAiUsageMetrics() {
-  const org = getSavedOrganization();
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.AI_METRICS);
-    if (raw) {
-      const data = JSON.parse(raw);
-      return {
-        used: Number(data.used) || 0,
-        quota: Number(org.aiQuotaMonth) || 150,
-        lastReset: data.lastReset || new Date().toISOString()
-      };
-    }
-  } catch (e) {
-    console.warn("Could not load AI metrics:", e);
-  }
-  return {
-    used: Number(org.aiUsedThisMonth) || 14,
-    quota: Number(org.aiQuotaMonth) || 150,
-    lastReset: new Date().toISOString()
-  };
-}
-
-/**
- * Records an AI API call usage
- */
-export function recordAiUsage() {
-  const metrics = getAiUsageMetrics();
-  metrics.used += 1;
-  localStorage.setItem(STORAGE_KEYS.AI_METRICS, JSON.stringify(metrics));
-  
-  // Also update organization in memory
-  const org = getSavedOrganization();
-  org.aiUsedThisMonth = metrics.used;
-  localStorage.setItem(STORAGE_KEYS.ORGANIZATION, JSON.stringify(org));
-  return metrics;
 }
 
 export { STORAGE_KEYS };

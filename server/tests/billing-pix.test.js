@@ -200,6 +200,55 @@ test('cobrança cancelada ou expirada fica registrada e não libera', async () =
   assert.equal(db.organizations.org_a.planStatus, 'trial');
 });
 
+// ---------------------------------------------------------------- estorno
+
+test('pagamento estornado tira o período e a empresa volta para onde o teste está', async () => {
+  const { service, db, pay, remote, clock } = setup({ orgExtra: { trialEndsAtMs: NOW + 5 * DAY } });
+  const charge = await service.createCharge(admin, 'pro');
+  pay(charge.paymentId);
+  await service.syncPayment(charge.paymentId);
+  assert.equal(db.organizations.org_a.planStatus, 'active');
+
+  clock.now += 2 * DAY;
+  remote[charge.paymentId].status = 'refunded';
+  const result = await service.syncPayment(charge.paymentId);
+  assert.equal(result.status, 'refunded');
+  assert.equal(db.payments[charge.paymentId].status, 'refunded');
+  assert.equal(db.organizations.org_a.planStatus, 'trial');
+  assert.equal(db.organizations.org_a.paidUntilMs, null);
+  assert.equal(db.organizations.org_a.trialEndsAtMs, NOW + 5 * DAY, 'o fim do teste não muda');
+});
+
+test('estorno de um de dois períodos pagos tira só 30 dias, e uma vez só', async () => {
+  const { service, db, pay, remote, clock } = setup();
+  const first = await service.createCharge(admin, 'pro');
+  pay(first.paymentId);
+  await service.syncPayment(first.paymentId);
+  clock.now += DAY;
+  const second = await service.createCharge(admin, 'pro');
+  pay(second.paymentId);
+  await service.syncPayment(second.paymentId);
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 60 * DAY);
+
+  remote[second.paymentId].status = 'charged_back';
+  await Promise.all([service.syncPayment(second.paymentId), service.syncPayment(second.paymentId)]);
+  await service.syncPayment(second.paymentId);
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 30 * DAY);
+  assert.equal(db.organizations.org_a.planStatus, 'active');
+});
+
+test('estorno numa empresa antiga, sem fim de teste gravado, não a deixa liberada para sempre', async () => {
+  const { service, db, pay, remote, clock } = setup();
+  const charge = await service.createCharge(admin, 'starter');
+  pay(charge.paymentId);
+  await service.syncPayment(charge.paymentId);
+  clock.now += DAY;
+  remote[charge.paymentId].status = 'refunded';
+  await service.syncPayment(charge.paymentId);
+  assert.equal(db.organizations.org_a.planStatus, 'trial');
+  assert.equal(db.organizations.org_a.trialEndsAtMs, clock.now);
+});
+
 // ---------------------------------------------------------------- assinatura do aviso
 
 test('a assinatura do aviso do Mercado Pago é conferida', () => {

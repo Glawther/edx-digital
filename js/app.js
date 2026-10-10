@@ -4,7 +4,7 @@
  */
 
 import { storage } from './core/storage-manager.js';
-import { crmStore, STAGES, LOSS_REASONS, SALES_TEAM } from './core/crm-store.js';
+import { crmStore, STAGES, LOSS_REASONS, SALES_TEAM, applyStageNames } from './core/crm-store.js';
 import {
   renderKPIs,
   renderKanban,
@@ -13,11 +13,11 @@ import {
   renderDetailedMetrics,
   renderLeadTimeline,
   toggleLostColumn,
+  setReportPeriod,
   renderConnectionStatus,
   renderAuthBadge,
   renderSecurityView,
   showToast,
-  getWhatsAppLink,
   formatBRL,
   escapeHtml
 } from './ui/ui-renderer.js';
@@ -25,7 +25,6 @@ import {
   getSavedOrganization, 
   saveOrganization, 
   applyWhitelabelStyles, 
-  getAiUsageMetrics,
   getPlanState
 } from './core/config.js';
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from './services/gemini-service.js';
@@ -73,6 +72,7 @@ import {
   deleteEmployee, 
   generateCredentialsShareText, 
   onEmployeesChange,
+  recheckInviteWithSeats,
   startEmployeeSync,
   stopEmployeeSync
 } from './services/employee-service.js';
@@ -105,13 +105,23 @@ import {
   markAsRead,
   markAllAsRead,
   onNotificationsChange,
-  getNotificationIcon,
-  scheduleFollowUpReminder,
-  notifyDealEvent,
-  NOTIFICATION_TYPES
+  clearNotifications,
+  notify
 } from './services/notification-service.js';
+import { startTaskReminders, stopTaskReminders, localDateString } from './services/reminder-service.js';
+import { parseMoney } from './services/import-service.js';
+import { setupImportDialog } from './ui/import-dialog.js';
 import {
-  PLANS
+  setupCustomizeDialog,
+  renderCustomFieldInputs,
+  collectCustomFieldValues
+} from './ui/customize-dialog.js';
+import {
+  PLANS,
+  currentPlan,
+  leadsRoom,
+  seatsRoom,
+  describeLimit
 } from './services/billing-service.js';
 import {
   buildWhatsAppLink,
@@ -165,7 +175,8 @@ async function initApp() {
     setupLeadDetailsEvents();
     setupBackupEvents();
     setupProposalModalEvents();
-    setupImportModalEvents();
+    setupImportDialog();
+    setupCustomizeDialog();
     setupAuthPortalEvents();
     setupCommandPalette();
     setupKeyboardShortcuts();
@@ -185,13 +196,34 @@ async function initApp() {
 
     // Periodic poll for Webhook incoming leads (every 15s)
     setInterval(async () => {
-      if (!isSessionActive() || !isAdmin()) return;
-      const res = await pollWebhookInbox();
-      if (res && res.count > 0) {
-        if (crmStore) crmStore.emitChange();
-        showToast(`${res.count} novo(s) lead(s) capturado(s) via Webhook!`, 'success');
+      if (!isSessionActive() || !isAdmin() || isReadOnly() || document.hidden) return;
+      try {
+        const res = await pollWebhookInbox();
+        if (res && res.count > 0) {
+          crmStore.emitChange();
+          showToast(res.count === 1 ? '1 novo contato chegou por formulário.' : `${res.count} novos contatos chegaram por formulário.`, 'success');
+        }
+      } catch (err) {
+        // a full plan or a lost connection: the contacts stay in the inbox for the next round
+        console.warn('Webhook inbox:', err.message);
       }
     }, 15000);
+
+    // The company's own stage names and extra fields: redraw whenever the company record changes
+    applyStageNames(getSavedOrganization().stageNames);
+    window.addEventListener('edx-organization-changed', (event) => {
+      applyStageNames(event.detail && event.detail.stageNames);
+      crmStore.emitChange();
+    });
+
+    // A click on a browser notification asks for a screen
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'OPEN_VIEW' && event.data.view && isSessionActive()) {
+          window.navigateToView(event.data.view);
+        }
+      });
+    }
 
     // Subscribe state store changes to DOM rendering
     crmStore.subscribe((state) => {
@@ -251,6 +283,7 @@ async function enterSession({ resumed = false } = {}) {
 
   if (!isSessionActive()) {
     stopEmployeeSync();
+    stopTaskReminders();
     storage.reset();
     initAuditFirestore(null);
     window.showAuthPortal();
@@ -274,6 +307,11 @@ async function enterSession({ resumed = false } = {}) {
   }
 
   logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: resumed ? 'session_resume' : (isCloudSession() ? 'email_password' : 'demo') });
+
+  startTaskReminders({
+    getContext: () => (isSessionActive() ? { customers: storage.getCustomers(), user: getCurrentUser(), isAdmin: isAdmin() } : null),
+    notify
+  });
 
   const user = getCurrentUser();
   if (user && user.mustChangePassword) {
@@ -394,14 +432,8 @@ function setupIdleSignOut() {
 // Kept on purpose: theme, the Gemini key and the webhook token (device settings),
 // and the demo's sample data.
 function clearCompanyDataFromBrowser() {
-  [
-    'edx_audit_logs',
-    'edx_notifications',
-    'edx_ai_usage_metrics',
-    'edx_last_activity',
-    'edx_jwt_token',
-    'edx_tenant_id'
-  ].forEach(key => localStorage.removeItem(key));
+  ['edx_audit_logs', 'edx_last_activity', 'edx_reminder_rung'].forEach(key => localStorage.removeItem(key));
+  clearNotifications();
 }
 
 /**
@@ -435,7 +467,6 @@ if (document.readyState === 'loading') {
 }
 
 function applyRoleUIRestrictions(permissions) {
-  const geminiBtn = document.getElementById('sidebar-gemini-btn');
   const exportBtn = document.getElementById('btn-export-csv');
 
   const isAdmin = !!permissions.isAdmin;
@@ -473,23 +504,8 @@ function applyRoleUIRestrictions(permissions) {
   if (groupCompany) groupCompany.style.display = isAdmin ? 'block' : 'none';
   if (dividerCompany) dividerCompany.style.display = isAdmin ? 'block' : 'none';
 
-  // Oculta área de faturamento e configuração de PIX para funcionários
-
-
-  // 3. Configurações de Nuvem & IA (Gemini / Firebase)
-  if (permissions.canAccessCloudConfig) {
-    if (geminiBtn) {
-      geminiBtn.style.opacity = '1';
-      geminiBtn.title = 'Configuração da Chave Gemini AI';
-      geminiBtn.disabled = false;
-    }
-  } else {
-    // Restrito para Funcionários pela Confidencialidade (Tríade CID)
-    if (geminiBtn) {
-      geminiBtn.style.opacity = '0.4';
-      geminiBtn.title = 'Só administradores configuram a IA';
-    }
-  }
+  const btnMenuCustomize = document.getElementById('btn-menu-customize');
+  if (btnMenuCustomize) btnMenuCustomize.style.display = isAdmin ? 'flex' : 'none';
 
   if (exportBtn) {
     if (permissions.canExportAll) {
@@ -768,10 +784,8 @@ window.handleDropCard = async function(event, targetStage) {
     // Audit & Notification
     if (targetStage === 'won') {
       logAudit(AUDIT_ACTIONS.LEAD_WON, { customerId, name: cust?.name, value: cust?.dealValue || 0 });
-      notifyDealEvent(NOTIFICATION_TYPES.DEAL_WON, cust?.name || 'Cliente', cust?.dealValue || 0);
     } else {
       logAudit(AUDIT_ACTIONS.LEAD_STAGE_CHANGED, { customerId, name: cust?.name, newStage: targetStage });
-      notifyDealEvent(NOTIFICATION_TYPES.LEAD_UPDATE, cust?.name || 'Cliente');
     }
 
     setTimeout(() => window.scrollToKanbanStage(targetStage), 100);
@@ -800,7 +814,6 @@ window.handleMoveStage = async function(customerId, newStage) {
     // Audit & Notification
     if (newStage === 'won') {
       logAudit(AUDIT_ACTIONS.LEAD_WON, { customerId, name: cust?.name, value: cust?.dealValue || 0 });
-      notifyDealEvent(NOTIFICATION_TYPES.DEAL_WON, cust?.name || 'Cliente', cust?.dealValue || 0);
     } else {
       logAudit(AUDIT_ACTIONS.LEAD_STAGE_CHANGED, { customerId, name: cust?.name, newStage });
     }
@@ -893,7 +906,6 @@ function setupLossReasonEvents() {
         // Store the reason id (the metrics group by id); the label is resolved when displaying
         await storage.setLossReason(customerId, reasonVal, details);
         logAudit(AUDIT_ACTIONS.LEAD_LOST, { customerId, name: cust?.name, reason: reasonLabel, details }, AUDIT_SEVERITY.INFO);
-        notifyDealEvent(NOTIFICATION_TYPES.DEAL_LOST, cust?.name || 'Cliente', cust?.dealValue || 0);
         activeLossCustomerId = null;
         dialog.close();
         showToast(`${cust?.name || 'Oportunidade'} marcada como perdida.`, "info", undoAction(before, 'A oportunidade voltou para a etapa anterior.'));
@@ -1008,9 +1020,11 @@ function setupWhatsAppModalEvents() {
         });
 
         renderTemplatesList(aiOptions, customer);
-        showToast('Sugestões prontas. Escolha uma e ajuste o texto.', 'success');
+        showToast('Sugestões do Gemini prontas. Escolha uma e ajuste o texto.', 'success');
       } catch (err) {
-        showToast('Erro ao gerar com IA: ' + err.message, 'error');
+        showToast(err.message, err.code === 'no-key' ? 'info' : 'error', err.code === 'no-key'
+          ? { label: 'Informar a chave', onClick: () => document.getElementById('sidebar-gemini-btn')?.click() }
+          : null);
       } finally {
         btnGenerateAi.disabled = false;
         btnGenerateAi.textContent = 'Sugerir com IA';
@@ -1048,7 +1062,7 @@ function setupWhatsAppModalEvents() {
       }
 
       // Log contact action
-      recordWhatsAppContact(customer, message);
+      recordWhatsAppContact(customer);
       await storage.addActivity(customer.id, {
         type: 'whatsapp',
         title: 'Mensagem pelo WhatsApp',
@@ -1277,28 +1291,26 @@ function setupTasksEvents() {
       }
 
       try {
-        await storage.addTask(customerId, { title, type, dueDate });
-        const cust = storage.getCustomer(customerId);
-        scheduleFollowUpReminder({ id: customerId, name: cust?.name || 'Cliente' }, dueDate, title);
+        const dueTime = document.getElementById('task-input-time')?.value || '';
+        await storage.addTask(customerId, { title, type, dueDate, ...(dueTime ? { dueTime } : {}) });
         taskForm.reset();
-        document.getElementById('task-input-date').value = new Date().toISOString().split('T')[0];
-        showToast("Tarefa comercial agendada com sucesso!", "success");
+        document.getElementById('task-input-date').value = localDateString();
+        showToast("Tarefa agendada.", "success");
       } catch (err) {
-        showToast("Erro ao agendar tarefa: " + err.message, "error");
+        reportError("Não foi possível agendar a tarefa", err);
       }
     });
 
     // Default task date to today
     const dateInput = document.getElementById('task-input-date');
-    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+    if (dateInput) dateInput.value = localDateString();
   }
 
   window.handleToggleTask = async function(customerId, taskId) {
     try {
       await storage.toggleTask(customerId, taskId);
-      showToast("Status da tarefa atualizado.", "success");
     } catch (err) {
-      showToast("Erro ao atualizar tarefa: " + err.message, "error");
+      reportError("Não foi possível atualizar a tarefa", err);
     }
   };
 }
@@ -1313,21 +1325,7 @@ function sanitizeInput(val) {
     .trim();
 }
 
-// Reads an amount typed the Brazilian way (1.234,56) and also 1234.56 or 1234
-function parseSafeDealValue(val) {
-  if (val === null || val === undefined || val === '') return 0;
-  if (typeof val === 'number') return val < 0 || isNaN(val) ? 0 : Math.min(val, 1000000000);
-  let text = String(val).replace(/[^\d.,]/g, '');
-  if (text.includes(',')) {
-    // comma is the decimal mark; dots are thousands separators
-    text = text.replace(/\./g, '').replace(',', '.');
-  } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
-    // 1.234 or 12.345.678: dots are thousands separators
-    text = text.replace(/\./g, '');
-  }
-  const num = parseFloat(text);
-  return isNaN(num) || num < 0 ? 0 : Math.min(num, 1000000000);
-}
+const parseSafeDealValue = parseMoney;
 
 function formatMoneyField(amount) {
   return (Number(amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1350,9 +1348,19 @@ function setupDialogEvents() {
       window.handleReadOnlyAttempt();
       return;
     }
+    // Better to hear about the limit now than after filling in the form
+    if (isCloudSession()) {
+      const room = leadsRoom(storage.getCustomers());
+      if (room.left <= 0) {
+        reportError('', { code: 'plan-limit', message: `O plano ${currentPlan().name} comporta ${describeLimit(room.limit)} oportunidades em aberto, e esse limite foi atingido. Feche ou exclua oportunidades, ou mude de plano.` });
+        return;
+      }
+    }
     document.getElementById('dialog-customer-id').value = '';
     document.getElementById('customer-dialog-title').textContent = 'Nova oportunidade';
     customerForm.reset();
+    fillStageSelect();
+    renderCustomFieldInputs({});
     document.getElementById('input-deal-stage').value = 'lead';
     document.getElementById('input-deal-priority').value = 'medium';
     document.getElementById('input-deal-forecast').value = '';
@@ -1434,6 +1442,7 @@ function setupDialogEvents() {
         expectedCloseDate,
         tags,
         notes,
+        custom: collectCustomFieldValues(),
         assignedTo: {
           id: assignedMember.id,
           name: assignedMember.name,
@@ -1453,10 +1462,8 @@ function setupDialogEvents() {
         // Audit & Notification
         if (id) {
           logAudit(AUDIT_ACTIONS.LEAD_UPDATED, { customerId: id, name, company, dealValue, stage });
-          notifyDealEvent(NOTIFICATION_TYPES.LEAD_UPDATE, name, dealValue);
         } else {
           logAudit(AUDIT_ACTIONS.LEAD_CREATED, { name, company, dealValue, stage });
-          notifyDealEvent(NOTIFICATION_TYPES.LEAD_UPDATE, name, dealValue);
         }
 
         setTimeout(() => {
@@ -1469,6 +1476,17 @@ function setupDialogEvents() {
   }
 }
 
+// The stage list of the form follows the names the company chose
+function fillStageSelect() {
+  const select = document.getElementById('input-deal-stage');
+  if (select) select.innerHTML = STAGES.map(stage => `<option value="${stage.id}">${escapeHtml(stage.name)}</option>`).join('');
+}
+
+window.handleReportPeriod = function(periodId) {
+  setReportPeriod(periodId);
+  crmStore.emitChange();
+};
+
 window.handleOpenEditCustomer = function(customerId) {
   if (isReadOnly()) {
     window.handleReadOnlyAttempt();
@@ -1478,6 +1496,8 @@ window.handleOpenEditCustomer = function(customerId) {
   const customer = storage.getCustomer(customerId);
   if (!customer || !customerDialog) return;
 
+  fillStageSelect();
+  renderCustomFieldInputs(customer.custom || {});
   document.getElementById('dialog-customer-id').value = customer.id;
   document.getElementById('customer-dialog-title').textContent = 'Editar oportunidade';
   document.getElementById('input-customer-name').value = customer.name || '';
@@ -1573,7 +1593,7 @@ function setupGeminiModals() {
       const key = keyInput ? keyInput.value : '';
       saveGeminiKey(key);
       keyDialog.close();
-      showToast(key ? "Chave do Google Gemini salva com sucesso!" : "Chave do Gemini removida. Usando motor heurístico.", "success");
+      showToast(key ? "Chave do Google Gemini salva neste navegador." : "Chave do Gemini removida.", "success");
     });
   }
 }
@@ -1583,44 +1603,39 @@ window.handleAnalyzeWithAI = async function(customerId) {
   const customer = storage.getCustomer(customerId);
   if (!customer || !geminiDialog) return;
 
-  // Header info
-  document.getElementById('gemini-dialog-customer-name').textContent = customer.name;
-  document.getElementById('gemini-dialog-customer-meta').textContent = `${customer.company || 'Empresa'} • R$ ${Number(customer.dealValue || 0).toLocaleString('pt-BR')}`;
+  const show = (id) => ['gemini-loading', 'gemini-results', 'gemini-unavailable'].forEach(part => {
+    const el = document.getElementById(part);
+    if (el) el.style.display = part === id ? 'block' : 'none';
+  });
+  const fill = (id, items) => {
+    document.getElementById(id).innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+  };
 
-  // Reset to loading state
-  document.getElementById('gemini-loading').style.display = 'block';
-  document.getElementById('gemini-results').style.display = 'none';
+  document.getElementById('gemini-dialog-customer-name').textContent = customer.name;
+  document.getElementById('gemini-dialog-customer-meta').textContent = [customer.company, formatBRL(customer.dealValue)].filter(Boolean).join(', ');
+  show('gemini-loading');
   geminiDialog.showModal();
 
   try {
-    const analysis = await analyzeDealWithGemini(customer);
-
-    // Probability
-    const prob = Math.round(analysis.probability || 0);
+    const analysis = await analyzeDealWithGemini(customer, {
+      companyName: getSavedOrganization().name,
+      userName: getCurrentUser()?.name
+    });
+    const prob = Math.round(analysis.probability);
     document.getElementById('gemini-probability-number').textContent = `${prob}%`;
     document.getElementById('gemini-probability-bar').style.width = `${prob}%`;
-    document.getElementById('gemini-summary-text').textContent = analysis.summary || '';
-
-    // Keypoints
-    const keypointsList = document.getElementById('gemini-keypoints-list');
-    keypointsList.innerHTML = (analysis.keyPoints || []).map(p => `<li>${p}</li>`).join('');
-
-    // Objections
-    const objectionsList = document.getElementById('gemini-objections-list');
-    objectionsList.innerHTML = (analysis.objections || []).map(o => `<li>${o}</li>`).join('');
-
-    // Recommended Action
-    document.getElementById('gemini-recommended-action').textContent = analysis.recommendedAction || 'Dar continuidade ao contato comercial.';
-
-    // Email Draft
-    document.getElementById('gemini-email-draft').textContent = analysis.proposalEmail || '';
-
-    // Show results
-    document.getElementById('gemini-loading').style.display = 'none';
-    document.getElementById('gemini-results').style.display = 'block';
+    document.getElementById('gemini-summary-text').textContent = analysis.summary;
+    fill('gemini-keypoints-list', analysis.keyPoints);
+    fill('gemini-objections-list', analysis.objections);
+    document.getElementById('gemini-recommended-action').textContent = analysis.recommendedAction;
+    document.getElementById('gemini-email-draft').textContent = analysis.proposalEmail;
+    show('gemini-results');
   } catch (err) {
-    showToast("Erro ao processar análise da IA: " + err.message, "error");
-    geminiDialog.close();
+    // No key, or Google refused: say so instead of showing an analysis nobody made
+    document.getElementById('gemini-unavailable-text').textContent = err.code === 'no-key'
+      ? 'A análise é feita pelo Google Gemini com a sua própria chave, que é gratuita para começar. Informe a chave para usar este recurso.'
+      : err.message;
+    show('gemini-unavailable');
   }
 };
 
@@ -1904,7 +1919,7 @@ function setupProposalModalEvents() {
 
       const orgName = getSavedOrganization().name || 'nossa empresa';
       const msg = `Olá, ${customer.name}. Preparamos a proposta da ${orgName}${customer.company ? ` para a ${customer.company}` : ''}, no valor de ${formatBRL(customer.dealValue)}. Vou enviar o documento em seguida. Qualquer dúvida, é só responder aqui.`;
-      const link = getWhatsAppLink(customer.phone, msg);
+      const link = buildWhatsAppLink(customer.phone, msg);
       if (link) {
         await storage.addActivity(customer.id, {
           type: 'whatsapp',
@@ -1921,131 +1936,6 @@ function setupProposalModalEvents() {
 // ==========================================================================
 // Lead Import Modal Events (Excel / CSV / Paste)
 // ==========================================================================
-function setupImportModalEvents() {
-  const dialog = document.getElementById('import-dialog');
-  const btnOpen = document.getElementById('btn-open-import-modal');
-  const btnClose = document.getElementById('btn-close-import-dialog');
-  const btnCancel = document.getElementById('btn-cancel-import');
-  const btnConfirm = document.getElementById('btn-confirm-import');
-  const dropzone = document.getElementById('import-dropzone-area');
-  const fileInput = document.getElementById('input-csv-file');
-  const textarea = document.getElementById('textarea-import-raw');
-  const previewContainer = document.getElementById('import-preview-container');
-  const previewTbody = document.getElementById('import-preview-tbody');
-  const countLabel = document.getElementById('import-count-label');
-
-  let parsedLeads = [];
-
-  const closeDialog = () => {
-    if (dialog) dialog.close();
-    parsedLeads = [];
-  };
-
-  if (btnOpen) {
-    btnOpen.addEventListener('click', () => {
-      if (textarea) textarea.value = '';
-      if (previewContainer) previewContainer.style.display = 'none';
-      if (btnConfirm) btnConfirm.disabled = true;
-      if (dialog) dialog.showModal();
-    });
-  }
-
-  if (btnClose) btnClose.addEventListener('click', closeDialog);
-  if (btnCancel) btnCancel.addEventListener('click', closeDialog);
-
-  if (dropzone && fileInput) {
-    dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (textarea) {
-          textarea.value = event.target.result;
-          parseAndRenderPreview(textarea.value);
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
-
-  if (textarea) {
-    textarea.addEventListener('input', () => {
-      parseAndRenderPreview(textarea.value);
-    });
-  }
-
-  function parseAndRenderPreview(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    parsedLeads = [];
-
-    lines.forEach(line => {
-      if (line.toLowerCase().startsWith('nome')) return; // Header skip
-      const parts = line.includes(';') ? line.split(';') : line.split(',');
-      if (parts.length >= 2) {
-        const name = parts[0]?.trim();
-        const company = parts[1]?.trim() || '';
-        const phone = parts[2]?.trim() || '';
-        const dealVal = parseFloat(parts[3]?.replace(/[^\d.]/g, '')) || 25000;
-        const email = parts[4]?.trim() || '';
-
-        if (name) {
-          parsedLeads.push({
-            name,
-            company,
-            phone,
-            dealValue: dealVal,
-            email,
-            stage: 'lead',
-            priority: 'medium',
-            tags: ['#Importado']
-          });
-        }
-      }
-    });
-
-    if (parsedLeads.length > 0) {
-      previewContainer.style.display = 'block';
-      countLabel.textContent = `${parsedLeads.length} lead(s) identificado(s) prontos para inclusão`;
-      previewTbody.innerHTML = parsedLeads.slice(0, 10).map(l => `
-        <tr>
-          <td><strong>${escapeHtml(l.name)}</strong></td>
-          <td>${escapeHtml(l.company)}</td>
-          <td>${escapeHtml(l.phone || '-')}</td>
-          <td style="color:#16a34a; font-weight:600;">${formatBRL(l.dealValue)}</td>
-        </tr>
-      `).join('') + (parsedLeads.length > 10 ? `<tr><td colspan="4" style="text-align:center; color:#64748b;">+ ${parsedLeads.length - 10} outros contatos...</td></tr>` : '');
-      btnConfirm.disabled = false;
-    } else {
-      previewContainer.style.display = 'none';
-      btnConfirm.disabled = true;
-    }
-  }
-
-  if (btnConfirm) {
-    btnConfirm.addEventListener('click', async () => {
-      if (parsedLeads.length === 0) return;
-
-      btnConfirm.disabled = true;
-      btnConfirm.textContent = 'Importando leads...';
-
-      try {
-        for (const lead of parsedLeads) {
-          await storage.saveCustomer(lead);
-        }
-        crmStore.addAuditLog('Importação em Lote de Leads', `${parsedLeads.length} novos leads importados via planilha/texto com sucesso.`);
-        closeDialog();
-        showToast(`${parsedLeads.length} oportunidades importadas com sucesso para o pipeline!`, "success");
-      } catch (err) {
-        showToast("Erro durante a importação: " + err.message, "error");
-      } finally {
-        btnConfirm.textContent = 'Confirmar e Inserir no Pipeline';
-      }
-    });
-  }
-}
-
 // ==========================================================================
 // Authentication & Registration Portal Events (Tríade CID & RBAC)
 // ==========================================================================
@@ -3202,30 +3092,20 @@ function setupBillingEvents() {
 
   function refreshBillingData() {
     const org = getSavedOrganization();
-    const metrics = getAiUsageMetrics();
-    const employees = getEmployees();
-    const state = crmStore?.getState();
-    const totalLeads = state?.allCustomers?.length || 0;
-
     const planNames = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
-    const plan = PLANS[org.plan] || PLANS.pro;
+    const plan = currentPlan(org);
     const planState = getPlanState(org);
     const onTrial = planState.status === 'trial' || planState.status === 'trial_ended';
-    const unlimited = org.plan === 'enterprise';
-    const limit = (n) => (unlimited ? 'sem limite' : n.toLocaleString('pt-BR'));
+    const limit = describeLimit;
+    const leads = leadsRoom(storage.getCustomers(), org);
+    const seats = seatsRoom(getEmployees(), org);
     const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
     set('billing-plan-name', planNames[org.plan] || 'Professional');
     set('billing-plan-badge', describePlanState(planState));
 
-    const used = metrics.used || 0;
-    const quota = plan.aiQuotaMonth;
-    set('billing-ai-count', `${used} de ${limit(quota)}`);
-    const aiBar = document.getElementById('billing-ai-bar');
-    if (aiBar) aiBar.style.width = `${Math.min(100, Math.round((used / quota) * 100))}%`;
-
-    set('billing-leads-count', `${totalLeads} de ${limit(plan.maxLeads)}`);
-    set('billing-users-count', `${employees.length + 1} de ${limit(plan.maxUsers)}`);
+    set('billing-leads-count', `${leads.used.toLocaleString('pt-BR')} de ${limit(leads.limit)}`);
+    set('billing-users-count', `${seats.used} de ${limit(seats.limit)}`);
 
     // During the trial every plan can still be subscribed to, including the current one
     document.querySelectorAll('.btn-plan-select').forEach(btn => {
@@ -3282,7 +3162,18 @@ function setupTeamInviteEvents() {
     if (statAdmin) statAdmin.textContent = employees.filter(e => e.role === 'admin').length + 1;
     if (statBlocked) statBlocked.textContent = employees.filter(e => e.status === 'blocked').length;
 
-    if (displayTeamCode) displayTeamCode.textContent = getCompanyTeamInviteCode() || 'sem código';
+    const seats = seatsRoom(employees);
+    const full = isCloudSession() && seats.left <= 0;
+    const seatsNote = document.getElementById('team-seats-note');
+    if (seatsNote) {
+      seatsNote.hidden = !isCloudSession() || seats.unlimited;
+      seatsNote.textContent = full
+        ? `A equipe está completa: o plano ${currentPlan().name} comporta ${seats.limit} pessoas com acesso. O convite fica pausado até abrir uma vaga ou você mudar de plano.`
+        : `${seats.used} de ${seats.limit} pessoas com acesso no plano ${currentPlan().name}.`;
+      seatsNote.classList.toggle('is-warning', full);
+    }
+    if (displayTeamCode) displayTeamCode.textContent = full ? 'pausado' : (getCompanyTeamInviteCode() || 'sem código');
+    if (btnCopyTeamCode) btnCopyTeamCode.disabled = full;
     if (btnNewTeamCode) btnNewTeamCode.style.display = isCloudSession() ? '' : 'none';
   }
   window.refreshTeamInviteCard = renderTeamView;
@@ -3311,6 +3202,7 @@ function setupTeamInviteEvents() {
         showToast(result.error, 'error');
         return;
       }
+      recheckInviteWithSeats();
       renderTeamView();
       showToast('Novo código gerado. O anterior não vale mais.', 'success');
     });
@@ -3425,32 +3317,22 @@ function setupNotificationCenter() {
 
     const notifications = getInAppNotifications(20);
     if (notifications.length === 0) {
-      listEl.innerHTML = `<div class="notification-empty" style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
-        Nenhuma notificação ainda.
-      </div>`;
+      listEl.innerHTML = '<p class="notification-empty">Nada por aqui. Os lembretes de tarefa e os contatos que chegam por formulário aparecem nesta lista.</p>';
       return;
     }
 
     listEl.innerHTML = notifications.map(n => {
-      const icon = getNotificationIcon(n.type);
       const date = new Date(n.timestamp);
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMin = Math.floor(diffMs / 60000);
-      let timeAgo;
-      if (diffMin < 1) timeAgo = 'Agora';
-      else if (diffMin < 60) timeAgo = `${diffMin}min atrás`;
-      else if (diffMin < 1440) timeAgo = `${Math.floor(diffMin / 60)}h atrás`;
-      else timeAgo = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-
-      return `<div class="notification-item ${n.read ? '' : 'unread'}" style="background: ${n.read ? 'var(--bg-surface)' : '#1c263c'} !important; border-bottom: 1px solid var(--border-subtle) !important; ${n.read ? '' : 'border-left: 4px solid #3b82f6 !important;'}" onclick="window.handleNotificationClick('${n.id}')">
-        <div class="notification-item-icon" style="background: #22293a !important; border: 1px solid var(--border-subtle) !important; color: #ffffff !important;">${icon}</div>
-        <div class="notification-item-content">
-          <div class="notification-item-title" style="color: #ffffff !important; font-weight: 600; font-size: 0.86rem;">${escapeHtml(n.title)}</div>
-          <div class="notification-item-body" style="color: var(--text-secondary) !important; font-size: 0.78rem; line-height: 1.4;">${escapeHtml(n.body)}</div>
-          <div class="notification-item-time" style="color: var(--text-secondary) !important; font-size: 0.7rem; margin-top: 4px;">${timeAgo}</div>
-        </div>
-      </div>`;
+      const minutes = Math.floor((Date.now() - date) / 60000);
+      const when = minutes < 1 ? 'agora'
+        : minutes < 60 ? `há ${minutes} min`
+        : minutes < 1440 ? `há ${Math.floor(minutes / 60)} h`
+        : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      return `<button type="button" class="notification-item ${n.read ? '' : 'unread'}" onclick="window.handleNotificationClick('${n.id}')">
+        <span class="notification-item-title">${escapeHtml(n.title)}</span>
+        <span class="notification-item-body">${escapeHtml(n.body)}</span>
+        <span class="notification-item-time">${when}</span>
+      </button>`;
     }).join('');
   }
 
@@ -3482,42 +3364,41 @@ function setupNotificationCenter() {
       markAllAsRead();
       renderNotificationList();
       updateBadge();
-      showToast('Todas as notificações marcadas como lidas.', 'info');
     });
   }
 
-  // Enable push notifications
+  // Browser notifications: asked for only when the person clicks
   if (enablePushBtn) {
+    const reflect = () => {
+      const permission = getNotificationPermission();
+      enablePushBtn.hidden = permission === 'unsupported';
+      enablePushBtn.disabled = permission === 'granted' || permission === 'denied';
+      enablePushBtn.textContent = permission === 'granted' ? 'Avisos do navegador ativados'
+        : permission === 'denied' ? 'Avisos bloqueados nas configurações do navegador'
+        : 'Avisar também pelo navegador';
+    };
     enablePushBtn.addEventListener('click', async () => {
       const permission = await requestNotificationPermission();
-      if (permission === 'granted') {
-        showToast('Notificações push ativadas!', 'success');
-        enablePushBtn.textContent = 'Notificações Push Ativas';
-        enablePushBtn.disabled = true;
-      } else if (permission === 'denied') {
-        showToast('Permissão de notificações foi negada pelo navegador.', 'error');
-      } else {
-        showToast('Notificações não são suportadas neste navegador.', 'info');
-      }
+      reflect();
+      if (permission === 'granted') showToast('Pronto. Os lembretes de tarefa também vão aparecer como aviso do navegador.', 'success');
     });
-
-    // Update button state
-    if (getNotificationPermission() === 'granted') {
-      enablePushBtn.textContent = 'Notificações Push Ativas';
-      enablePushBtn.disabled = true;
-    }
+    reflect();
   }
 
   // Notification click handler
   window.handleNotificationClick = function(notifId) {
-    markAsRead(notifId);
-    renderNotificationList();
+    const notification = markAsRead(notifId);
     updateBadge();
+    if (dropdown) dropdown.style.display = 'none';
+    const target = (notification && notification.data) || {};
+    if (target.view) window.navigateToView(target.view);
+    if (target.customerId && storage.getCustomer(target.customerId)) window.handleOpenLeadDetails(target.customerId);
   };
 
   // Subscribe to changes
   onNotificationsChange(() => {
     updateBadge();
+    if (dropdown && dropdown.style.display !== 'none') renderNotificationList();
   });
 
   // Initial state
@@ -3605,6 +3486,10 @@ window.handleReadOnlyAttempt = function() {
 // An error from a blocked change was already explained by the notice above
 function reportError(prefix, err) {
   if (err && err.code === 'read-only') return;
+  if (err && err.code === 'plan-limit') {
+    showToast(err.message, 'warning', isAdmin() ? { label: 'Ver planos', onClick: () => window.openCheckoutModal() } : null);
+    return;
+  }
   showToast(`${prefix}: ${err.message}`, 'error');
 }
 

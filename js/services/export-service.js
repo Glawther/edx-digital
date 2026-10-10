@@ -3,6 +3,9 @@
  */
 
 import { STAGES } from '../core/crm-store.js';
+import { csvSafe } from './import-service.js';
+import { getCustomFields } from '../ui/customize-dialog.js';
+import { formatCustomValue } from '../core/customization.js';
 
 export function exportCustomersToCSV(customers, filename = 'edx-digital-oportunidades.csv') {
   if (!customers || customers.length === 0) {
@@ -12,33 +15,29 @@ export function exportCustomersToCSV(customers, filename = 'edx-digital-oportuni
   const stageMap = {};
   STAGES.forEach(s => stageMap[s.id] = s.name);
 
-  const headers = [
-    "Nome do Contato",
-    "Empresa",
-    "Cargo",
-    "Email",
-    "Telefone",
-    "Valor (R$)",
-    "Estágio",
-    "Prioridade",
-    "Tags",
-    "Anotações",
-    "Data de Criação"
-  ];
+  const customFields = getCustomFields();
+  // Quoted, and with anything a spreadsheet would run as a formula neutralised
+  const cell = (value) => `"${csvSafe(value).replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
 
+  const headers = [
+    "Nome do contato", "Empresa", "Cargo", "E-mail", "Telefone", "Valor (R$)", "Etapa", "Prioridade",
+    "Responsável", "Previsão de fechamento", "Etiquetas", "Anotações", "Criada em",
+    ...customFields.map(field => field.label)
+  ].map(cell);
+
+  const date = (iso) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '');
   const rows = customers.map(c => [
-    `"${(c.name || '').replace(/"/g, '""')}"`,
-    `"${(c.company || '').replace(/"/g, '""')}"`,
-    `"${(c.role || '').replace(/"/g, '""')}"`,
-    `"${(c.email || '').replace(/"/g, '""')}"`,
-    `"${(c.phone || '').replace(/"/g, '""')}"`,
-    `"${(c.dealValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}"`,
-    `"${stageMap[c.stage] || c.stage || 'Lead'}"`,
-    `"${{ high: 'Alta', medium: 'Média', low: 'Baixa' }[c.priority] || 'Média'}"`,
-    `"${(c.tags || []).join('; ').replace(/"/g, '""')}"`,
-    `"${(c.notes || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
-    `"${c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR') : ''}"`
-  ]);
+    c.name, c.company, c.role, c.email, c.phone,
+    (Number(c.dealValue) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+    stageMap[c.stage] || c.stage || '',
+    { high: 'Alta', medium: 'Média', low: 'Baixa' }[c.priority] || 'Média',
+    c.assignedTo?.name || '',
+    c.expectedCloseDate ? date(c.expectedCloseDate + (c.expectedCloseDate.length === 10 ? 'T12:00:00' : '')) : '',
+    (c.tags || []).join('; '),
+    c.notes,
+    date(c.createdAt),
+    ...customFields.map(field => formatCustomValue(field, (c.custom || {})[field.id]))
+  ].map(cell));
 
   // Prepend UTF-8 BOM so Microsoft Excel handles Portuguese special characters correctly
   const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');

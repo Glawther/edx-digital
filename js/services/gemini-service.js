@@ -1,22 +1,26 @@
 /**
- * EDX Digital - Google Gemini AI Service
- * Generates deal insights, win probability, sales strategies and proposal drafts.
+ * EDX Digital - Google Gemini
+ * Opportunity analysis and message suggestions, with the Gemini key of whoever is using the CRM.
+ * Without a key, or when Google refuses the call, the caller is told so: nothing is made up.
  */
 
-import { recordAiUsage } from '../core/config.js';
+import { getStageName } from '../core/crm-store.js';
 
 const GEMINI_KEY_STORAGE = 'edx_gemini_api_key';
+// Tried in this order; the first one the key has access to answers
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
-/**
- * Retrieves the stored Gemini API key
- */
+export class AiUnavailableError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code; // 'no-key' | 'refused'
+  }
+}
+
 export function getSavedGeminiKey() {
   return localStorage.getItem(GEMINI_KEY_STORAGE) || '';
 }
 
-/**
- * Saves or clears the Gemini API key
- */
 export function saveGeminiKey(key) {
   if (key && key.trim()) {
     localStorage.setItem(GEMINI_KEY_STORAGE, key.trim());
@@ -26,157 +30,83 @@ export function saveGeminiKey(key) {
 }
 
 /**
- * Analyzes a CRM customer / lead using Google Gemini AI
- * @param {Object} customer - The lead / customer object
- * @returns {Promise<Object>} Analysis results
+ * Sends a prompt and returns the parsed JSON answer
  */
-export async function analyzeDealWithGemini(customer) {
+export async function askGeminiForJson(prompt) {
   const apiKey = getSavedGeminiKey();
-
-  if (apiKey) {
-    try {
-      const result = await callGeminiAPI(customer, apiKey);
-      recordAiUsage();
-      return result;
-    } catch (err) {
-      console.warn("Gemini API call failed, falling back to smart analytical engine:", err);
-      recordAiUsage();
-      return generateHeuristicAnalysis(customer);
-    }
+  if (!apiKey) {
+    throw new AiUnavailableError('no-key', 'Para usar a IA, informe a sua chave do Google Gemini em Ferramentas.');
   }
 
-  // Fallback to high-quality smart analytical engine
-  recordAiUsage();
-  return generateHeuristicAnalysis(customer);
-}
-
-/**
- * Calls the Google Gemini REST API
- */
-async function callGeminiAPI(customer, apiKey) {
-  const prompt = `
-Você é o Chief Revenue Officer (CRO) e especialista sênior em vendas B2B e CRM.
-Analise a seguinte oportunidade comercial e responda em formato JSON estrito:
-
-DADOS DO CLIENTE:
-- Nome: ${customer.name || 'Não informado'}
-- Empresa: ${customer.company || 'Não informada'}
-- Cargo: ${customer.role || 'Não informado'}
-- Valor da Oportunidade: R$ ${customer.dealValue || 0}
-- Estágio no Funil: ${customer.stage || 'lead'}
-- Prioridade: ${customer.priority || 'medium'}
-- Tags: ${(customer.tags || []).join(', ')}
-- Anotações: ${customer.notes || 'Sem anotações adicionais'}
-
-FORMATO DE RESPOSTA OBRIGATÓRIO (JSON estrito):
-{
-  "probability": 75,
-  "summary": "Resumo executivo do perfil e momento da oportunidade (máximo 2 parágrafos concisos).",
-  "keyPoints": ["Ponto forte 1", "Ponto forte 2", "Ponto forte 3"],
-  "objections": ["Possível objeção 1 e como contornar", "Possível objeção 2 e como contornar"],
-  "recommendedAction": "Ação recomendada imediata para acelerar o fechamento.",
-  "proposalEmail": "Assunto: ...\\n\\nOlá [Nome],\\n... rascunho de e-mail de proposta ou follow-up profissional em tom consultivo."
-}
-`;
-
-  // Standard current Google Gemini models
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
   let lastError = null;
-
-  for (const model of models) {
+  for (const model of MODELS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // the key goes in a header so it never ends up in an address
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.7
-          }
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.6 }
         })
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const message = errorData?.error?.message || `HTTP ${response.status}`;
-        throw new Error(message);
+        throw new Error(errorData?.error?.message || `HTTP ${response.status}`);
       }
-
       const data = await response.json();
-      let textOutput = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!textOutput) {
-        throw new Error("Resposta vazia da IA Gemini.");
-      }
-
-      // Robust Markdown JSON block stripper
-      textOutput = textOutput.trim();
-      if (textOutput.startsWith("```")) {
-        textOutput = textOutput.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
-      }
-
-      return JSON.parse(textOutput);
+      let text = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+      if (!text) throw new Error('resposta vazia');
+      if (text.startsWith('```')) text = text.replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+      return JSON.parse(text);
     } catch (err) {
       lastError = err;
-      console.warn(`Tentativa com ${model} falhou:`, err.message);
     }
   }
-
-  throw lastError || new Error("Falha ao comunicar com os modelos Gemini.");
+  throw new AiUnavailableError('refused', `O Google Gemini não respondeu (${lastError ? lastError.message : 'sem detalhe'}). Confira a chave em Ferramentas e tente de novo.`);
 }
 
 /**
- * Smart Analytical Engine (Fallback when no key is entered)
+ * Analyses one opportunity
+ * @returns {Promise<{probability:number, summary:string, keyPoints:string[], objections:string[], recommendedAction:string, proposalEmail:string}>}
  */
-function generateHeuristicAnalysis(customer) {
-  const val = Number(customer.dealValue) || 0;
-  const stage = customer.stage || 'lead';
-  const priority = customer.priority || 'medium';
+export async function analyzeDealWithGemini(customer, context = {}) {
+  const pendingTasks = (customer.tasks || []).filter(t => !t.completed).map(t => `${t.title} (${t.dueDate || 'sem data'})`);
+  const recent = (customer.activities || []).slice(-6).map(a => `${a.title}: ${a.text || ''}`.slice(0, 200));
+  const prompt = `
+Você apoia um vendedor de uma pequena empresa brasileira. Analise a oportunidade abaixo usando só o que está escrito.
+Não invente fatos sobre o cliente. Se faltar informação, diga o que falta.
 
-  // Calculate realistic probability
-  let baseProb = 20;
-  if (stage === 'contact') baseProb = 35;
-  if (stage === 'proposal') baseProb = 60;
-  if (stage === 'negotiation') baseProb = 85;
-  if (stage === 'won') baseProb = 100;
-  if (stage === 'lost') baseProb = 0;
+Quem vende: ${context.companyName || 'não informado'}
+Contato: ${customer.name || 'não informado'}${customer.role ? `, ${customer.role}` : ''}
+Empresa do contato: ${customer.company || 'não informada'}
+Valor: R$ ${customer.dealValue || 0}
+Etapa do funil: ${getStageName(customer.stage || 'lead')}
+Prioridade: ${customer.priority || 'medium'}
+Previsão de fechamento: ${customer.expectedCloseDate || 'não informada'}
+Etiquetas: ${(customer.tags || []).join(', ') || 'nenhuma'}
+Anotações: ${customer.notes || 'nenhuma'}
+Tarefas pendentes: ${pendingTasks.join('; ') || 'nenhuma'}
+Últimos registros: ${recent.join(' | ') || 'nenhum'}
 
-  if (priority === 'high') baseProb = Math.min(100, baseProb + 10);
-  if (priority === 'low') baseProb = Math.max(5, baseProb - 10);
+Responda em JSON, em português do Brasil, neste formato:
+{
+  "probability": número de 0 a 100,
+  "summary": "até 2 parágrafos curtos",
+  "keyPoints": ["até 3 pontos a favor, com base nos dados"],
+  "objections": ["até 3 objeções prováveis, cada uma com uma forma de responder"],
+  "recommendedAction": "o próximo passo, em uma frase",
+  "proposalEmail": "Assunto: ...\\n\\nrascunho curto de e-mail para o contato, assinado por ${context.userName || 'quem vende'}"
+}`;
 
-  const firstName = (customer.name || 'Cliente').split(' ')[0];
-  const company = customer.company || 'sua empresa';
-
+  const result = await askGeminiForJson(prompt);
+  const list = (value) => (Array.isArray(value) ? value.map(String).slice(0, 5) : []);
   return {
-    probability: baseProb,
-    summary: `A oportunidade com ${customer.name || 'o contato'} da ${company} possui ticket de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)}. O lead encontra-se atualmente no estágio "${getStageLabel(stage)}" com prioridade ${priority.toUpperCase()}. Há forte potencial de geração de valor mútuo e expansão no segmento.`,
-    keyPoints: [
-      `Ticket no valor de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)} compatível com o perfil corporativo.`,
-      `Decisor com cargo de ${customer.role || 'Liderança'}, com autonomia de escolha técnica e orçamentária.`,
-      `Alinhamento estratégico com as tags: ${(customer.tags && customer.tags.length > 0) ? customer.tags.join(', ') : 'Tecnologia e Eficiência'}.`
-    ],
-    objections: [
-      "Prazo de implementação: apresentar cronograma ágil com primeiros resultados em menos de 30 dias.",
-      "Justificativa de ROI: demonstrar ganhos de produtividade e redução de custos operacionais logo no primeiro trimestre."
-    ],
-    recommendedAction: stage === 'won' 
-      ? 'Agendar reunião de kick-off de onboarding para garantir rápida ativação.'
-      : stage === 'proposal'
-      ? 'Fazer follow-up com o decisor em até 48 horas oferecendo tirar dúvidas sobre o escopo.'
-      : 'Apresentar demonstração prática e casos de sucesso similares para avançar para a fase de proposta.',
-    proposalEmail: `Assunto: Proposta Estratégica EDX Digital para a ${company}\n\nOlá, ${firstName}!\n\nFoi um prazer conversar com você sobre as metas e desafios da ${company}. Conforme alinhamos, elaborei nossa proposta personalizada com foco em acelerar a sua operação com a máxima confiabilidade e segurança em nuvem do Google.\n\nFico à total disposição para alinharmos os detalhes e tirarmos qualquer dúvida.\n\nVocê tem 15 minutos amanhã às 14h para conversarmos rapidamente?\n\nUm abraço,\nEquipe Comercial EDX Digital`
+    probability: Math.max(0, Math.min(100, Number(result.probability) || 0)),
+    summary: String(result.summary || ''),
+    keyPoints: list(result.keyPoints),
+    objections: list(result.objections),
+    recommendedAction: String(result.recommendedAction || ''),
+    proposalEmail: String(result.proposalEmail || '')
   };
-}
-
-function getStageLabel(stage) {
-  const map = {
-    lead: 'Novo Lead',
-    contact: 'Primeiro Contato',
-    proposal: 'Proposta Enviada',
-    negotiation: 'Em Negociação',
-    won: 'Fechado Ganho',
-    lost: 'Perdido'
-  };
-  return map[stage] || stage;
 }

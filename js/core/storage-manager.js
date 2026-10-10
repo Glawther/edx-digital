@@ -7,7 +7,8 @@
 import { STORAGE_KEYS, getSavedOrganization } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
 import { getCurrentUser, isAdmin, isCloudSession, isDemoSession, isReadOnly } from '../services/auth-service.js';
-import { crmStore, getLossReasonLabel } from './crm-store.js';
+import { crmStore, getLossReasonLabel, getStageName } from './crm-store.js';
+import { leadsRoom, isOpenOpportunity, currentPlan, PlanLimitError } from '../services/billing-service.js';
 
 let lastCloudWarningAt = 0;
 
@@ -443,6 +444,8 @@ class StorageManager {
         updatedAt: new Date().toISOString(),
         updatedBy: user.name
       };
+      if (merged.stage === 'won' && existing.stage !== 'won') merged.wonAt = merged.updatedAt;
+      if (merged.stage !== 'won') merged.wonAt = null;
 
       crmStore.addAuditLog('Edição de Oportunidade', `Lead "${merged.name}" (${merged.company}) atualizado por ${user.name} [${user.role}].`, merged);
 
@@ -465,6 +468,14 @@ class StorageManager {
       }
       return merged;
     } else {
+      // The plan says how many opportunities can be in play at once
+      if (this.mode === 'firestore' && isOpenOpportunity(customerData)) {
+        const room = leadsRoom(this.currentData);
+        if (room.left <= 0) {
+          throw new PlanLimitError(`O plano ${currentPlan().name} comporta ${room.limit.toLocaleString('pt-BR')} oportunidades em aberto, e esse limite foi atingido. Feche ou exclua oportunidades, ou mude de plano.`);
+        }
+      }
+
       const org = getSavedOrganization();
       const newLead = {
         orgId: user.orgId || customerData.orgId || org?.id || 'org_edx_default',
@@ -477,13 +488,14 @@ class StorageManager {
         updatedAt: new Date().toISOString(),
         updatedBy: user.name
       };
+      if (newLead.stage === 'won') newLead.wonAt = newLead.createdAt;
 
       // Add creation activity
       newLead.activities.push({
         id: 'act-' + Date.now(),
         type: 'note',
-        title: 'Oportunidade Criada',
-        text: `Lead cadastrado por ${user.name} com valor de R$ ${Number(newLead.dealValue || 0).toLocaleString('pt-BR')}.`,
+        title: 'Oportunidade criada',
+        text: `Valor de R$ ${Number(newLead.dealValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`,
         author: user.name,
         timestamp: new Date().toISOString()
       });
@@ -517,6 +529,54 @@ class StorageManager {
   }
 
   /**
+   * Saves many opportunities at once (spreadsheet import), a few at a time so a long list
+   * does not take minutes. The plan limit was already applied by whoever prepared the list.
+   * @returns {Promise<{imported:number, failed:Array}>}
+   */
+  async importCustomers(leads, onProgress = () => {}) {
+    assertCanWrite();
+    const user = getCurrentUser() || { name: 'Operador', email: 'user@example.com' };
+    const org = getSavedOrganization();
+    const now = new Date().toISOString();
+    const prepared = leads.map((lead, index) => ({
+      orgId: user.orgId || org?.id || 'org_edx_default',
+      tasks: [],
+      assignedTo: { id: user.uid || 'employee-user-02', name: user.name, email: user.email },
+      ...lead,
+      tags: [...new Set([...(lead.tags || []), 'Importado'])],
+      id: 'lead-' + Date.now() + '-' + index + '-' + Math.random().toString(36).slice(2, 7),
+      activities: [{ id: 'act-' + Date.now() + '-' + index, type: 'note', title: 'Importada de planilha', text: '', author: user.name, timestamp: now }],
+      createdAt: now,
+      createdBy: user.name,
+      updatedAt: now,
+      updatedBy: user.name,
+      ...(lead.stage === 'won' ? { wonAt: now } : {})
+    }));
+
+    const failed = [];
+    let done = 0;
+    if (this.mode === 'firestore') {
+      const BATCH = 8;
+      for (let i = 0; i < prepared.length; i += BATCH) {
+        const slice = prepared.slice(i, i + BATCH);
+        const results = await Promise.allSettled(slice.map(lead => firestoreService.addFirestoreCustomer(lead)));
+        results.forEach((result, index) => { if (result.status === 'rejected') failed.push(slice[index]); });
+        done += slice.length;
+        onProgress(done, prepared.length);
+      }
+    } else {
+      this.currentData.unshift(...prepared);
+      this.saveLocalData();
+      this.notifyListeners();
+      onProgress(prepared.length, prepared.length);
+    }
+
+    const imported = prepared.length - failed.length;
+    crmStore.addAuditLog('Importação de planilha', `${imported} oportunidades importadas por ${user.name}.`);
+    return { imported, failed };
+  }
+
+  /**
    * Updates only the stage of a customer
    */
   async updateStage(customerId, newStage) {
@@ -529,17 +589,21 @@ class StorageManager {
     const activity = {
       id: 'act-' + Date.now(),
       type: 'stage_change',
-      title: 'Mudança de Estágio',
-      text: `Oportunidade movida de "${oldStage}" para "${newStage}" por ${user.name}.`,
+      title: 'Mudança de etapa',
+      text: `De "${getStageName(oldStage)}" para "${getStageName(newStage)}".`,
       author: user.name,
       timestamp: updatedAt
     };
 
-    crmStore.addAuditLog('Avanço de Funil', `Lead "${customer?.name || customerId}" movido de "${oldStage}" para "${newStage}" por ${user.name}.`, customer);
+    crmStore.addAuditLog('Avanço de Funil', `Lead "${customer?.name || customerId}" movido de "${getStageName(oldStage)}" para "${getStageName(newStage)}" por ${user.name}.`, customer);
 
     // 1. Optimistic update (instant visual response on Kanban)
+    // The closing date is what the reports by period count
+    const wonAt = newStage === 'won' ? updatedAt : null;
+
     if (customer) {
       customer.stage = newStage;
+      customer.wonAt = wonAt;
       customer.updatedAt = updatedAt;
       customer.updatedBy = user.name;
       if (!Array.isArray(customer.activities)) customer.activities = [];
@@ -555,6 +619,7 @@ class StorageManager {
         const updatedActivities = customer && customer.activities ? [...customer.activities] : [activity];
         await firestoreService.updateFirestoreCustomer(docId, { 
           stage: newStage, 
+          wonAt,
           updatedAt,
           updatedBy: user.name,
           activities: updatedActivities 
@@ -588,6 +653,7 @@ class StorageManager {
     // 1. Optimistic update
     if (customer) {
       customer.stage = 'lost';
+      customer.wonAt = null;
       customer.lossReason = lossReason;
       customer.lossDetails = lossDetails || '';
       customer.lostAt = updatedAt;
@@ -606,6 +672,7 @@ class StorageManager {
         const updatedActivities = customer && customer.activities ? [...customer.activities] : [activity];
         await firestoreService.updateFirestoreCustomer(docId, {
           stage: 'lost',
+          wonAt: null,
           lossReason,
           lossDetails: lossDetails || '',
           lostAt: updatedAt,
@@ -630,7 +697,7 @@ class StorageManager {
     const activity = {
       id: 'act-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
       timestamp: new Date().toISOString(),
-      author: 'Você',
+      author: getCurrentUser()?.name || 'Você',
       ...activityData
     };
 
@@ -673,9 +740,9 @@ class StorageManager {
     const activity = {
       id: 'act-' + Date.now(),
       type: 'task',
-      title: 'Tarefa Agendada',
-      text: `Agendado: ${task.title} (para ${task.dueDate || 'hoje'}).`,
-      author: 'Você',
+      title: 'Tarefa agendada',
+      text: `${task.title}, para ${task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'hoje'}${task.dueTime ? ' às ' + task.dueTime : ''}.`,
+      author: getCurrentUser()?.name || 'Você',
       timestamp: new Date().toISOString()
     };
 

@@ -1,14 +1,17 @@
 {
   "name": "EDX Digital",
   "short_name": "EDX Digital",
-  "description": "Plataforma Inteligente de Gestão Comercial & Pipeline de Vendas em Tempo Real",
+  "description": "Funil de vendas, clientes e tarefas da sua equipe comercial.",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#18212f",
+  "theme_color": "#18212f",
   "orientation": "any",
   "lang": "pt-BR",
-  "categories": ["business", "productivity", "finance"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "assets/icon.svg",
@@ -19,25 +22,40 @@
   ],
   "shortcuts": [
     {
-      "name": "Funil Kanban",
+      "name": "Funil de vendas",
       "short_name": "Funil",
-      "description": "Visualizar pipeline de oportunidades",
+      "description": "Ver as oportunidades por etapa",
       "url": "/#pipeline",
-      "icons": [{ "src": "assets/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "assets/icon.svg",
+          "sizes": "any"
+        }
+      ]
     },
     {
-      "name": "Clientes & Leads",
+      "name": "Clientes",
       "short_name": "Clientes",
-      "description": "Ver lista consolidada de clientes",
+      "description": "Ver a lista de clientes",
       "url": "/#customers",
-      "icons": [{ "src": "assets/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "assets/icon.svg",
+          "sizes": "any"
+        }
+      ]
     },
     {
-      "name": "Métricas & Metas",
-      "short_name": "Métricas",
-      "description": "Acompanhar faturamento e comissões",
+      "name": "Relatórios",
+      "short_name": "Relatórios",
+      "description": "Ver os números do funil",
       "url": "/#metrics",
-      "icons": [{ "src": "assets/icon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "assets/icon.svg",
+          "sizes": "any"
+        }
+      ]
     }
   ]
 }

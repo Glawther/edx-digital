@@ -1454,3 +1454,70 @@ body.is-read-only .task-checkbox { pointer-events: none; opacity: 0.55; }
 body.is-read-only .lead-card { cursor: pointer; -webkit-user-drag: none; }
 
 body.is-read-only .pipeline-hint { display: none; }
+
+
+/* ==========================================================================
+   Refinement round: plan limits, tasks, reports by period, import, customisation, notifications
+   ========================================================================== */
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.form-row-2 .form-group { margin-bottom: 0; }
+
+.team-seats-note { margin-top: 0.5rem !important; font-size: 0.82rem; color: var(--text-secondary); }
+.team-seats-note.is-warning { color: var(--color-proposal, #a15c00); }
+.team-seats-note[hidden] { display: none; }
+
+.lead-meta .is-quiet { color: var(--text-muted); }
+
+.report-period {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;
+  margin: 0 0 0.85rem;
+}
+.report-period:not(:first-child) { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); }
+.figure-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
+.figure-row .figure-box { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-surface); }
+.figure-row .figure-box + .figure-box { border-left: 1px solid var(--border-subtle); border-top: 1px solid var(--border-subtle); }
+.figure-row .figure-value { font-size: 1.35rem; }
+@media (max-width: 1100px) { .figure-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .figure-row { grid-template-columns: 1fr; } }
+
+.check-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.86rem; color: var(--text-primary); margin: 0.6rem 0; cursor: pointer; }
+.check-row input { width: 16px; height: 16px; flex: none; }
+.import-summary { font-size: 0.92rem; line-height: 1.5; color: var(--text-primary); margin: 0 0 0.5rem; }
+.import-mapping { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem 0.75rem; margin: 0.5rem 0 0.25rem; }
+.import-mapping .form-group { margin-bottom: 0; }
+.import-mapping label { font-size: 0.78rem; }
+.import-preview { max-height: 260px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-top: 0.75rem; }
+.import-preview thead th { position: sticky; top: 0; background: var(--bg-surface); z-index: 1; }
+.import-dropzone.is-drop-target { border-color: var(--color-primary); background: var(--color-primary-light); }
+.import-dropzone:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+#import-step-source[hidden], #import-step-review[hidden] { display: none; }
+@media (max-width: 640px) { .import-mapping { grid-template-columns: 1fr 1fr; } }
+
+.custom-field-row { display: grid; grid-template-columns: 1fr 140px auto; gap: 0.6rem; align-items: center; margin-bottom: 0.6rem; }
+#customer-custom-fields { margin-top: 0.85rem; }
+#customer-custom-fields[hidden] { display: none; }
+@media (max-width: 520px) { .custom-field-row { grid-template-columns: 1fr 1fr; } }
+
+/* Bell: the list reads like the rest of the app, in either theme */
+.notification-dropdown-header, .notification-dropdown-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0.7rem 0.9rem; background: var(--bg-surface);
+}
+.notification-dropdown-header { border-bottom: 1px solid var(--border-subtle); }
+.notification-dropdown-footer { border-top: 1px solid var(--border-subtle); }
+.notification-dropdown-title { font-weight: 600; font-size: 0.92rem; color: var(--text-primary); }
+.notification-dropdown .notification-list { background: var(--bg-surface); }
+.notification-dropdown .notification-item {
+  display: grid; gap: 0.15rem; width: 100%; text-align: left; cursor: pointer;
+  padding: 0.7rem 0.9rem; background: var(--bg-surface); color: inherit; font: inherit;
+  border: 0; border-bottom: 1px solid var(--border-subtle); border-left: 3px solid transparent;
+}
+.notification-dropdown .notification-item:hover { background: var(--bg-surface-elevated); }
+.notification-dropdown .notification-item.unread { border-left-color: var(--color-primary); }
+.notification-dropdown .notification-item-title { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); }
+.notification-dropdown .notification-item-body { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; }
+.notification-dropdown .notification-item-time { font-size: 0.72rem; color: var(--text-muted); }
+.notification-empty { margin: 0; padding: 1.5rem 1rem; text-align: center; font-size: 0.84rem; line-height: 1.5; color: var(--text-muted); }
+
+/* The hidden attribute always wins, whatever display a component sets */
+[hidden] { display: none !important; }

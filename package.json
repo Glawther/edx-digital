@@ -1,27 +1,23 @@
 {
   "name": "edx-digital",
   "version": "2.0.0",
-  "description": "EDX Digital - Sistema Comercial Enterprise com IA Gemini, Tríade CID (RBAC) e Google Cloud Firestore",
+  "description": "EDX Digital: funil de vendas, clientes e tarefas para equipes pequenas",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js || python -m http.server 3000",
     "start": "node server.js || python -m http.server 3000",
-    "test": "node --test server/tests/*.test.js",
+    "test": "node --test \"server/tests/*.test.js\" \"tests/unit/*.test.mjs\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-edx-digital",
-    "test:rules": "firebase emulators:exec --only auth,firestore --project demo-edx-digital \"node --test tests/rules/\"",
+    "test:rules": "firebase emulators:exec --only auth,firestore --project demo-edx-digital \"node --test tests/rules/firestore-rules.test.mjs\"",
     "deploy": "npx -y firebase-tools deploy --only hosting"
   },
   "keywords": [
     "crm",
     "edx-digital",
-    "sales",
-    "gemini-ai",
-    "firestore",
-    "rbac",
-    "triade-cid",
-    "kanban",
-    "business"
+    "vendas",
+    "funil",
+    "firestore"
   ],
-  "author": "EDX Digital Team",
+  "author": "Glawther Soares",
   "license": "MIT"
 }
