@@ -128,11 +128,12 @@ service cloud.firestore {
       );
 
       allow update: if signedIn() && (
-        // a própria pessoa: só o nome e o aviso de troca de senha
+        // a própria pessoa: o nome, o aviso de troca de senha e se quer o resumo diário por e-mail
         (request.auth.uid == uid
           && validName(request.resource.data.name)
+          && (!('emailDigest' in request.resource.data) || request.resource.data.emailDigest is bool)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['name', 'mustChangePassword', 'updatedAt']))
+               .hasOnly(['name', 'mustChangePassword', 'emailDigest', 'updatedAt']))
         // o administrador: dados de outra pessoa da empresa, menos do dono
         || (request.auth.uid != uid
           && isOrgAdmin(resource.data.orgId)

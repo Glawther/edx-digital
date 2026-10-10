@@ -143,7 +143,6 @@
         "data",
         "tests",
         "server/tests",
-        "js",
         "css",
         "assets",
         "docs",

@@ -590,3 +590,10 @@ test('plano cheio (marcado pelo servidor): ninguém cria oportunidade nem entra 
   assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: false } }), OK);
   assert.equal(await put(novato, `users/${novato.uid}`, profile), OK);
 });
+
+test('cada pessoa liga ou desliga o próprio resumo por e-mail, e só o dela', async () => {
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: false }), OK);
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: 'talvez' }), DENIED);
+  assert.equal(await patch(world.ana, `users/${world.a.owner.uid}`, { emailDigest: false }), DENIED);
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: true }), OK);
+});
