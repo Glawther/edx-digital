@@ -8,6 +8,7 @@ import { REPORT_PERIODS, periodReport } from '../core/report.js';
 import { localDateString } from '../services/reminder-service.js';
 import { customFacts } from './customize-dialog.js';
 import { escapeHtml, safeImageUrl } from '../core/html.js';
+import { HISTORY_FILTERS, sortedHistory, countHistory, lastContact, daysAgoLabel, isManual } from '../core/history.js';
 import { FOCUS_OPTIONS } from '../core/attention.js';
 import { getSavedOrganization } from '../core/config.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
@@ -584,6 +585,12 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
   `;
 }
 
+// Which part of the history the opportunity window shows
+let historyFilter = 'all';
+export function setHistoryFilter(filter) {
+  historyFilter = HISTORY_FILTERS.some(item => item.id === filter) ? filter : 'all';
+}
+
 /**
  * Renders the Customer Timeline in Modal
  */
@@ -663,31 +670,46 @@ export function renderLeadTimeline(customer) {
         }).join('');
   }
 
-  const activities = (customer.activities || []).slice().reverse();
+  const lastTalk = lastContact(customer);
+  const lastEl = document.getElementById('lead-details-last-contact');
+  if (lastEl) {
+    lastEl.textContent = lastTalk
+      ? `Último contato: ${lastTalk.title.toLowerCase()}, ${daysAgoLabel(lastTalk.timestamp)}.`
+      : 'Nenhuma conversa registrada com este cliente ainda.';
+  }
+
+  const pillsEl = document.getElementById('history-filter-pills');
+  if (pillsEl) {
+    const counts = countHistory(customer);
+    pillsEl.innerHTML = HISTORY_FILTERS.map(filter => `
+      <button type="button" class="filter-pill ${historyFilter === filter.id ? 'active' : ''}" aria-pressed="${historyFilter === filter.id}"
+              data-click="handleHistoryFilter" data-a="${filter.id}">${filter.label}${filter.id === 'all' ? '' : ` <span class="pill-count">${counts[filter.id]}</span>`}</button>
+    `).join('');
+  }
+
+  const activities = sortedHistory(customer, historyFilter);
 
   if (activities.length === 0) {
-    container.innerHTML = `
-      <div style="padding: 2rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
-        Nenhuma atividade registrada ainda nesta oportunidade.
-      </div>
-    `;
+    container.innerHTML = `<p class="empty-note">${historyFilter === 'all' ? 'Nada registrado ainda nesta oportunidade.' : 'Nada deste tipo no histórico.'}</p>`;
     return;
   }
 
+  const canWrite = !document.body.classList.contains('is-read-only');
   container.innerHTML = activities.map(act => {
     const dateFormatted = new Date(act.timestamp).toLocaleString('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit'
     });
 
-    const dotClass = ['note', 'task', 'stage_change', 'loss', 'whatsapp', 'call', 'meeting'].includes(act.type) ? act.type : 'note';
+    const dotClass = ['note', 'task', 'stage_change', 'loss', 'whatsapp', 'call', 'meeting', 'email'].includes(act.type) ? act.type : 'note';
 
     return `
       <div class="timeline-item">
         <div class="timeline-dot ${dotClass}"></div>
         <div class="timeline-item-header">
           <span class="timeline-item-title">${escapeHtml(act.title || 'Interação')}</span>
-          <span class="timeline-item-date">${dateFormatted}, ${escapeHtml(act.author || 'Você')}</span>
+          <span class="timeline-item-date">${dateFormatted}, ${escapeHtml(act.author || 'Você')}${canWrite && isManual(act)
+            ? ` <button type="button" class="link-btn danger" data-click="handleDeleteActivity" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(act.id)}" aria-label="Excluir este registro">Excluir</button>` : ''}</span>
         </div>
         <div class="timeline-item-text">${escapeHtml(act.text || '')}</div>
       </div>

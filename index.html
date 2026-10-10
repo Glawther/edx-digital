@@ -870,33 +870,20 @@
       </form>
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
-      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
-          Registrar ligação
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-meeting">
-          Registrar reunião
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-note">
-          Adicionar nota
-        </button>
-      </div>
+      <form id="contact-log-form" class="contact-log-form">
+        <select id="contact-log-type" class="form-select" aria-label="Tipo de contato"></select>
+        <input type="datetime-local" id="contact-log-when" class="form-input" aria-label="Quando aconteceu">
+        <textarea id="contact-log-text" class="form-textarea" placeholder="O que foi conversado" required maxlength="5000" aria-label="O que foi conversado"></textarea>
+        <button type="submit" class="btn btn-outline btn-sm">Registrar</button>
+      </form>
 
-      <!-- Quick Note Form (Collapsible) -->
-      <div id="quick-activity-form-container" style="display: none; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
-        <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);" id="quick-activity-title">Registrar contato</h4>
-        <input type="hidden" id="quick-activity-type" value="note">
-        <textarea id="quick-activity-text" class="form-textarea" placeholder="O que foi conversado" style="min-height: 70px; margin-bottom: 0.75rem;"></textarea>
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-          <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-quick-activity">Cancelar</button>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-save-quick-activity">Salvar</button>
+      <div class="history-head">
+        <div>
+          <h3 class="section-title">Histórico</h3>
+          <p class="history-last" id="lead-details-last-contact"></p>
         </div>
+        <div class="filter-pills" id="history-filter-pills" role="group" aria-label="Filtrar o histórico"></div>
       </div>
-
-      <!-- Timeline Title -->
-      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>Histórico</span>
-      </h3>
 
       <div class="timeline-container" id="lead-details-timeline">
         <!-- Rendered dynamically -->

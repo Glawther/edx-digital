@@ -12,6 +12,7 @@ import {
   renderTasksView,
   renderDetailedMetrics,
   renderLeadTimeline,
+  setHistoryFilter,
   toggleLostColumn,
   renderFocusPills,
   setReportPeriod,
@@ -25,6 +26,7 @@ import {
 } from './ui/ui-renderer.js';
 import { safeImageUrl } from './core/html.js';
 import { setupActions, registerActions } from './ui/actions.js';
+import { CONTACT_TYPES, buildContact, toLocalInput } from './core/history.js';
 import { passwordProblem } from './core/attention.js';
 import { 
   getSavedOrganization, 
@@ -1249,13 +1251,13 @@ function setupLeadDetailsEvents() {
     if (!customer) return;
 
     activeLeadDetailsCustomerId = customerId;
+    resetContactForm();
     renderLeadTimeline(customer);
     const taskForm = document.getElementById('lead-task-form');
     if (taskForm) {
       taskForm.reset();
       document.getElementById('lead-task-date').value = localDateString();
     }
-    document.getElementById('quick-activity-form-container').style.display = 'none';
     if (!dialog.open) dialog.showModal();
   };
 
@@ -1276,62 +1278,59 @@ function setupLeadDetailsEvents() {
     }
   });
 
-  // Quick activity logging buttons
-  const quickFormContainer = document.getElementById('quick-activity-form-container');
-  const quickTitle = document.getElementById('quick-activity-title');
-  const quickType = document.getElementById('quick-activity-type');
-  const quickText = document.getElementById('quick-activity-text');
-  const btnSaveQuick = document.getElementById('btn-save-quick-activity');
-  const btnCancelQuick = document.getElementById('btn-cancel-quick-activity');
+  // Registering a contact: what was said, by which means and when
+  const contactForm = document.getElementById('contact-log-form');
+  const contactType = document.getElementById('contact-log-type');
+  const contactWhen = document.getElementById('contact-log-when');
+  const contactText = document.getElementById('contact-log-text');
+  if (contactType) {
+    contactType.innerHTML = CONTACT_TYPES.map(type => `<option value="${type.id}">${type.label}</option>`).join('');
+  }
 
-  const openQuickForm = (type, title) => {
-    quickType.value = type;
-    quickTitle.textContent = title;
-    quickText.value = '';
-    quickFormContainer.style.display = 'block';
-    quickText.focus();
+  function resetContactForm() {
+    if (!contactForm) return;
+    contactForm.reset();
+    contactWhen.value = toLocalInput();
+    contactWhen.max = toLocalInput();
+    setHistoryFilter('all');
+  }
+
+  contactForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeLeadDetailsCustomerId) return;
+    const result = buildContact({ type: contactType.value, when: contactWhen.value, text: sanitizeInput(contactText.value) });
+    if (!result.ok) {
+      showToast(result.message, 'error');
+      return;
+    }
+    try {
+      await storage.addActivity(activeLeadDetailsCustomerId, result.activity);
+    } catch (err) {
+      reportError('Não foi possível registrar', err);
+      return;
+    }
+    const type = contactType.value;
+    contactForm.reset();
+    contactType.value = type;
+    contactWhen.value = toLocalInput();
+    showToast('Registrado no histórico.', 'success');
+  });
+
+  window.handleHistoryFilter = function(filter) {
+    setHistoryFilter(filter);
+    const customer = storage.getCustomer(activeLeadDetailsCustomerId);
+    if (customer) renderLeadTimeline(customer);
   };
 
-  const btnLogCall = document.getElementById('btn-quick-log-call');
-  const btnLogMeeting = document.getElementById('btn-quick-log-meeting');
-  const btnLogNote = document.getElementById('btn-quick-log-note');
-
-  if (btnLogCall) btnLogCall.addEventListener('click', () => openQuickForm('call', 'Registrar ligação'));
-  if (btnLogMeeting) btnLogMeeting.addEventListener('click', () => openQuickForm('meeting', 'Registrar reunião'));
-  if (btnLogNote) btnLogNote.addEventListener('click', () => openQuickForm('note', 'Adicionar nota'));
-
-  if (btnCancelQuick) {
-    btnCancelQuick.addEventListener('click', () => {
-      quickFormContainer.style.display = 'none';
-    });
-  }
-
-  if (btnSaveQuick) {
-    btnSaveQuick.addEventListener('click', async () => {
-      if (!activeLeadDetailsCustomerId) return;
-      const text = quickText.value.trim();
-      if (!text) {
-        showToast("Escreva o que foi conversado.", "error");
-        quickText.focus();
-        return;
-      }
-
-      const type = quickType.value;
-      const titleMap = { call: 'Ligação', meeting: 'Reunião', note: 'Nota' };
-
-      try {
-        await storage.addActivity(activeLeadDetailsCustomerId, { type, title: titleMap[type] || 'Contato', text: sanitizeInput(text) });
-      } catch (err) {
-        reportError('Não foi possível registrar', err);
-        return;
-      }
-
-      quickFormContainer.style.display = 'none';
-      const updatedCustomer = storage.getCustomer(activeLeadDetailsCustomerId);
-      if (updatedCustomer) renderLeadTimeline(updatedCustomer);
-      showToast("Registrado no histórico.", "success");
-    });
-  }
+  window.handleDeleteActivity = async function(customerId, activityId) {
+    if (!confirm('Excluir este registro do histórico?')) return;
+    try {
+      await storage.deleteActivity(customerId, activityId);
+      showToast('Registro excluído.', 'success');
+    } catch (err) {
+      reportError('Não foi possível excluir', err);
+    }
+  };
 }
 
 // ==========================================================================
