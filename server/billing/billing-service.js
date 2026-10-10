@@ -30,9 +30,8 @@ class BillingError extends Error {
  * @param {Object} deps.store    - getUserProfile, getOrganization, updateOrganization, getPayment, savePayment, updatePayment
  * @param {Object} deps.gateway  - createPixPayment, getPayment
  * @param {Function} [deps.now]  - clock, for tests
- * @param {string} [deps.notificationUrl] - public address of the webhook
  */
-function createBillingService({ store, gateway, now = () => Date.now(), notificationUrl = '' }) {
+function createBillingService({ store, gateway, now = () => Date.now() }) {
 
   async function requireCompanyAdmin(uid) {
     const profile = await store.getUserProfile(uid);
@@ -67,16 +66,15 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
 
     const amount = PLAN_PRICES[plan];
     const expiresAt = new Date(current + CHARGE_VALID_MINUTES * 60000).toISOString();
-    const reference = crypto.randomBytes(8).toString('hex');
+    // Letters, numbers, hyphen and underscore only, within the 64 characters Mercado Pago accepts
+    const reference = `${profile.orgId}-${plan}-${crypto.randomBytes(8).toString('hex')}`.slice(0, 64);
 
     const charge = await gateway.createPixPayment({
       amount,
       description: `EDX Digital, plano ${PLAN_NAMES[plan]}, ${PERIOD_DAYS} dias`,
       payerEmail: user.email || profile.email,
-      payerName: profile.name || user.name,
-      externalReference: `${profile.orgId}|${plan}|${reference}`,
-      idempotencyKey: `${profile.orgId}-${plan}-${reference}`,
-      notificationUrl,
+      externalReference: reference,
+      idempotencyKey: reference,
       expiresAt
     });
 
@@ -85,6 +83,7 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
       plan,
       amount,
       status: 'pending',
+      reference,
       copyPaste: charge.copyPaste,
       qrCodeBase64: charge.qrCodeBase64,
       createdBy: user.uid,
@@ -150,8 +149,7 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
     }
 
     // Everything the provider reports has to match the charge we created
-    const [orgId, plan] = String(payment.externalReference).split('|');
-    if (orgId !== record.orgId || plan !== record.plan) {
+    if (!referenceMatches(record, payment.externalReference)) {
       throw new BillingError('reference_mismatch', 'A cobrança não corresponde ao registro.', 409);
     }
     if (payment.currency !== 'BRL' || !(payment.amount >= PLAN_PRICES[record.plan])) {
@@ -183,6 +181,14 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
     });
 
     return { status: 'approved', plan: record.plan, paidUntil };
+  }
+
+  // The reference was written by this server when it created the charge. Charges from before
+  // it was kept with the record carried "company|plan|random" instead.
+  function referenceMatches(record, reported) {
+    if (record.reference) return reported === record.reference;
+    const [orgId, plan] = String(reported).split('|');
+    return orgId === record.orgId && plan === record.plan;
   }
 
   /**

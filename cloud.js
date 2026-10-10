@@ -17,9 +17,6 @@ const { handleApi } = require('./server/api');
 const MERCADO_PAGO_ACCESS_TOKEN = defineSecret('MERCADO_PAGO_ACCESS_TOKEN');
 const MERCADO_PAGO_WEBHOOK_SECRET = defineSecret('MERCADO_PAGO_WEBHOOK_SECRET');
 
-// The address Mercado Pago calls when a payment changes
-const PUBLIC_URL = 'https://edx-digital.web.app';
-
 exports.api = onRequest(
   {
     region: 'southamerica-east1',
@@ -31,7 +28,6 @@ exports.api = onRequest(
     invoker: 'public'
   },
   (req, res) => {
-    if (!process.env.PUBLIC_API_URL) process.env.PUBLIC_API_URL = PUBLIC_URL;
     if (!handleApi(req, res)) {
       res.status(404).json({ error: 'not_found' });
     }

@@ -3,7 +3,7 @@
 ## Como funciona
 
 1. O administrador escolhe um plano em Ferramentas > Plano e uso.
-2. O servidor (uma função do Firebase, no mesmo projeto do site) cria uma cobrança PIX no Mercado Pago e devolve o QR Code e o código copia e cola. A cobrança vale por 30 minutos.
+2. O servidor (uma função do Firebase, no mesmo projeto do site) cria uma cobrança PIX no Mercado Pago (API de Orders: uma ordem com um pagamento PIX) e devolve o QR Code e o código copia e cola. A cobrança vale por 30 minutos.
 3. O cliente paga no aplicativo do banco.
 4. O Mercado Pago avisa o servidor. O servidor **consulta o pagamento no próprio Mercado Pago** e, se estiver aprovado e com o valor do plano, grava na empresa: plano, situação ativa e validade de 30 dias.
 5. A tela do cliente confirma sozinha em alguns segundos.
@@ -29,7 +29,7 @@ Funções só rodam no plano Blaze (pago por uso, com uma faixa gratuita mensal 
 
 1. Crie a conta em https://www.mercadopago.com.br (funciona com CPF) e conclua a verificação de identidade.
 2. Cadastre uma chave PIX na conta: sem ela o Mercado Pago não gera cobrança por PIX.
-3. Em https://www.mercadopago.com.br/developers/panel/app crie uma aplicação (tipo: pagamentos online).
+3. Em https://www.mercadopago.com.br/developers/panel/app crie uma aplicação: solução **Checkout Transparente**. O servidor usa a **API de Orders**; a de Payments está marcada pelo Mercado Pago para ser descontinuada.
 4. Em **Credenciais de produção**, copie o **Access Token**.
 5. No terminal, na pasta do projeto, rode o comando abaixo e cole o valor quando ele pedir (o que você digita não aparece na tela):
 
@@ -41,7 +41,7 @@ firebase functions:secrets:set MERCADO_PAGO_ACCESS_TOKEN
 
 1. Na mesma aplicação, abra **Webhooks > Configurar notificações**, modo produção.
 2. URL: `https://edx-digital.web.app/api/billing/webhook/mercadopago`
-3. Evento: **Pagamentos**.
+3. Evento: **Order (Mercado Pago)**. É por ele que as cobranças feitas pela API de Orders são avisadas; o evento "Pagamentos" não avisa essas cobranças.
 4. Salve e copie a **assinatura secreta** que aparece.
 5. No terminal:
 
@@ -96,6 +96,9 @@ Para dar mais prazo a um cliente (cortesia, acordo), altere `trialEndsAtMs` ou `
 Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca entram em modo de leitura pelo teste. Hoje isso vale só para a sua própria conta.
 
 ## Limites conhecidos
+
+- **Cobranças anteriores à API de Orders** (identificador só de números) continuam sendo consultadas pela API de Payments. Não há nenhuma paga nesse formato; quando a API antiga for desligada, elas simplesmente deixam de ser consultadas.
+- **Contestação**: o período só é tirado quando o Mercado Pago informa que devolveu o valor ao pagador. Enquanto a contestação está em análise, nada muda.
 
 - **Primeira chamada depois de um tempo parado**: a função é ligada sob demanda, e a primeira resposta pode levar alguns segundos. O aviso do Mercado Pago que chegar nesse momento é repetido por ele sozinho, e a tela do cliente consulta o pagamento a cada 5 segundos.
 - **Limites de chamadas** (contatos por minuto, cobranças por conta) são contados em cada cópia da função, e podem existir até três ao mesmo tempo.
