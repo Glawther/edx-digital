@@ -7,7 +7,7 @@
  *   - a file is taken from the cache only under its exact address, version included.
  */
 
-const CACHE_NAME = 'edx-digital-v3.14.0';
+const CACHE_NAME = 'edx-digital-v3.15.0';
 // The build replaces this list with the exact files of the published version
 const STATIC_ASSETS = [
   '/',

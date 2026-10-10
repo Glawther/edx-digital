@@ -29,7 +29,7 @@
             },
             {
               "key": "Content-Security-Policy",
-              "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://www.gstatic.com https://nexus-crm-yfof.onrender.com; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+              "value": "default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://www.gstatic.com; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
             },
             {
               "key": "Cache-Control",
@@ -66,6 +66,13 @@
         }
       ],
       "rewrites": [
+        {
+          "source": "/api/**",
+          "function": {
+            "functionId": "api",
+            "region": "southamerica-east1"
+          }
+        },
         {
           "source": "/landing",
           "destination": "/landing.html"
@@ -123,5 +130,34 @@
       "enabled": false
     },
     "singleProjectMode": true
-  }
+  },
+  "functions": [
+    {
+      "source": ".",
+      "codebase": "default",
+      "runtime": "nodejs22",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "dist",
+        "data",
+        "tests",
+        "server/tests",
+        "js",
+        "css",
+        "assets",
+        "docs",
+        "scripts",
+        "legacy-site",
+        "*.html",
+        "*.md",
+        "manifest.json",
+        "sw.js",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local",
+        ".env*"
+      ]
+    }
+  ]
 }

@@ -75,6 +75,34 @@ async function updateDoc(path, data) {
   if (result === null) throw new Error(`Documento não encontrado: ${path}`);
 }
 
+async function deleteDoc(path) {
+  await request('DELETE', path);
+}
+
+/**
+ * Documents of a collection whose fields equal the given values
+ * @param {Array<[string, any]>} filters
+ * @returns {Promise<Array<{id: string, data: object}>>}
+ */
+async function queryDocs(collection, filters, limit = 500) {
+  const clauses = filters.map(([field, value]) => ({ fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: toValue(value) } }));
+  const where = clauses.length === 1 ? clauses[0] : { compositeFilter: { op: 'AND', filters: clauses } };
+  const token = await getAccessToken();
+  const res = await fetch(`${baseUrl()}:runQuery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: collection }], where, limit } })
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Firestore query ${collection}: ${res.status} ${detail.slice(0, 200)}`);
+  }
+  const rows = await res.json();
+  return (Array.isArray(rows) ? rows : [])
+    .filter(row => row.document)
+    .map(row => ({ id: row.document.name.split('/').pop(), data: fromFields(row.document.fields || {}) }));
+}
+
 /**
  * The storage interface the billing service depends on
  */
@@ -87,4 +115,4 @@ const firestoreStore = {
   updatePayment: (paymentId, data) => updateDoc(`payments/${paymentId}`, data)
 };
 
-module.exports = { firestoreStore, toFields, fromFields };
+module.exports = { firestoreStore, toFields, fromFields, getDoc, setDoc, deleteDoc, queryDocs };

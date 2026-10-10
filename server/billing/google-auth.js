@@ -5,19 +5,26 @@
  *  - prove who is calling: verify the Firebase ID token the browser sends;
  *  - act as the project: turn the service account into an access token for Firestore.
  *
- * In development the Firebase emulators can stand in for both (never in production).
+ * In production (Firebase Functions) the project's identity comes from the machine itself, so no
+ * key file exists anywhere. Outside Google a service account key in FIREBASE_SERVICE_ACCOUNT does
+ * the same job. In development the Firebase emulators can stand in for both (never in production).
  */
 
 const crypto = require('crypto');
 
 const CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
 
+/** Running as a Firebase Function (Cloud Run sets this), not under the local emulator */
+function onGoogleCloud() {
+  return Boolean(process.env.K_SERVICE) && process.env.FUNCTIONS_EMULATOR !== 'true';
+}
+
 function projectId() {
-  return process.env.FIREBASE_PROJECT_ID || 'nexuscrm-d8e13';
+  return process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'nexuscrm-d8e13';
 }
 
 function isProduction() {
-  return process.env.NODE_ENV === 'production';
+  return process.env.NODE_ENV === 'production' || onGoogleCloud();
 }
 
 function authEmulatorHost() {
@@ -111,6 +118,7 @@ async function getAccessToken() {
   if (tokenCache.token && Date.now() < tokenCache.expiresAt - 60000) return tokenCache.token;
 
   const account = loadServiceAccount();
+  if (!account && onGoogleCloud()) return machineAccessToken();
   if (!account) throw new Error('FIREBASE_SERVICE_ACCOUNT não configurada.');
 
   const now = Math.floor(Date.now() / 1000);
@@ -140,11 +148,23 @@ async function getAccessToken() {
   return tokenCache.token;
 }
 
+// On Google's machines the function's own identity is handed out by the metadata server
+async function machineAccessToken() {
+  const res = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
+    headers: { 'Metadata-Flavor': 'Google' }
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.access_token) throw new Error('Não foi possível obter a identidade do projeto.');
+  tokenCache = { token: body.access_token, expiresAt: Date.now() + (body.expires_in || 600) * 1000 };
+  return tokenCache.token;
+}
+
 function isServiceAccountConfigured() {
-  return Boolean(firestoreEmulatorHost() || loadServiceAccount());
+  return Boolean(firestoreEmulatorHost() || loadServiceAccount() || onGoogleCloud());
 }
 
 module.exports = {
+  onGoogleCloud,
   projectId,
   firestoreEmulatorHost,
   verifyIdToken,

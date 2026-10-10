@@ -8,7 +8,7 @@
 
 const crypto = require('crypto');
 const { parseJsonBody } = require('../middleware/body-parser');
-const { getWebhookLeads, updateLeads, normalizeLeadPayload, MAX_TOTAL, MAX_PER_INBOX } = require('../services/lead-storage');
+const { leadInbox, normalizeLeadPayload } = require('../services/lead-storage');
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,128}$/;
 const MAX_BODY_BYTES = 32 * 1024;
@@ -26,6 +26,12 @@ function inboxFromRequest(req) {
 function send(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(body));
+}
+
+// The sender is told to try again; the reason stays in the server's log
+function unavailable(res, err) {
+  console.error('[Webhook]', err.message);
+  send(res, 503, { success: false, error: 'A caixa de entrada está indisponível. Tente de novo em instantes.' });
 }
 
 function withoutInbox(lead) {
@@ -82,16 +88,12 @@ async function handleIngestLead(req, res) {
     return send(res, 400, { success: false, error: 'Informe ao menos nome, e-mail ou telefone' });
   }
 
-  let full = false;
-  await updateLeads((leads) => {
-    const waiting = leads.filter(item => item.inbox === inbox && item.status === 'unread').length;
-    if (waiting >= MAX_PER_INBOX) {
-      full = true;
-      return leads;
-    }
-    return [lead, ...leads].slice(0, MAX_TOTAL);
-  });
-  if (full) return send(res, 429, { success: false, error: 'A caixa de entrada está cheia. Abra o CRM para recolher os contatos.' });
+  try {
+    const stored = await leadInbox().add(lead);
+    if (!stored) return send(res, 429, { success: false, error: 'A caixa de entrada está cheia. Abra o CRM para recolher os contatos.' });
+  } catch (err) {
+    return unavailable(res, err);
+  }
 
   send(res, 201, { success: true, lead: withoutInbox(lead) });
 }
@@ -101,8 +103,12 @@ async function handleGetLeads(req, res) {
   const inbox = inboxFromRequest(req);
   if (!inbox) return send(res, 401, { success: false, error: 'Token do webhook ausente ou inválido' });
 
-  const leads = (await getWebhookLeads()).filter(lead => lead.inbox === inbox).map(withoutInbox);
-  send(res, 200, { success: true, count: leads.length, leads });
+  try {
+    const leads = (await leadInbox().list(inbox)).map(withoutInbox);
+    send(res, 200, { success: true, count: leads.length, leads });
+  } catch (err) {
+    unavailable(res, err);
+  }
 }
 
 /** POST /api/webhook/leads/ack */
@@ -118,11 +124,12 @@ async function handleAcknowledgeLeads(req, res) {
   }
 
   const ids = Array.isArray(body.leadIds) ? body.leadIds.filter(id => typeof id === 'string') : [];
-  const all = ids.length === 0;
-  await updateLeads(leads => leads.map(lead => (
-    lead.inbox === inbox && (all || ids.includes(lead.id)) ? { ...lead, status: 'processed' } : lead
-  )));
-  send(res, 200, { success: true });
+  try {
+    await leadInbox().acknowledge(inbox, ids.length === 0 ? null : ids.slice(0, 500));
+    send(res, 200, { success: true });
+  } catch (err) {
+    unavailable(res, err);
+  }
 }
 
 module.exports = {
