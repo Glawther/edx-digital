@@ -18,15 +18,31 @@ const RUN = Date.now().toString(36);
 
 // ---------------------------------------------------------------- utilidades
 
-async function signUp(label) {
-  const email = `${label}.${RUN}@teste.local`;
-  const res = await fetch(`${AUTH}/accounts:signUp?key=demo-key`, {
+const PASSWORD = 'senha-de-teste-123';
+
+async function authCall(method, payload, admin = false) {
+  const url = admin
+    ? `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:${method}`
+    : `${AUTH}/accounts:${method}?key=demo-key`;
+  const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: 'senha-de-teste-123', returnSecureToken: true })
+    headers: { 'Content-Type': 'application/json', ...(admin ? { Authorization: 'Bearer owner' } : {}) },
+    body: JSON.stringify(payload)
   });
-  const body = await res.json();
+  return res.json();
+}
+
+// Uma conta nova; por padrão com o e-mail já confirmado, como quem clicou no link da mensagem
+async function signUp(label, { verified = true } = {}) {
+  const email = `${label}.${RUN}@teste.local`;
+  let body = await authCall('signUp', { email, password: PASSWORD, returnSecureToken: true });
   assert.ok(body.idToken, `conta de teste não criada: ${JSON.stringify(body)}`);
+  if (verified) {
+    await authCall('update', { localId: body.localId, emailVerified: true }, true);
+    // a confirmação só aparece num token emitido depois dela
+    body = await authCall('signInWithPassword', { email, password: PASSWORD, returnSecureToken: true });
+    assert.ok(body.idToken, `não entrou depois de confirmar: ${JSON.stringify(body)}`);
+  }
   return { uid: body.localId, token: body.idToken, email };
 }
 
@@ -540,4 +556,52 @@ test('dados da empresa: meta numérica, nome obrigatório, logotipo com limite',
   assert.equal(await patch(world.a.owner, org, { name: '' }), DENIED);
   assert.equal(await patch(world.a.owner, org, { logoUrl: 'x'.repeat(400001) }), DENIED);
   assert.equal(await patch(world.ana, org, { monthlyGoal: 1 }), DENIED, 'vendedor não define a meta');
+});
+
+test('sem o e-mail confirmado ninguém cria empresa', async () => {
+  const u = await signUp('semconfirmar', { verified: false });
+  const endsAt = await claimTrial(u);
+  const company = { name: 'Fantasma', ownerUid: u.uid, plan: 'pro', planStatus: 'trial', trialEndsAtMs: endsAt };
+  assert.equal(await put(u, `organizations/org_fantasma_${RUN}`, company), DENIED);
+  // depois de confirmar, com um token novo, a mesma criação passa
+  await authCall('update', { localId: u.uid, emailVerified: true }, true);
+  const again = await authCall('signInWithPassword', { email: u.email, password: PASSWORD, returnSecureToken: true });
+  assert.equal(await put({ ...u, token: again.idToken }, `organizations/org_fantasma_${RUN}`, company), OK);
+});
+
+test('plano cheio (marcado pelo servidor): ninguém cria oportunidade nem entra na equipe; o resto continua', async () => {
+  const c = await registerCompany('cheia');
+  assert.equal(await put(c.owner, `customers/cheia-1-${RUN}`, lead(c.orgId, c.owner)), OK);
+  // o aplicativo não marca nem desmarca
+  assert.equal(await patch(c.owner, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: false } }), DENIED);
+
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: true, seatsFull: false } }), OK);
+  assert.equal(await put(c.owner, `customers/cheia-2-${RUN}`, lead(c.orgId, c.owner)), DENIED);
+  assert.equal(await patch(c.owner, `customers/cheia-1-${RUN}`, { stage: 'won' }), OK);   // alterar o que existe segue valendo
+  assert.equal(await del(c.owner, `customers/cheia-1-${RUN}`), OK);
+
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: true } }), OK);
+  assert.equal(await put(c.owner, `customers/cheia-3-${RUN}`, lead(c.orgId, c.owner)), OK);
+  const novato = await signUp('novato');
+  const profile = { orgId: c.orgId, role: 'employee', name: 'Novato', email: novato.email, status: 'active', inviteCode: c.code };
+  assert.equal(await put(novato, `users/${novato.uid}`, profile), DENIED);
+  assert.equal(await put(c.owner, `users/colab-${RUN}`, { orgId: c.orgId, role: 'employee', name: 'Colab', email: 'colab@teste.local', status: 'active' }), DENIED);
+
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: false } }), OK);
+  assert.equal(await put(novato, `users/${novato.uid}`, profile), OK);
+});
+
+test('cada pessoa liga ou desliga o próprio resumo por e-mail, e só o dela', async () => {
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: false }), OK);
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: 'talvez' }), DENIED);
+  assert.equal(await patch(world.ana, `users/${world.a.owner.uid}`, { emailDigest: false }), DENIED);
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { emailDigest: true }), OK);
+});
+
+test('o administrador grava os modelos de mensagem da empresa; lista grande e vendedor são recusados', async () => {
+  const modelos = [{ name: 'Boas-vindas', text: 'Olá, {nome}!' }];
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: modelos }), OK);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: Array.from({ length: 13 }, (_, i) => ({ name: `M${i}`, text: 'x' })) }), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: 'texto' }), DENIED);
+  assert.equal(await patch(world.ana, `organizations/${world.a.orgId}`, { messageTemplates: [] }), DENIED);
 });

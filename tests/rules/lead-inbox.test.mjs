@@ -46,3 +46,33 @@ test('confirmar o recebimento tira da caixa só os contatos indicados, e só os 
   assert.equal((await firestoreInbox.list(inboxB)).length, 1);
   await firestoreInbox.acknowledge(inboxB, null);
 });
+
+// ---------------------------------------------------------------- contagem para os limites do plano
+
+const { firestoreStore, setDoc } = require('../../server/billing/firestore-store.js');
+const { createUsageService } = require('../../server/usage/usage-service.js');
+
+test('o servidor conta as oportunidades em aberto e as pessoas ativas, e marca a empresa cheia', async () => {
+  const orgId = `org_conta_${RUN}`;
+  await setDoc(`organizations/${orgId}`, { name: 'Conta', plan: 'starter', ownerUid: 'dona' });
+  await setDoc(`users/dona-${RUN}`, { orgId, role: 'admin', status: 'active', name: 'Dona', email: 'dona@teste.local' });
+  await setDoc(`users/vend-${RUN}`, { orgId, role: 'employee', status: 'active', name: 'Vend', email: 'vend@teste.local' });
+  await setDoc(`users/bloq-${RUN}`, { orgId, role: 'employee', status: 'blocked', name: 'Bloq', email: 'bloq@teste.local' });
+  for (const [id, stage] of [['a', 'lead'], ['b', 'negotiation'], ['c', 'won'], ['d', 'lost'], ['e', 'contacted']]) {
+    await setDoc(`customers/conta-${id}-${RUN}`, { orgId, name: id, stage });
+  }
+  await setDoc(`customers/outra-${RUN}`, { orgId: 'org_de_outro', name: 'x', stage: 'lead' });
+
+  assert.equal(await firestoreStore.countDocs('customers', [['orgId', orgId], ['stage', 'IN', ['lead', 'contact', 'contacted', 'proposal', 'negotiation']]]), 3);
+  assert.equal(await firestoreStore.countDocs('users', [['orgId', orgId], ['status', 'active']]), 2);
+
+  // Starter comporta 2 pessoas: está cheio de gente, não de oportunidades
+  const usage = createUsageService({ store: firestoreStore });
+  assert.deepEqual(await usage.refreshUsage(orgId), { leadsFull: false, seatsFull: true, changed: true });
+  assert.deepEqual((await firestoreStore.getOrganization(orgId)).usage, { leadsFull: false, seatsFull: true });
+  assert.equal((await usage.refreshUsage(orgId)).changed, false);
+
+  assert.ok((await firestoreStore.listOrganizations()).some(doc => doc.id === orgId));
+  assert.equal((await firestoreStore.listUsers(orgId)).length, 3);
+  assert.equal((await firestoreStore.listCustomers(orgId)).length, 5);
+});

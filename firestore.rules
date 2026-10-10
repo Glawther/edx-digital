@@ -61,6 +61,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/trial_claims/$(request.auth.token.email)).data;
     }
 
+    // ---- limites do plano -------------------------------------------------
+    // O servidor conta as oportunidades em aberto e as pessoas com acesso a cada alteração e
+    // grava na empresa se o plano está cheio (usage.leadsFull, usage.seatsFull). O aplicativo
+    // não consegue mexer nesse campo. Empresas sem o campo seguem liberadas.
+    function usageFull(orgId, what) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)).data.get('usage', {}).get(what, false) == true;
+    }
+
     function validStages() {
       // 'contacted' é o nome antigo de 'contact'; fica aceito por causa de registros antigos
       return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
@@ -112,17 +120,20 @@ service cloud.firestore {
           && request.resource.data.role == 'employee'
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.inviteCode is string
-          && inviteOpens(request.resource.data.inviteCode, request.resource.data.orgId))
+          && inviteOpens(request.resource.data.inviteCode, request.resource.data.orgId)
+          && !usageFull(request.resource.data.orgId, 'seatsFull'))
         // 3. o administrador cadastra alguém da própria empresa
-        || (request.auth.uid != uid && isOrgAdmin(request.resource.data.orgId))
+        || (request.auth.uid != uid && isOrgAdmin(request.resource.data.orgId)
+          && !usageFull(request.resource.data.orgId, 'seatsFull'))
       );
 
       allow update: if signedIn() && (
-        // a própria pessoa: só o nome e o aviso de troca de senha
+        // a própria pessoa: o nome, o aviso de troca de senha e se quer o resumo diário por e-mail
         (request.auth.uid == uid
           && validName(request.resource.data.name)
+          && (!('emailDigest' in request.resource.data) || request.resource.data.emailDigest is bool)
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['name', 'mustChangePassword', 'updatedAt']))
+               .hasOnly(['name', 'mustChangePassword', 'emailDigest', 'updatedAt']))
         // o administrador: dados de outra pessoa da empresa, menos do dono
         || (request.auth.uid != uid
           && isOrgAdmin(resource.data.orgId)
@@ -183,6 +194,8 @@ service cloud.firestore {
 
       // Uma conta sem empresa pode registrar a sua, sempre em período de teste
       allow create: if signedIn()
+        // só com o e-mail confirmado: um endereço inventado não abre empresa nem ganha teste
+        && request.auth.token.email_verified == true
         && !exists(profilePath(request.auth.uid))
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.name is string
@@ -198,7 +211,7 @@ service cloud.firestore {
       // O plano e a situação do pagamento não são alteráveis pelo aplicativo
       allow update: if isOrgAdmin(orgId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'monthlyGoal', 'updatedAt'])
+             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal', 'updatedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
         && optText(request.resource.data, 'legalName', 300) && optText(request.resource.data, 'cnpj', 40)
@@ -209,6 +222,8 @@ service cloud.firestore {
             || (request.resource.data.stageNames is map && request.resource.data.stageNames.size() <= 6))
         && (!('customFields' in request.resource.data)
             || (request.resource.data.customFields is list && request.resource.data.customFields.size() <= 8))
+        && (!('messageTemplates' in request.resource.data)
+            || (request.resource.data.messageTemplates is list && request.resource.data.messageTemplates.size() <= 12))
         && (!('monthlyGoal' in request.resource.data)
             || (request.resource.data.monthlyGoal is number && request.resource.data.monthlyGoal >= 0));
 
@@ -258,6 +273,7 @@ service cloud.firestore {
         // o identificador aparece em telas de outras pessoas da empresa: só os caracteres que o app gera
         && customerId.matches('^[A-Za-z0-9_-]{1,120}$')
         && planAllowsWrites(request.resource.data.orgId)
+        && !usageFull(request.resource.data.orgId, 'leadsFull')
         && (
           isOrgAdmin(request.resource.data.orgId)
           || (isMember(request.resource.data.orgId) && assignedToMe(request.resource.data))

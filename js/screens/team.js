@@ -2,6 +2,7 @@
  * EDX Digital - The team: people and their access, the invite code, the activity history
  */
 
+import { requestTourForNewAccount, startTourIfPending } from '../ui/tour.js';
 import { passwordProblem } from '../core/attention.js';
 import { crmStore } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
@@ -278,6 +279,9 @@ export function setupEmployeeManagementEvents() {
         formFirstAccess.reset();
         if (firstAccessDialog) firstAccessDialog.close();
         showToast('Senha pessoal criada.', 'success');
+        // it is this person's first time in the system
+        requestTourForNewAccount();
+        startTourIfPending();
       } catch (err) {
         showToast(describeAuthError(err), 'error');
       }

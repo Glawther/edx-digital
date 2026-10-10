@@ -42,7 +42,7 @@ export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
-const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'monthlyGoal'];
+const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal'];
 
 let currentUser = null;
 let currentRole = USER_ROLES.EMPLOYEE;
@@ -124,6 +124,8 @@ async function applyFirebaseUser(fbUser) {
     role: currentRole,
     orgId: profile.orgId,
     mustChangePassword: !!profile.mustChangePassword,
+    // on unless the person turned it off
+    emailDigest: profile.emailDigest !== false,
     isOwner: org.ownerUid === fbUser.uid,
     photoURL: null
   };
@@ -164,10 +166,15 @@ export async function signIn(email, password) {
 /**
  * Creates the account, or reuses one whose sign-up stopped before it was linked to a company
  */
+// Accounts created by this page a moment ago (they still have to receive the confirmation e-mail)
+const justCreated = new Set();
+
 async function createOrResumeAccount(email, password) {
   const { auth, db, authMod, fsMod } = await getFirebase();
   try {
-    return await authMod.createUserWithEmailAndPassword(auth, email, password);
+    const cred = await authMod.createUserWithEmailAndPassword(auth, email, password);
+    justCreated.add(cred.user.uid);
+    return cred;
   } catch (err) {
     if (err.code !== 'auth/email-already-in-use') throw err;
     let cred;
@@ -189,11 +196,24 @@ async function createOrResumeAccount(email, password) {
  * Registers a new company. Whoever registers it is its first administrator.
  */
 export async function registerCompany({ name, email, company, password, plan = 'pro' }) {
-  const { db, authMod, fsMod } = await getFirebase();
+  const { auth, db, authMod, fsMod } = await getFirebase();
   const cleanEmail = email.trim().toLowerCase();
   const companyName = company.trim();
 
   const cred = await createOrResumeAccount(cleanEmail, password);
+
+  // The company is only created for a confirmed e-mail (the database rules require it too).
+  // Until then the account exists, signed out, and this same form picks it up again.
+  await cred.user.reload().catch(() => {});
+  if (!cred.user.emailVerified) {
+    // sent once, when the account is created; "Enviar a mensagem de novo" asks for another
+    if (justCreated.delete(cred.user.uid)) await authMod.sendEmailVerification(cred.user).catch(() => {});
+    await authMod.signOut(auth).catch(() => {});
+    throw authError('edx/verify-email');
+  }
+  // the token in hand may predate the confirmation
+  await cred.user.getIdToken(true);
+
   const uid = cred.user.uid;
   const now = new Date().toISOString();
 
@@ -242,9 +262,21 @@ export async function registerCompany({ name, email, company, password, plan = '
   });
   await fsMod.updateDoc(fsMod.doc(db, 'organizations', orgId), { teamInviteCode: inviteCode, updatedAt: now });
   await authMod.updateProfile(cred.user, { displayName: name.trim() }).catch(() => {});
-  authMod.sendEmailVerification(cred.user).catch(() => {});
 
   return applyFirebaseUser(cred.user);
+}
+
+/**
+ * Sends the confirmation e-mail again to an account that has not confirmed yet
+ */
+export async function resendEmailVerification(email, password) {
+  const { auth, authMod } = await getFirebase();
+  const cred = await authMod.signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+  try {
+    if (!cred.user.emailVerified) await authMod.sendEmailVerification(cred.user);
+  } finally {
+    await authMod.signOut(auth).catch(() => {});
+  }
 }
 
 /**
@@ -405,6 +437,16 @@ export async function updateOwnName(name) {
   if (currentUser) currentUser.name = clean;
   notifyListeners();
   return clean;
+}
+
+/**
+ * Whether the signed-in person wants the morning summary by e-mail
+ */
+export async function setEmailDigest(wanted) {
+  if (sessionKind !== SESSION_KINDS.CLOUD || !currentUser) return;
+  const { db, fsMod } = await getFirebase();
+  await fsMod.updateDoc(fsMod.doc(db, 'users', currentUser.uid), { emailDigest: Boolean(wanted), updatedAt: new Date().toISOString() });
+  currentUser.emailDigest = Boolean(wanted);
 }
 
 /**

@@ -84,15 +84,27 @@ async function deleteDoc(path) {
  * @param {Array<[string, any]>} filters
  * @returns {Promise<Array<{id: string, data: object}>>}
  */
-async function queryDocs(collection, filters, limit = 500) {
-  const clauses = filters.map(([field, value]) => ({ fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: toValue(value) } }));
-  const where = clauses.length === 1 ? clauses[0] : { compositeFilter: { op: 'AND', filters: clauses } };
+// A filter is [field, value] (equal) or [field, 'IN', values]
+function whereOf(filters) {
+  const clauses = filters.map(([field, second, third]) => ({
+    fieldFilter: third === undefined
+      ? { field: { fieldPath: field }, op: 'EQUAL', value: toValue(second) }
+      : { field: { fieldPath: field }, op: second, value: toValue(third) }
+  }));
+  return clauses.length === 1 ? clauses[0] : { compositeFilter: { op: 'AND', filters: clauses } };
+}
+
+async function post(path, body) {
   const token = await getAccessToken();
-  const res = await fetch(`${baseUrl()}:runQuery`, {
+  return fetch(`${baseUrl()}${path}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: collection }], where, limit } })
+    body: JSON.stringify(body)
   });
+}
+
+async function queryDocs(collection, filters, limit = 500) {
+  const res = await post(':runQuery', { structuredQuery: { from: [{ collectionId: collection }], where: whereOf(filters), limit } });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(`Firestore query ${collection}: ${res.status} ${detail.slice(0, 200)}`);
@@ -104,6 +116,42 @@ async function queryDocs(collection, filters, limit = 500) {
 }
 
 /**
+ * How many documents match, without reading them
+ */
+async function countDocs(collection, filters) {
+  const res = await post(':runAggregationQuery', {
+    structuredAggregationQuery: {
+      structuredQuery: { from: [{ collectionId: collection }], where: whereOf(filters) },
+      aggregations: [{ alias: 'total', count: {} }]
+    }
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Firestore count ${collection}: ${res.status} ${detail.slice(0, 200)}`);
+  }
+  const rows = await res.json();
+  const first = (Array.isArray(rows) ? rows : []).find(row => row.result);
+  return first ? Number(first.result.aggregateFields.total.integerValue || 0) : 0;
+}
+
+/**
+ * Every document of a collection, page by page
+ */
+async function listDocs(collection, pageSize = 300, maxPages = 200) {
+  const docs = [];
+  let pageToken = '';
+  for (let page = 0; page < maxPages; page++) {
+    const data = await request('GET', `${collection}?pageSize=${pageSize}${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`);
+    for (const doc of (data && data.documents) || []) {
+      docs.push({ id: doc.name.split('/').pop(), data: fromFields(doc.fields || {}) });
+    }
+    pageToken = (data && data.nextPageToken) || '';
+    if (!pageToken) break;
+  }
+  return docs;
+}
+
+/**
  * The storage interface the billing service depends on
  */
 const firestoreStore = {
@@ -112,7 +160,12 @@ const firestoreStore = {
   updateOrganization: (orgId, data) => updateDoc(`organizations/${orgId}`, data),
   getPayment: (paymentId) => getDoc(`payments/${paymentId}`),
   savePayment: (paymentId, data) => setDoc(`payments/${paymentId}`, data),
-  updatePayment: (paymentId, data) => updateDoc(`payments/${paymentId}`, data)
+  updatePayment: (paymentId, data) => updateDoc(`payments/${paymentId}`, data),
+  countDocs,
+  // for the morning e-mails
+  listOrganizations: () => listDocs('organizations'),
+  listUsers: (orgId) => queryDocs('users', [['orgId', orgId]], 1000),
+  listCustomers: (orgId) => queryDocs('customers', [['orgId', orgId]], 10000)
 };
 
-module.exports = { firestoreStore, toFields, fromFields, getDoc, setDoc, deleteDoc, queryDocs };
+module.exports = { firestoreStore, toFields, fromFields, getDoc, setDoc, deleteDoc, queryDocs, countDocs, listDocs };

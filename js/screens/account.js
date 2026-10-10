@@ -21,6 +21,8 @@ import {
   logoutToPortal,
   markActivity,
   registerCompany,
+  setEmailDigest,
+  resendEmailVerification,
   sendPasswordReset,
   signIn,
   updateOwnName,
@@ -60,6 +62,8 @@ export function setupAccountDialog() {
     set('account-summary', user ? `${user.name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${org.name}.` : '');
     show('account-terms', cloud);
     show('account-profile-block', cloud);
+    const digestBox = document.getElementById('account-email-digest');
+    if (digestBox) digestBox.checked = !user || user.emailDigest !== false;
     const nameInput = document.getElementById('account-name');
     if (nameInput) nameInput.value = user ? user.name : '';
     document.getElementById('form-account-password')?.reset();
@@ -86,6 +90,17 @@ export function setupAccountDialog() {
       if (summary && user) summary.textContent = `${name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${getSavedOrganization().name}.`;
       showToast('Nome atualizado.', 'success');
     } catch (err) {
+      showToast(err.code ? describeAuthError(err) : err.message, 'error');
+    }
+  });
+
+  document.getElementById('account-email-digest')?.addEventListener('change', async (e) => {
+    const box = e.currentTarget;
+    try {
+      await setEmailDigest(box.checked);
+      showToast(box.checked ? 'Você vai receber o resumo do dia por e-mail.' : 'Você não vai mais receber o resumo por e-mail.', 'success');
+    } catch (err) {
+      box.checked = !box.checked;
       showToast(err.code ? describeAuthError(err) : err.message, 'error');
     }
   });
@@ -362,9 +377,13 @@ export function setupAuthPortalEvents() {
         return;
       }
 
-      const restore = setBusy(document.getElementById('btn-submit-register'), 'Criando a empresa...');
+      const submitButton = document.getElementById('btn-submit-register');
+      const verifyNote = document.getElementById('reg-verify-note');
+      const restore = setBusy(submitButton, 'Criando a empresa...');
+      let waitingForEmail = false;
       try {
         await registerCompany({ name, email, company, password, plan });
+        if (verifyNote) verifyNote.hidden = true;
         // a new account is shown around on its first screen
         requestTourForNewAccount();
         formRegister.reset();
@@ -373,9 +392,38 @@ export function setupAuthPortalEvents() {
         logAudit(AUDIT_ACTIONS.USER_REGISTERED, { role: 'admin', company, plan });
         showToast(`Empresa "${company}" criada. Você é o administrador.`, "success");
       } catch (err) {
-        showToast(describeAuthError(err), "error");
+        if (err.code === 'edx/verify-email') {
+          // The form stays as it is: after confirming, the same button finishes the registration
+          waitingForEmail = true;
+          const alreadyAsked = verifyNote && !verifyNote.hidden;
+          if (verifyNote) {
+            document.getElementById('reg-verify-email').textContent = email;
+            verifyNote.hidden = false;
+          }
+          showToast(alreadyAsked ? 'O e-mail ainda não foi confirmado. Clique no link da mensagem e tente de novo.' : 'Enviamos um e-mail de confirmação. Clique no link dele para continuar.', alreadyAsked ? 'warning' : 'info');
+        } else {
+          showToast(describeAuthError(err), "error");
+        }
       } finally {
         restore();
+        if (waitingForEmail && submitButton) submitButton.textContent = 'Já confirmei, criar empresa';
+      }
+    });
+
+    document.getElementById('btn-resend-verification')?.addEventListener('click', async (e) => {
+      const email = document.getElementById('reg-input-email').value.trim();
+      const password = document.getElementById('reg-input-password').value;
+      if (!email || !password) return;
+      e.currentTarget.disabled = true;
+      try {
+        await resendEmailVerification(email, password);
+        showToast('Mensagem enviada de novo. Confira também a caixa de spam.', 'success');
+      } catch (err) {
+        showToast(describeAuthError(err), 'error');
+      } finally {
+        const button = document.getElementById('btn-resend-verification');
+        // the e-mail service refuses requests that come too close together
+        setTimeout(() => { if (button) button.disabled = false; }, 30000);
       }
     });
   }

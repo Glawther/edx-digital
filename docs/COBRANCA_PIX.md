@@ -102,7 +102,7 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 
 - **Primeira chamada depois de um tempo parado**: a função é ligada sob demanda, e a primeira resposta pode levar alguns segundos. O aviso do Mercado Pago que chegar nesse momento é repetido por ele sozinho, e a tela do cliente consulta o pagamento a cada 5 segundos.
 - **Limites de chamadas** (contatos por minuto, cobranças por conta) são contados em cada cópia da função, e podem existir até três ao mesmo tempo.
-- **Limites do plano** (pessoas com acesso, oportunidades em aberto) são conferidos pelo aplicativo, não pelas regras do banco. Na conta de quem administra a contagem de oportunidades é exata; a de um vendedor conta só a própria carteira. Com a equipe completa, o código de convite fica pausado.
+- **Limites do plano** (pessoas com acesso, oportunidades em aberto): o aplicativo confere antes de criar e o servidor reconta depois de cada mudança, marcando a empresa quando o plano enche; com a marca, as regras do banco recusam o que passar. Com a equipe completa, o código de convite fica pausado.
 - **Reembolso**: você devolve o valor no painel do Mercado Pago e o sistema tira sozinho os 30 dias daquele pagamento, quando o Mercado Pago avisa (estorno total ou contestação). Sem outro período pago, a empresa volta para onde o teste está, em geral modo de leitura. Devolução parcial não muda nada: ajuste `paidUntilMs` e `paidUntil` no console do Firebase se precisar.
 - **Nota fiscal** não é emitida pelo sistema.
 

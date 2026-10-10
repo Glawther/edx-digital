@@ -1,6 +1,7 @@
 /**
- * EDX Digital - "Funil e campos"
- * Where an administrator renames the funnel stages and adds extra fields to the opportunity.
+ * EDX Digital - "Funil, campos e mensagens"
+ * Where an administrator renames the funnel stages, adds extra fields to the opportunity,
+ * writes the company's message templates and sets the month's goal.
  */
 
 import { getSavedOrganization, saveOrganization } from '../core/config.js';
@@ -11,6 +12,9 @@ import { parseMoney } from '../services/import-service.js';
 import {
   FIELD_TYPES, MAX_CUSTOM_FIELDS, MAX_LABEL_LENGTH, cleanStageNames, cleanCustomFields, formatCustomValue, readCustomValues
 } from '../core/customization.js';
+import {
+  MAX_TEMPLATES, MAX_TEMPLATE_NAME, MAX_TEMPLATE_TEXT, TEMPLATE_FIELDS, DEFAULT_TEMPLATES, cleanTemplates
+} from '../core/message-templates.js';
 
 /** The company's extra fields, always a clean list */
 export function getCustomFields() {
@@ -100,6 +104,49 @@ export function setupCustomizeDialog() {
     renderFields();
   });
 
+  // ---- message templates
+  const templatesBox = document.getElementById('customize-templates');
+  const btnAddTemplate = document.getElementById('btn-add-template');
+  const btnDefaults = document.getElementById('btn-start-from-defaults');
+  let templates = [];
+  const hint = document.getElementById('customize-template-fields');
+  if (hint) hint.textContent = `Campos que o sistema preenche: ${TEMPLATE_FIELDS.map(field => `{${field.key}} (${field.label})`).join(', ')}.`;
+
+  function renderTemplates() {
+    templatesBox.innerHTML = templates.map((template, index) => `
+      <div class="template-row">
+        <input type="text" class="form-input" value="${escapeHtml(template.name)}" maxlength="${MAX_TEMPLATE_NAME}" placeholder="Nome do modelo" data-index="${index}" data-part="name" aria-label="Nome do modelo ${index + 1}">
+        <button type="button" class="link-btn danger" data-index="${index}" data-part="remove">Remover</button>
+        <textarea class="form-textarea" maxlength="${MAX_TEMPLATE_TEXT}" placeholder="Olá, {nome}! Aqui é {vendedor}, da {minha_empresa}." data-index="${index}" data-part="text" aria-label="Texto do modelo ${index + 1}">${escapeHtml(template.text)}</textarea>
+      </div>
+    `).join('');
+    btnAddTemplate.disabled = templates.length >= MAX_TEMPLATES;
+    btnAddTemplate.textContent = templates.length >= MAX_TEMPLATES ? `Limite de ${MAX_TEMPLATES} modelos` : 'Adicionar modelo';
+    btnDefaults.hidden = templates.length > 0;
+  }
+
+  templatesBox.addEventListener('input', (event) => {
+    const { index, part } = event.target.dataset;
+    if (part === 'name' || part === 'text') templates[Number(index)][part] = event.target.value;
+  });
+  templatesBox.addEventListener('click', (event) => {
+    const { index, part } = event.target.dataset;
+    if (part !== 'remove') return;
+    templates.splice(Number(index), 1);
+    renderTemplates();
+  });
+  btnAddTemplate.addEventListener('click', () => {
+    if (templates.length >= MAX_TEMPLATES) return;
+    templates.push({ name: '', text: '' });
+    renderTemplates();
+    const inputs = templatesBox.querySelectorAll('input[data-part="name"]');
+    inputs[inputs.length - 1]?.focus();
+  });
+  btnDefaults.addEventListener('click', () => {
+    templates = DEFAULT_TEMPLATES.map(({ name, text }) => ({ name, text }));
+    renderTemplates();
+  });
+
   btnAdd.addEventListener('click', () => {
     if (fields.length >= MAX_CUSTOM_FIELDS) return;
     fields.push({ label: '', type: 'text' });
@@ -126,6 +173,8 @@ export function setupCustomizeDialog() {
     `).join('');
     fields = getCustomFields().map(field => ({ ...field }));
     renderFields();
+    templates = cleanTemplates(org.messageTemplates);
+    renderTemplates();
     const goal = Number(org.monthlyGoal) || 0;
     document.getElementById('customize-goal').value = goal > 0 ? goal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '';
     dialog.showModal();
@@ -145,8 +194,14 @@ export function setupCustomizeDialog() {
       showToast('Dois campos têm o mesmo nome. Dê nomes diferentes a cada um.', 'error');
       return;
     }
+    const started = templates.filter(template => template.name.trim() !== '' || template.text.trim() !== '');
+    const messageTemplates = cleanTemplates(templates);
+    if (messageTemplates.length < started.length) {
+      showToast('Cada modelo de mensagem precisa de um nome e de um texto, e os nomes não podem se repetir.', 'error');
+      return;
+    }
     const monthlyGoal = parseMoney(document.getElementById('customize-goal').value);
-    saveOrganization({ ...getSavedOrganization(), stageNames: cleanStageNames(names, defaults), customFields, monthlyGoal });
+    saveOrganization({ ...getSavedOrganization(), stageNames: cleanStageNames(names, defaults), customFields, messageTemplates, monthlyGoal });
     dialog.close();
     showToast('Alterações salvas.', 'success');
   });

@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.17.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.17.0">
-  <link rel="stylesheet" href="css/components.css?v=3.17.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.17.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.17.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.18.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.18.0">
+  <link rel="stylesheet" href="css/components.css?v=3.18.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.18.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.18.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.17.0"></script>
+  <script src="js/theme-boot.js?v=3.18.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -124,6 +124,12 @@
               <input type="checkbox" id="reg-consent" required>
               <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
             </label>
+
+            <div class="auth-note verify-note" id="reg-verify-note" role="status" hidden>
+              <strong>Confirme o seu e-mail</strong>
+              <p>Enviamos uma mensagem para <span id="reg-verify-email"></span>. Abra-a e clique no link de confirmação (confira também a caixa de spam). Depois volte aqui e continue.</p>
+              <button type="button" class="link-btn" id="btn-resend-verification">Enviar a mensagem de novo</button>
+            </div>
 
             <button type="submit" id="btn-submit-register" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
               Criar empresa
@@ -289,8 +295,8 @@
             <button type="button" class="dropdown-item" id="btn-menu-customize">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Funil, campos e meta</span>
-                <span class="dropdown-item-desc">Etapas, campos extras e meta do mês</span>
+                <span class="dropdown-item-title">Funil, campos e mensagens</span>
+                <span class="dropdown-item-desc">Etapas, campos extras, modelos de mensagem e meta</span>
               </div>
             </button>
 
@@ -360,6 +366,13 @@
                 <span class="dropdown-item-desc">Passeio pelas telas, em poucos minutos</span>
               </div>
             </button>
+            <a class="dropdown-item" id="link-menu-help" href="ajuda.html" target="_blank" rel="noopener">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Ajuda</span>
+                <span class="dropdown-item-desc">Perguntas e respostas sobre o sistema</span>
+              </div>
+            </a>
             <button type="button" class="dropdown-item" id="btn-menu-shortcuts">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -1141,7 +1154,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
   <dialog id="customize-dialog" class="crm-dialog" style="max-width: 640px; width: 95%;">
     <div class="dialog-header">
-      <h2 class="dialog-title">Funil, campos e meta</h2>
+      <h2 class="dialog-title">Funil, campos e mensagens</h2>
       <button type="button" class="dialog-close" id="btn-close-customize-dialog" aria-label="Fechar">&times;</button>
     </div>
     <form id="customize-form">
@@ -1154,6 +1167,13 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
+
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Mensagens do WhatsApp</h3>
+        <p class="empty-note" style="margin: 0 0 0.5rem;">Os modelos que a equipe vê ao escrever para um cliente. Sem nenhum modelo aqui, valem os quatro modelos padrão do sistema.</p>
+        <p class="empty-note" style="margin: 0 0 0.85rem;" id="customize-template-fields"></p>
+        <div id="customize-templates"></div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-add-template">Adicionar modelo</button>
+        <button type="button" class="link-btn" id="btn-start-from-defaults" style="margin-left: 0.75rem;">Começar pelos modelos padrão</button>
 
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Meta de vendas do mês</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">O valor que a empresa quer vender em cada mês. O andamento aparece em Relatórios, para quem administra. Deixe em branco para não usar meta.</p>
@@ -1412,6 +1432,10 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
           </div>
           <button type="submit" class="btn btn-outline btn-sm">Trocar senha</button>
         </form>
+        <label class="consent-line" style="margin-top: 0.9rem;">
+          <input type="checkbox" id="account-email-digest">
+          <span>Receber por e-mail, de manhã, o resumo do que há para fazer no dia. Só é enviado quando há algo pendente.</span>
+        </label>
       </div>
 
       <div class="account-block" id="account-export-block">
@@ -1820,7 +1844,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.17.0"></script>
+  <script type="module" src="js/app.js?v=3.18.0"></script>
 
 </body>
 </html>

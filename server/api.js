@@ -12,6 +12,7 @@ const {
   handleAcknowledgeLeads
 } = require('./controllers/webhook-controller');
 const { handleBilling } = require('./billing/billing-controller');
+const { handleErrorReport } = require('./controllers/error-controller');
 
 function sendJson(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -42,6 +43,8 @@ function handleApi(req, res) {
     handleGetLeads(req, res);
   } else if (pathname === '/api/webhook/leads/ack' && req.method === 'POST') {
     handleAcknowledgeLeads(req, res);
+  } else if (pathname === '/api/errors' && req.method === 'POST') {
+    handleErrorReport(req, res);
   } else if (pathname === '/health' || pathname === '/api/health') {
     sendJson(res, 200, { status: 'healthy' });
   } else {

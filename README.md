@@ -8,8 +8,8 @@ Funil de vendas, clientes e tarefas para equipes pequenas. Site: https://edx-dig
 |---|---|---|
 | Aplicativo | `index.html`, `js/`, `css/` | Roda inteiro no navegador, em JavaScript puro (módulos ES), sem framework. |
 | Dados e login | Firebase (Authentication e Firestore) | Cada empresa só alcança os próprios dados; quem garante isso são as regras em `firestore.rules`. |
-| Servidor | `cloud.js`, `server/` | Uma função do Firebase, no mesmo projeto: o site entrega a ela tudo o que chega em `/api`. Cobra por PIX (Mercado Pago) e guarda por instantes os contatos enviados por formulários. `server.js` faz o mesmo no seu computador e serve o site. |
-| Páginas públicas | `landing.html`, `termos.html`, `privacidade.html` | Apresentação, termos de uso e política de privacidade. |
+| Servidor | `cloud.js`, `server/` | Uma função do Firebase, no mesmo projeto: o site entrega a ela tudo o que chega em `/api`. Cobra por PIX (Mercado Pago), guarda por instantes os contatos enviados por formulários, conta os limites do plano, envia os e-mails da manhã e recebe os erros das telas. `server.js` faz o mesmo no seu computador e serve o site. |
+| Páginas públicas | `landing.html`, `ajuda.html`, `termos.html`, `privacidade.html` | Apresentação, ajuda, termos de uso e política de privacidade. |
 
 ```
 js/
@@ -24,7 +24,8 @@ server/
 tests/
   unit/                  lógica do aplicativo (importação, relatório, lembretes, escape)
   rules/                 regras do banco, contra o emulador
-  ui/                    o aplicativo aberto num navegador de verdade
+  ui/                    o aplicativo aberto num navegador de verdade, na demonstração
+  e2e/                   uma conta de verdade, do cadastro ao bloqueio, contra os emuladores
 server/tests/            cobrança, caixa de entrada e o que o servidor expõe
 scripts/build.mjs        gera dist/, a versão compactada que é publicada
 scripts/screens.mjs      salva imagens das telas da demonstração, para conferir uma mudança
@@ -52,7 +53,11 @@ npm run test:rules
 npm run test:ui
 ```
 
-O primeiro roda a lógica do aplicativo e do servidor, sem rede. O segundo sobe o emulador do Firebase e confere as regras do banco. O terceiro abre a demonstração do aplicativo no Edge ou no Chrome instalado na máquina e usa as telas como uma pessoa usaria (se nenhum dos dois existir, os testes são pulados).
+```bash
+npm run test:e2e
+```
+
+O primeiro roda a lógica do aplicativo e do servidor, sem rede. O segundo sobe o emulador do Firebase e confere as regras do banco. O terceiro abre a demonstração do aplicativo no Edge ou no Chrome instalado na máquina e usa as telas como uma pessoa usaria (se nenhum dos dois existir, os testes são pulados). O quarto faz o caminho de uma conta de verdade contra os emuladores: cadastro com confirmação de e-mail, convite, o que cada um enxerga e bloqueio.
 
 O HTML não carrega código: nada de `onclick` nem de `<script>` com conteúdo. Um elemento diz qual ação dispara (`data-click="..."`) e `js/ui/actions.js` chama. O build recusa uma página que fuja disso, porque a política de segurança a bloquearia.
 
@@ -70,3 +75,4 @@ Publicar a função exige o plano Blaze do Firebase e os dois segredos do Mercad
 
 - [Login, permissões e segurança](docs/LOGIN_E_SEGURANCA.md)
 - [Cobrança por PIX](docs/COBRANCA_PIX.md)
+- [E-mails enviados pelo sistema](docs/EMAILS.md)

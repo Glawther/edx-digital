@@ -1,6 +1,6 @@
 {
   "name": "edx-digital",
-  "version": "3.17.0",
+  "version": "3.18.0",
   "description": "EDX Digital: funil de vendas, clientes e tarefas para equipes pequenas",
   "main": "cloud.js",
   "scripts": {
@@ -13,7 +13,8 @@
     "deploy": "npm run build && firebase deploy --only firestore:rules,functions,hosting",
     "build": "node scripts/build.mjs",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
-    "gcp-build": ""
+    "gcp-build": "",
+    "test:e2e": "node scripts/test-rules.mjs tests/e2e/account.test.mjs"
   },
   "keywords": [
     "crm",

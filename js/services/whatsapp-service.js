@@ -1,36 +1,11 @@
 /**
  * EDX Digital - WhatsApp messages
- * Ready-made messages by funnel stage, suggestions from Gemini and the wa.me link.
+ * Suggestions from Gemini and the wa.me link. The ready-made messages are in js/core/message-templates.js
  */
 
 import { askGeminiForJson } from './gemini-service.js';
 import { getStageName } from '../core/crm-store.js';
 import { logAudit, AUDIT_ACTIONS } from './audit-service.js';
-
-const firstName = (lead) => (lead.name || '').trim().split(/\s+/)[0] || '';
-const hello = (lead) => (firstName(lead) ? `Olá, ${firstName(lead)}!` : 'Olá!');
-
-/**
- * Starting points the person edits before sending. They state nothing that might not be true.
- */
-export const OUTREACH_TEMPLATES = {
-  first_contact: {
-    template: (lead, user, company) =>
-      `${hello(lead)} Aqui é ${user?.name || 'da equipe'}, da ${company || 'nossa empresa'}. Recebi seu contato e queria entender melhor o que você precisa. Tem uns minutos hoje para conversarmos?`
-  },
-  proposal_followup: {
-    template: (lead, user, company) =>
-      `${hello(lead)} Aqui é ${user?.name || 'da equipe'}, da ${company || 'nossa empresa'}. Conseguiu ver a proposta que enviei? Se ficou alguma dúvida sobre valores ou prazos, posso esclarecer agora.`
-  },
-  negotiation: {
-    template: (lead, user, company) =>
-      `${hello(lead)} Aqui é ${user?.name || 'da equipe'}, da ${company || 'nossa empresa'}. Queria saber como ficou a avaliação da proposta e se falta algum ajuste para fecharmos.`
-  },
-  cold_lead: {
-    template: (lead, user, company) =>
-      `${hello(lead)} Aqui é ${user?.name || 'da equipe'}, da ${company || 'nossa empresa'}. Faz um tempo que conversamos. Isso ainda é uma prioridade para você agora, ou prefere que eu volte a falar mais adiante?`
-  }
-};
 
 /**
  * Digits only, with Brazil's country code when the number has none

@@ -1545,3 +1545,20 @@ button.today-row:focus-visible { outline: 2px solid var(--accent); outline-offse
 .tour-skip { font-size: 0.82rem; color: var(--text-muted); }
 body.tour-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .tour-spot, .tour-card { transition: none; } }
+
+/* Sign-up: waiting for the e-mail to be confirmed */
+.verify-note { margin-bottom: 0.9rem; }
+.verify-note strong { display: block; margin-bottom: 0.2rem; color: var(--text-primary); }
+.verify-note p { margin: 0 0 0.4rem; }
+
+/* "Hoje" for an administrator: whose day is on screen */
+.today-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.2rem; }
+.today-head .today-date { margin: 0; }
+.today-owners { max-width: 100%; overflow-x: auto; }
+
+/* Message templates in "Funil, campos e mensagens" */
+.template-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; margin-bottom: 0.9rem; }
+.template-row textarea { grid-column: 1 / -1; min-height: 76px; }
+
+/* A link among the tools menu's buttons */
+a.dropdown-item { text-decoration: none; box-sizing: border-box; }

@@ -2,6 +2,8 @@
  * EDX Digital - What is sent to the customer: WhatsApp messages, proposals, and the AI analysis
  */
 
+import { messagesFor } from '../core/message-templates.js';
+import { getStageName } from '../core/crm-store.js';
 import { getSavedOrganization } from '../core/config.js';
 import { storage } from '../core/storage-manager.js';
 import { getCurrentUser } from '../services/auth-service.js';
@@ -9,7 +11,6 @@ import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from '../serv
 import {
   buildWhatsAppLink,
   generateAIOutreachMessages,
-  OUTREACH_TEMPLATES,
   recordWhatsAppContact
 } from '../services/whatsapp-service.js';
 import { escapeHtml, formatBRL, showToast } from '../ui/ui-renderer.js';
@@ -63,18 +64,13 @@ export function setupWhatsAppModalEvents() {
     if (leadMetaEl) leadMetaEl.textContent = customer.company ? `, ${customer.company}` : '';
     if (leadPhoneEl) leadPhoneEl.textContent = phone;
 
-    // The model that fits the stage the opportunity is in comes first
-    const models = [
-      { key: 'first_contact', tone: 'Primeiro contato', stages: ['lead', 'contact'] },
-      { key: 'proposal_followup', tone: 'Retorno da proposta', stages: ['proposal'] },
-      { key: 'negotiation', tone: 'Negociação', stages: ['negotiation'] },
-      { key: 'cold_lead', tone: 'Retomar contato', stages: ['lost'] }
-    ];
-    models.sort((x, y) => Number(y.stages.includes(customer.stage)) - Number(x.stages.includes(customer.stage)));
-    renderTemplatesList(models.map(m => ({
-      tone: m.tone,
-      text: OUTREACH_TEMPLATES[m.key].template(customer, user, org.name)
-    })), customer);
+    // The company's own templates, or the standard ones; the one that fits the stage comes first
+    renderTemplatesList(messagesFor(org, {
+      customer,
+      userName: user?.name,
+      companyName: org.name,
+      stageName: getStageName(customer.stage || 'lead')
+    }), customer);
 
     if (dialog) dialog.showModal();
   };
