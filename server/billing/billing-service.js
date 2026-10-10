@@ -157,7 +157,8 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
     const current = now();
     const paidUntilNow = org.planStatus === 'active' && org.paidUntil ? Date.parse(org.paidUntil) : 0;
     const start = Math.max(current, paidUntilNow || 0);
-    const paidUntil = new Date(start + PERIOD_DAYS * DAY_MS).toISOString();
+    const paidUntilMs = start + PERIOD_DAYS * DAY_MS;
+    const paidUntil = new Date(paidUntilMs).toISOString();
     const approvedAt = payment.approvedAt || new Date(current).toISOString();
 
     // The payment is marked first: if anything fails after this, a retry cannot add a second period
@@ -166,6 +167,8 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
       plan: record.plan,
       planStatus: 'active',
       paidUntil,
+      // the number is what the database rules compare with the clock
+      paidUntilMs,
       lastPaymentId: paymentId,
       pendingPaymentId: null,
       updatedAt: new Date(current).toISOString()

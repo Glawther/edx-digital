@@ -1426,3 +1426,31 @@ body.is-first-run:not([data-view]) #kpi-container { display: none; }
 @keyframes waiting-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
 @media (prefers-reduced-motion: reduce) { .pix-waiting::after { animation: none; content: '...'; } }
 #trial-header-pill.needs-attention { color: var(--color-lost, #b42318); border-color: var(--color-lost, #b42318); }
+
+
+/* ==========================================================================
+   Plan notice and read-only mode
+   ========================================================================== */
+.plan-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; line-height: 1.45;
+  color: var(--text-primary); background: var(--bg-surface);
+  border: 1px solid var(--color-proposal, #b7791f); border-left-width: 4px; border-radius: var(--radius-md);
+}
+.plan-banner[hidden] { display: none; }
+.plan-banner.is-blocking { border-color: var(--color-lost, #b42318); }
+.plan-banner span { flex: 1 1 320px; }
+
+/* Nothing that creates or changes is offered while the plan is lapsed */
+body.is-read-only #btn-new-lead,
+body.is-read-only #btn-bottom-right-lead,
+body.is-read-only .first-run-actions,
+body.is-read-only #new-task-form,
+body.is-read-only #btn-menu-import,
+body.is-read-only .lead-details-actions .btn-primary { display: none !important; }
+body.is-read-only .move-stage-select,
+body.is-read-only #lead-details-stage,
+body.is-read-only .task-checkbox { pointer-events: none; opacity: 0.55; }
+body.is-read-only .lead-card { cursor: pointer; -webkit-user-drag: none; }
+
+body.is-read-only .pipeline-hint { display: none; }

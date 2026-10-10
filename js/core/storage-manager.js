@@ -6,7 +6,7 @@
 
 import { STORAGE_KEYS, getSavedOrganization } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
-import { getCurrentUser, isAdmin, isCloudSession, isDemoSession } from '../services/auth-service.js';
+import { getCurrentUser, isAdmin, isCloudSession, isDemoSession, isReadOnly } from '../services/auth-service.js';
 import { crmStore, getLossReasonLabel } from './crm-store.js';
 
 let lastCloudWarningAt = 0;
@@ -40,6 +40,25 @@ function warnCloudReadFailed(err) {
       : 'Não foi possível carregar os clientes. Verifique a conexão e recarregue a página.',
     'error'
   );
+}
+
+export class ReadOnlyError extends Error {
+  constructor() {
+    super('O plano da empresa venceu. O CRM está em modo de leitura.');
+    this.code = 'read-only';
+  }
+}
+
+/**
+ * Stops a change before it is shown on screen when the plan has lapsed.
+ * (The database would refuse it anyway; this avoids a card that moves and jumps back.)
+ */
+function assertCanWrite() {
+  if (!isReadOnly()) return;
+  if (typeof window !== 'undefined' && typeof window.handleReadOnlyAttempt === 'function') {
+    window.handleReadOnlyAttempt();
+  }
+  throw new ReadOnlyError();
 }
 
 // Realistic seed dataset with rich timeline activities, tasks and expected closing dates
@@ -401,6 +420,7 @@ class StorageManager {
    * Creates or updates a customer
    */
   async saveCustomer(customerData) {
+    assertCanWrite();
     const user = getCurrentUser() || { name: 'Operador', email: 'user@nexuscrm.com', role: 'admin' };
     const defaultAssignedTo = customerData.assignedTo || {
       id: user.uid || 'employee-user-02',
@@ -500,6 +520,7 @@ class StorageManager {
    * Updates only the stage of a customer
    */
   async updateStage(customerId, newStage) {
+    assertCanWrite();
     const user = getCurrentUser() || { name: 'Operador', role: 'admin' };
     const customer = this.getCustomer(customerId);
     const oldStage = customer ? customer.stage : 'lead';
@@ -548,6 +569,7 @@ class StorageManager {
    * Saves loss reason when moving to lost
    */
   async setLossReason(customerId, lossReason, lossDetails) {
+    assertCanWrite();
     const user = getCurrentUser() || { name: 'Operador', role: 'admin' };
     const customer = this.getCustomer(customerId);
     const updatedAt = new Date().toISOString();
@@ -601,6 +623,7 @@ class StorageManager {
    * Adds an activity to a customer's timeline
    */
   async addActivity(customerId, activityData) {
+    assertCanWrite();
     const customer = this.getCustomer(customerId);
     if (!customer) return;
 
@@ -636,6 +659,7 @@ class StorageManager {
    * Adds a task to a customer
    */
   async addTask(customerId, taskData) {
+    assertCanWrite();
     const customer = this.getCustomer(customerId);
     if (!customer) return;
 
@@ -683,6 +707,7 @@ class StorageManager {
    * Toggles task completion status
    */
   async toggleTask(customerId, taskId) {
+    assertCanWrite();
     const customer = this.getCustomer(customerId);
     if (!customer || !Array.isArray(customer.tasks)) return;
 
@@ -714,6 +739,7 @@ class StorageManager {
    * Puts an opportunity back exactly as it was (used by "Desfazer" after a move or a deletion)
    */
   async restoreCustomer(snapshot) {
+    assertCanWrite();
     if (!snapshot || !snapshot.id) return;
     const restored = {
       ...snapshot,
@@ -795,6 +821,7 @@ class StorageManager {
    * DISPONIBILIDADE (D): Restauração de Snapshot de Backup
    */
   async restoreBackupSnapshot(snapshotData) {
+    assertCanWrite();
     if (!isAdmin()) {
       throw new Error("Apenas o perfil Administrador pode restaurar backups de contingência.");
     }

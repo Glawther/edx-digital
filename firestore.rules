@@ -41,6 +41,22 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerUid;
     }
 
+    // ---- situação do plano -------------------------------------------------
+    // Período de teste: 14 dias, com o fim gravado na criação da empresa e conferido aqui.
+    // Plano pago: vale até paidUntilMs, gravado só pelo servidor de cobrança, com 3 dias de tolerância.
+    // Com o plano vencido a empresa fica em modo de leitura: vê, exporta e exclui, mas não cria nem altera.
+    function trialMs() { return 14 * 24 * 60 * 60 * 1000; }
+    function graceMs() { return 3 * 24 * 60 * 60 * 1000; }
+
+    function planAllowsWrites(orgId) {
+      let org = get(/databases/$(database)/documents/organizations/$(orgId)).data;
+      let now = request.time.toMillis();
+      return org.planStatus == 'active'
+        ? ('paidUntilMs' in org && now < org.paidUntilMs + graceMs())
+        // empresas criadas antes desta regra não têm trialEndsAtMs e seguem liberadas
+        : (!('trialEndsAtMs' in org) || now < org.trialEndsAtMs);
+    }
+
     function validStages() {
       // 'contacted' é o nome antigo de 'contact'; fica aceito por causa de registros antigos
       return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
@@ -143,7 +159,11 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
         && request.resource.data.plan in ['starter', 'pro', 'enterprise']
-        && request.resource.data.planStatus == 'trial';
+        && request.resource.data.planStatus == 'trial'
+        // o fim do teste é obrigatório e não pode passar de 14 dias a partir de agora
+        && request.resource.data.trialEndsAtMs is int
+        && request.resource.data.trialEndsAtMs <= request.time.toMillis() + trialMs() + 5 * 60 * 1000
+        && !('paidUntilMs' in request.resource.data);
 
       // O plano e a situação do pagamento não são alteráveis pelo aplicativo
       allow update: if isOrgAdmin(orgId)
@@ -176,13 +196,16 @@ service cloud.firestore {
       allow read: if isOrgAdmin(resource.data.orgId)
         || (isMember(resource.data.orgId) && assignedToMe(resource.data));
 
-      allow create: if validCustomer(request.resource.data) && (
-        isOrgAdmin(request.resource.data.orgId)
-        || (isMember(request.resource.data.orgId) && assignedToMe(request.resource.data))
-      );
+      allow create: if validCustomer(request.resource.data)
+        && planAllowsWrites(request.resource.data.orgId)
+        && (
+          isOrgAdmin(request.resource.data.orgId)
+          || (isMember(request.resource.data.orgId) && assignedToMe(request.resource.data))
+        );
 
       allow update: if validCustomer(request.resource.data)
         && request.resource.data.orgId == resource.data.orgId
+        && planAllowsWrites(resource.data.orgId)
         && (
           isOrgAdmin(resource.data.orgId)
           || (isMember(resource.data.orgId)
@@ -190,7 +213,7 @@ service cloud.firestore {
               && assignedToMe(request.resource.data))
         );
 
-      // Só o administrador exclui
+      // Só o administrador exclui (continua valendo com o plano vencido: o dado é da empresa)
       allow delete: if isOrgAdmin(resource.data.orgId);
     }
 
