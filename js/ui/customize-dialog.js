@@ -7,6 +7,7 @@ import { getSavedOrganization, saveOrganization } from '../core/config.js';
 import { STAGES, getDefaultStageNames } from '../core/crm-store.js';
 import { escapeHtml, showToast } from './ui-renderer.js';
 import { isAdmin, isReadOnly } from '../services/auth-service.js';
+import { parseMoney } from '../services/import-service.js';
 import {
   FIELD_TYPES, MAX_CUSTOM_FIELDS, MAX_LABEL_LENGTH, cleanStageNames, cleanCustomFields, formatCustomValue, readCustomValues
 } from '../core/customization.js';
@@ -125,6 +126,8 @@ export function setupCustomizeDialog() {
     `).join('');
     fields = getCustomFields().map(field => ({ ...field }));
     renderFields();
+    const goal = Number(org.monthlyGoal) || 0;
+    document.getElementById('customize-goal').value = goal > 0 ? goal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '';
     dialog.showModal();
   });
 
@@ -142,8 +145,9 @@ export function setupCustomizeDialog() {
       showToast('Dois campos têm o mesmo nome. Dê nomes diferentes a cada um.', 'error');
       return;
     }
-    saveOrganization({ ...getSavedOrganization(), stageNames: cleanStageNames(names, defaults), customFields });
+    const monthlyGoal = parseMoney(document.getElementById('customize-goal').value);
+    saveOrganization({ ...getSavedOrganization(), stageNames: cleanStageNames(names, defaults), customFields, monthlyGoal });
     dialog.close();
-    showToast('Funil e campos atualizados.', 'success');
+    showToast('Alterações salvas.', 'success');
   });
 }

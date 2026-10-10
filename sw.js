@@ -3,7 +3,7 @@
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'edx-digital-v3.12.0';
+const CACHE_NAME = 'edx-digital-v3.13.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -43,7 +43,10 @@ const STATIC_ASSETS = [
   '/js/core/report.js',
   '/js/core/customization.js',
   '/js/ui/import-dialog.js',
-  '/js/ui/customize-dialog.js'
+  '/js/ui/customize-dialog.js',
+  '/js/core/html.js',
+  '/js/core/normalize.js',
+  '/js/core/attention.js'
 ];
 
 // Install: Cache core application assets safely without failing if one asset 404s

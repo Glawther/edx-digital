@@ -42,7 +42,7 @@ export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
-const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields'];
+const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'monthlyGoal'];
 
 let currentUser = null;
 let currentRole = USER_ROLES.EMPLOYEE;
@@ -368,6 +368,32 @@ async function deleteDocsWhere(collectionName, orgId) {
   }
   if (pending > 0) await batch.commit();
   return snap.size;
+}
+
+/**
+ * Changes the password of the signed-in person, who proves who they are with the current one
+ */
+export async function changePassword(currentPassword, newPassword) {
+  if (sessionKind !== SESSION_KINDS.CLOUD) throw authError('permission-denied');
+  const fbUser = await confirmPassword(currentPassword);
+  const { authMod } = await getFirebase();
+  await authMod.updatePassword(fbUser, newPassword);
+}
+
+/**
+ * Changes the name the signed-in person is shown by
+ */
+export async function updateOwnName(name) {
+  const clean = String(name || '').replace(/[<>]/g, '').trim().slice(0, 200);
+  if (clean.length < 2) throw new Error('Informe o seu nome.');
+  if (sessionKind === SESSION_KINDS.CLOUD) {
+    const { auth, db, authMod, fsMod } = await getFirebase();
+    await fsMod.updateDoc(fsMod.doc(db, 'users', currentUser.uid), { name: clean, updatedAt: new Date().toISOString() });
+    await authMod.updateProfile(auth.currentUser, { displayName: clean }).catch(() => {});
+  }
+  if (currentUser) currentUser.name = clean;
+  notifyListeners();
+  return clean;
 }
 
 /**

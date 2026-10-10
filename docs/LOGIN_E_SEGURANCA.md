@@ -61,6 +61,15 @@ npm run test:rules
 - **API antiga desligada**: o código em `server/routes/api-v1.js` e os módulos que ele usa continuam no repositório, com os testes deles, mas não estão ligados ao servidor. O aplicativo nunca usou essa API, e a rota de token dela entregava sessão sem conferir quem pedia.
 - **Caixa de entrada de formulários**: cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
 
+## Proteções do banco
+
+Além de separar as empresas, as regras recusam o que poderia prejudicar outra pessoa da mesma empresa:
+
+- **Registro malformado**: uma oportunidade com tipos trocados (por exemplo, etiquetas que não são lista) ou texto gigante é recusada. Um registro assim travava o funil de quem o abrisse. O aplicativo também normaliza tudo o que lê (`js/core/normalize.js`), então um registro antigo ou estranho aparece, mas não derruba a tela.
+- **Bloqueio que vale**: quem foi bloqueado não consegue apagar o próprio perfil para voltar pelo código de convite. Ao bloquear ou excluir alguém, o aplicativo troca o código de convite sozinho, porque a pessoa conhecia o antigo.
+- **Histórico de atividade**: cada pessoa só grava em seu próprio nome e com o seu papel real; os registros têm tamanho limitado e campos fixos. Na tela, o nome de quem fez vem da lista da equipe, não do que foi gravado.
+- **Senhas**: no cadastro e na troca, o aplicativo recusa senhas curtas, as mais comuns, só de números e iguais ao nome ou ao e-mail (`passwordProblem` em `js/core/attention.js`).
+
 ## Proteções do navegador
 
 - **Dados do banco na tela**: todo texto passa por `escapeHtml`, e todo valor entregue a um clique passa por `jsArg` (`js/core/html.js`). Identificadores com caracteres que o aplicativo não gera são recusados pelas regras do banco na criação e ignorados na leitura. Sem isso, um vendedor poderia gravar um registro que executasse código na tela de quem administra.

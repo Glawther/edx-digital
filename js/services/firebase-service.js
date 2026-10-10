@@ -9,6 +9,7 @@
 
 import { getFirebase } from './firebase-app.js';
 import { isSafeId } from '../core/html.js';
+import { normalizeCustomer } from '../core/normalize.js';
 
 let db = null;
 let fs = null;
@@ -79,10 +80,8 @@ export async function subscribeToFirestoreCustomers(onData, onError, scope) {
         // Ids are used to find and open records on screen. One with characters this app never
         // generates was written by hand, around the app, and is left out.
         if (!isSafeId(doc.id)) return;
-        const data = doc.data();
-        ['tasks', 'activities'].forEach(list => {
-          if (Array.isArray(data[list])) data[list] = data[list].filter(item => item && isSafeId(item.id));
-        });
+        // every field in the type the screens expect, whatever was stored
+        const data = normalizeCustomer(doc.data());
         customers.push({
           ...data,
           id: doc.id,

@@ -62,11 +62,28 @@ service cloud.firestore {
       return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
     }
 
+    // Um texto opcional: ausente, nulo ou texto até o tamanho dado
+    function optText(data, field, max) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= max);
+    }
+
+    function optList(data, field, max) {
+      return !(field in data) || (data[field] is list && data[field].size() <= max);
+    }
+
+    // Os tipos são conferidos porque um registro malformado travaria a tela de quem o abrisse
     function validCustomer(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 300
         && data.stage in validStages()
         && (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0))
-        && data.orgId is string;
+        && data.orgId is string
+        && optText(data, 'company', 300) && optText(data, 'role', 300)
+        && optText(data, 'email', 320) && optText(data, 'phone', 60)
+        && optText(data, 'notes', 20000) && optText(data, 'priority', 20)
+        && optText(data, 'expectedCloseDate', 40) && optText(data, 'lossDetails', 2000)
+        && optList(data, 'tags', 30) && optList(data, 'tasks', 500) && optList(data, 'activities', 2000)
+        && (!('assignedTo' in data) || data.assignedTo == null || data.assignedTo is map)
+        && (!('custom' in data) || data.custom is map);
     }
 
     function assignedToMe(data) {
@@ -99,12 +116,14 @@ service cloud.firestore {
       allow update: if signedIn() && (
         // a própria pessoa: só o nome e o aviso de troca de senha
         (request.auth.uid == uid
+          && validName(request.resource.data.name)
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['name', 'mustChangePassword', 'updatedAt']))
         // o administrador: dados de outra pessoa da empresa, menos do dono
         || (request.auth.uid != uid
           && isOrgAdmin(resource.data.orgId)
           && orgOwner(resource.data.orgId) != uid
+          && validName(request.resource.data.name)
           && request.resource.data.role in ['admin', 'employee']
           && request.resource.data.status in ['active', 'blocked']
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -116,19 +135,25 @@ service cloud.firestore {
         (request.auth.uid != uid
           && isOrgAdmin(resource.data.orgId)
           && orgOwner(resource.data.orgId) != uid)
-        // a própria pessoa exclui a sua conta; o dono só depois de excluir a empresa
+        // a própria pessoa exclui a sua conta; o dono só depois de excluir a empresa.
+        // Quem foi bloqueado não se exclui: apagaria o bloqueio e voltaria pelo convite.
         || (request.auth.uid == uid
+          && resource.data.status == 'active'
           && (!exists(/databases/$(database)/documents/organizations/$(resource.data.orgId))
               || orgOwner(resource.data.orgId) != uid))
       );
+    }
+
+    function validName(name) {
+      return name is string && name.size() > 0 && name.size() <= 200;
     }
 
     function validNewProfile(data) {
       return data.orgId is string
         && data.role in ['admin', 'employee']
         && data.status == 'active'
-        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
-        && data.email is string;
+        && validName(data.name)
+        && data.email is string && data.email.size() <= 320;
     }
 
     function inviteOpens(code, orgId) {
@@ -168,12 +193,19 @@ service cloud.firestore {
       // O plano e a situação do pagamento não são alteráveis pelo aplicativo
       allow update: if isOrgAdmin(orgId)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'updatedAt'])
+             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'stageNames', 'customFields', 'monthlyGoal', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
+        && optText(request.resource.data, 'legalName', 300) && optText(request.resource.data, 'cnpj', 40)
+        // o logotipo pode ser uma imagem embutida; o app a reduz antes de salvar
+        && optText(request.resource.data, 'logoUrl', 400000) && optText(request.resource.data, 'brandColor', 20)
         // nomes de etapa e campos extras da empresa: listas pequenas, para não inflar o registro
         && (!('stageNames' in request.resource.data)
             || (request.resource.data.stageNames is map && request.resource.data.stageNames.size() <= 6))
         && (!('customFields' in request.resource.data)
-            || (request.resource.data.customFields is list && request.resource.data.customFields.size() <= 8));
+            || (request.resource.data.customFields is list && request.resource.data.customFields.size() <= 8))
+        && (!('monthlyGoal' in request.resource.data)
+            || (request.resource.data.monthlyGoal is number && request.resource.data.monthlyGoal >= 0));
 
       // Só o dono exclui a empresa (direito de eliminação dos dados)
       allow delete: if isOrgAdmin(orgId) && resource.data.ownerUid == request.auth.uid;
@@ -230,7 +262,14 @@ service cloud.firestore {
       allow read: if isOrgAdmin(resource.data.orgId);
       allow create: if isMember(request.resource.data.orgId)
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.keys().hasAll(['action', 'timestamp']);
+        // o papel gravado é o papel real; o nome é resolvido pela tela a partir do userId
+        && request.resource.data.get('userRole', myProfile().role) == myProfile().role
+        && request.resource.data.action is string && request.resource.data.action.size() <= 80
+        && request.resource.data.timestamp is string && request.resource.data.timestamp.size() <= 40
+        && optText(request.resource.data, 'userName', 200) && optText(request.resource.data, 'userEmail', 320)
+        && optText(request.resource.data, 'severity', 20)
+        && (!('details' in request.resource.data) || request.resource.data.details is map)
+        && request.resource.data.keys().hasOnly(['id', 'action', 'severity', 'timestamp', 'userId', 'userName', 'userEmail', 'userRole', 'orgId', 'orgName', 'details']);
       allow update: if false; // o registro não pode ser alterado
       // Só é apagado pelo dono, ao excluir a empresa inteira
       allow delete: if isOrgAdmin(resource.data.orgId)

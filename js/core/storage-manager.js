@@ -8,6 +8,7 @@ import { STORAGE_KEYS, getSavedOrganization } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
 import { getCurrentUser, isAdmin, isCloudSession, isDemoSession, isReadOnly } from '../services/auth-service.js';
 import { crmStore, getLossReasonLabel, getStageName } from './crm-store.js';
+import { normalizeCustomer } from './normalize.js';
 import { leadsRoom, isOpenOpportunity, currentPlan, PlanLimitError } from '../services/billing-service.js';
 
 let lastCloudWarningAt = 0;
@@ -358,12 +359,8 @@ class StorageManager {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.LOCAL_DATA);
       if (raw) {
-        this.currentData = JSON.parse(raw);
-        // Ensure activities and tasks arrays exist
-        this.currentData.forEach(c => {
-          if (!Array.isArray(c.activities)) c.activities = [];
-          if (!Array.isArray(c.tasks)) c.tasks = [];
-        });
+        const stored = JSON.parse(raw);
+        this.currentData = (Array.isArray(stored) ? stored : []).map(normalizeCustomer);
       } else {
         this.currentData = JSON.parse(JSON.stringify(INITIAL_DEMO_LEADS));
         this.saveLocalData();
@@ -800,6 +797,72 @@ class StorageManager {
         warnCloudWriteFailed(fsErr);
       }
     }
+  }
+
+  /**
+   * Removes a task from an opportunity
+   */
+  async deleteTask(customerId, taskId) {
+    assertCanWrite();
+    const customer = this.getCustomer(customerId);
+    if (!customer || !Array.isArray(customer.tasks)) return;
+    const remaining = customer.tasks.filter(task => task.id !== taskId);
+    if (remaining.length === customer.tasks.length) return;
+
+    customer.tasks = remaining;
+    customer.updatedAt = new Date().toISOString();
+    this.saveLocalData();
+    this.notifyListeners();
+
+    if (this.mode === 'firestore') {
+      try {
+        await firestoreService.updateFirestoreCustomer(customer.firestoreId || customer.id, { tasks: customer.tasks, updatedAt: customer.updatedAt });
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
+    }
+  }
+
+  /**
+   * Hands the open opportunities of one person over to another (administrators only)
+   * @param {string} fromId - id of the person who had them
+   * @param {{id:string, name:string, email:string}} to
+   * @returns {Promise<number>} how many were transferred
+   */
+  async reassignCustomers(fromId, to) {
+    assertCanWrite();
+    if (!isAdmin()) throw new Error('Só administradores podem transferir oportunidades.');
+    const user = getCurrentUser() || { name: 'Administrador' };
+    const now = new Date().toISOString();
+    const moving = this.currentData.filter(c => c.assignedTo && c.assignedTo.id === fromId && c.stage !== 'won' && c.stage !== 'lost');
+
+    for (const customer of moving) {
+      const previous = customer.assignedTo.name || '';
+      customer.assignedTo = { id: to.id, name: to.name, email: to.email };
+      customer.updatedAt = now;
+      customer.updatedBy = user.name;
+      if (!Array.isArray(customer.activities)) customer.activities = [];
+      customer.activities.push({
+        id: 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        type: 'note',
+        title: 'Responsável alterado',
+        text: `De ${previous || 'sem responsável'} para ${to.name}.`,
+        author: user.name,
+        timestamp: now
+      });
+    }
+    this.saveLocalData();
+    this.notifyListeners();
+
+    if (this.mode === 'firestore') {
+      const results = await Promise.allSettled(moving.map(customer => firestoreService.updateFirestoreCustomer(
+        customer.firestoreId || customer.id,
+        { assignedTo: customer.assignedTo, activities: customer.activities, updatedAt: now, updatedBy: user.name }
+      )));
+      const failed = results.filter(result => result.status === 'rejected');
+      if (failed.length) warnCloudWriteFailed(failed[0].reason);
+    }
+    return moving.length;
   }
 
   /**
