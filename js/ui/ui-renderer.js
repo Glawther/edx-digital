@@ -7,6 +7,7 @@ import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId }
 import { REPORT_PERIODS, periodReport } from '../core/report.js';
 import { localDateString } from '../services/reminder-service.js';
 import { customFacts } from './customize-dialog.js';
+import { escapeHtml, jsArg, safeImageUrl } from '../core/html.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
 import { isDemoSession, isCloudSession, getCurrentUser, isAdmin } from '../services/auth-service.js';
 
@@ -22,15 +23,7 @@ export function formatBRL(amount) {
   }).format(value);
 }
 
-export function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+export { escapeHtml, jsArg };
 
 /**
  * Updates Top KPI Summary Cards
@@ -144,7 +137,7 @@ export function renderKanban(customers, metrics, permissions = {}, totalCount = 
         <div class="column-header">
           <div class="column-title-wrap">
             <span class="column-indicator" style="background-color: ${stage.color};"></span>
-            <h3 class="column-title">${stage.name}</h3>
+            <h3 class="column-title">${escapeHtml(stage.name)}</h3>
             <span class="column-count">${stageCustomers.length}</span>
           </div>
           ${stage.id === 'lost'
@@ -177,7 +170,8 @@ function daysWithoutUpdate(customer) {
  * The card itself opens the opportunity, where every action lives.
  */
 function renderLeadCard(customer, permissions = {}) {
-  const priorityClass = customer.priority || 'medium';
+  // only the three known values ever reach the class attribute
+  const priorityClass = ['high', 'medium', 'low'].includes(customer.priority) ? customer.priority : 'medium';
   const priorityLabel = { high: 'Alta', medium: 'Média', low: 'Baixa' }[priorityClass] || 'Média';
   const isClosed = customer.stage === 'won' || customer.stage === 'lost';
   const daysIdle = daysWithoutUpdate(customer);
@@ -208,16 +202,16 @@ function renderLeadCard(customer, permissions = {}) {
     meta.push(`<span class="is-warning" title="Sem nenhuma atualização nesse período">Parado há ${daysIdle} dias</span>`);
   }
 
-  const open = `window.handleOpenLeadDetails('${customer.id}')`;
+  const open = `window.handleOpenLeadDetails(${jsArg(customer.id)})`;
 
   return `
     <div class="lead-card ${isRotting ? 'is-rotting' : ''}"
          draggable="true" tabindex="0" role="button"
          aria-label="${escapeHtml(customer.name)}, ${formatBRL(customer.dealValue)}. Abrir a oportunidade."
-         ondragstart="window.handleDragStartCard(event, '${customer.id}')"
+         ondragstart="window.handleDragStartCard(event, ${jsArg(customer.id)})"
          onclick="if (!event.target.closest('select, button, a')) ${open}"
          onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
-         data-id="${customer.id}">
+         data-id="${escapeHtml(customer.id)}">
       <div class="lead-card-header">
         <div class="lead-name">${escapeHtml(customer.name)}</div>
         ${priorityClass === 'medium' ? '' : `<span class="priority-badge ${priorityClass}" title="Prioridade ${priorityLabel.toLowerCase()}">${priorityLabel}</span>`}
@@ -234,11 +228,11 @@ function renderLeadCard(customer, permissions = {}) {
       ` : ''}
 
       <div class="card-footer">
-        <select class="move-stage-select" onchange="window.handleMoveStage('${customer.id}', this.value)" aria-label="Mover ${escapeHtml(customer.name)} para outra etapa">
-          ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+        <select class="move-stage-select" onchange="window.handleMoveStage(${jsArg(customer.id)}, this.value)" aria-label="Mover ${escapeHtml(customer.name)} para outra etapa">
+          ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
         </select>
         ${customer.phone ? `
-          <button type="button" class="card-icon-btn wa" onclick="window.handleOpenWhatsAppModal('${customer.id}')" title="Mensagem pelo WhatsApp" aria-label="Mensagem pelo WhatsApp para ${escapeHtml(customer.name)}">
+          <button type="button" class="card-icon-btn wa" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})" title="Mensagem pelo WhatsApp" aria-label="Mensagem pelo WhatsApp para ${escapeHtml(customer.name)}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
           </button>
         ` : ''}
@@ -280,14 +274,14 @@ export function renderTable(customers, permissions = {}) {
     return `
       <tr>
         <td>
-          <button type="button" class="cell-title" onclick="window.handleOpenLeadDetails('${customer.id}')">${escapeHtml(customer.name)}</button>
+          <button type="button" class="cell-title" onclick="window.handleOpenLeadDetails(${jsArg(customer.id)})">${escapeHtml(customer.name)}</button>
           <div class="cell-sub">${escapeHtml(customer.company || 'Sem empresa')}</div>
         </td>
         <td>
           <div>${escapeHtml(customer.email || 'Sem e-mail')}</div>
           <div class="cell-sub">
             ${escapeHtml(customer.phone || 'Sem telefone')}
-            ${customer.phone ? `<button type="button" class="link-btn" onclick="window.handleOpenWhatsAppModal('${customer.id}')">WhatsApp</button>` : ''}
+            ${customer.phone ? `<button type="button" class="link-btn" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})">WhatsApp</button>` : ''}
           </div>
         </td>
         <td>${customer.assignedTo ? escapeHtml((customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '')) : '<span class="muted">Ninguém</span>'}</td>
@@ -296,16 +290,16 @@ export function renderTable(customers, permissions = {}) {
           ${closeDate ? `<div class="cell-sub">fecha em ${closeDate}</div>` : ''}
         </td>
         <td>
-          <span class="stage-text"><span class="stage-dot" style="background: ${stageObj.color}"></span>${stageObj.name}</span>
+          <span class="stage-text"><span class="stage-dot" style="background: ${stageObj.color}"></span>${escapeHtml(stageObj.name)}</span>
           <div class="cell-sub">Prioridade ${priorityLabel.toLowerCase()}</div>
         </td>
         <td>
           <div class="row-actions">
-            <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails('${customer.id}')">Histórico</button>
-            <button type="button" class="link-btn" onclick="window.handleOpenProposalModal('${customer.id}')">Proposta</button>
-            <button type="button" class="link-btn" onclick="window.handleAnalyzeWithAI('${customer.id}')" title="Análise da oportunidade com IA">Analisar</button>
-            <button type="button" class="link-btn" onclick="window.handleOpenEditCustomer('${customer.id}')">Editar</button>
-            ${permissions && permissions.canDelete === false ? '' : `<button type="button" class="link-btn danger" onclick="window.handleDeleteCustomer('${customer.id}')">Excluir</button>`}
+            <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails(${jsArg(customer.id)})">Histórico</button>
+            <button type="button" class="link-btn" onclick="window.handleOpenProposalModal(${jsArg(customer.id)})">Proposta</button>
+            <button type="button" class="link-btn" onclick="window.handleAnalyzeWithAI(${jsArg(customer.id)})" title="Análise da oportunidade com IA">Analisar</button>
+            <button type="button" class="link-btn" onclick="window.handleOpenEditCustomer(${jsArg(customer.id)})">Editar</button>
+            ${permissions && permissions.canDelete === false ? '' : `<button type="button" class="link-btn danger" onclick="window.handleDeleteCustomer(${jsArg(customer.id)})">Excluir</button>`}
           </div>
         </td>
       </tr>
@@ -324,7 +318,7 @@ export function renderTasksView(tasks, filter, customers) {
   // Populate customer select
   if (customerSelect) {
     customerSelect.innerHTML = customers.map(c => `
-      <option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.company || 'Sem empresa')})</option>
+      <option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} (${escapeHtml(c.company || 'Sem empresa')})</option>
     `).join('');
   }
 
@@ -356,15 +350,15 @@ export function renderTasksView(tasks, filter, customers) {
     const timeText = task.dueTime ? ` às ${escapeHtml(task.dueTime)}` : '';
 
     return `
-      <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" data-customer-id="${task.customerId}">
+      <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${escapeHtml(task.id)}" data-customer-id="${escapeHtml(task.customerId)}">
         <div class="task-left">
           <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
-                 onchange="window.handleToggleTask('${task.customerId}', '${task.id}')">
+                 onchange="window.handleToggleTask(${jsArg(task.customerId)}, ${jsArg(task.id)})">
           <div>
             <div class="task-title">${escapeHtml(task.title)}</div>
             <div class="task-customer-link">
               ${typeObj.label} com
-              <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails('${task.customerId}')">${escapeHtml(task.customerName)}</button>${task.customerCompany ? `, ${escapeHtml(task.customerCompany)}` : ''}
+              <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails(${jsArg(task.customerId)})">${escapeHtml(task.customerName)}</button>${task.customerCompany ? `, ${escapeHtml(task.customerCompany)}` : ''}
             </div>
           </div>
         </div>
@@ -558,8 +552,8 @@ export function renderLeadTimeline(customer) {
         <div class="fact">
           <dt><label for="lead-details-stage">Etapa</label></dt>
           <dd>
-            <select id="lead-details-stage" class="form-select form-select-sm" onchange="window.handleMoveStage('${customer.id}', this.value)">
-              ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
+            <select id="lead-details-stage" class="form-select form-select-sm" onchange="window.handleMoveStage(${jsArg(customer.id)}, this.value)">
+              ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
             </select>
           </dd>
         </div>
@@ -579,11 +573,11 @@ export function renderLeadTimeline(customer) {
   const actionsEl = document.getElementById('lead-details-actions');
   if (actionsEl) {
     actionsEl.innerHTML = `
-      <button type="button" class="btn btn-primary btn-sm" onclick="window.handleOpenEditCustomer('${customer.id}')">Editar</button>
-      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenWhatsAppModal('${customer.id}')">WhatsApp</button>` : ''}
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal('${customer.id}')">Proposta</button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI('${customer.id}')">Analisar com IA</button>
-      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" onclick="window.handleDeleteCustomer('${customer.id}')">Excluir</button>` : ''}
+      <button type="button" class="btn btn-primary btn-sm" onclick="window.handleOpenEditCustomer(${jsArg(customer.id)})">Editar</button>
+      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})">WhatsApp</button>` : ''}
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal(${jsArg(customer.id)})">Proposta</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI(${jsArg(customer.id)})">Analisar com IA</button>
+      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" onclick="window.handleDeleteCustomer(${jsArg(customer.id)})">Excluir</button>` : ''}
     `;
   }
 
@@ -604,7 +598,7 @@ export function renderLeadTimeline(customer) {
       hour: '2-digit', minute: '2-digit'
     });
 
-    const dotClass = act.type || 'note';
+    const dotClass = ['note', 'task', 'stage_change', 'loss', 'whatsapp', 'call', 'meeting'].includes(act.type) ? act.type : 'note';
 
     return `
       <div class="timeline-item">
@@ -637,7 +631,7 @@ export function renderAuthBadge(user) {
     container.innerHTML = `
       <div class="sidebar-user-card" id="sidebar-user-card">
         <div class="sidebar-user-avatar">
-          ${user.photoURL ? `<img src="${user.photoURL}" class="user-avatar-img" alt="${escapeHtml(user.name)}">` : `
+          ${safeImageUrl(user.photoURL) ? `<img src="${escapeHtml(safeImageUrl(user.photoURL))}" class="user-avatar-img" alt="${escapeHtml(user.name)}">` : `
             <div class="sidebar-user-avatar-placeholder">
               ${(user.name || 'U')[0].toUpperCase()}
             </div>
@@ -730,8 +724,8 @@ export function renderSecurityView(state) {
         <td>${escapeHtml(emp.email)}</td>
         <td>
           ${emp.cpf ? `
-            <span class="cpf-text" id="cpf-text-${emp.id}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
-            <button type="button" class="link-btn" onclick="window.handleToggleCPFVisibility('${emp.id}')">mostrar</button>
+            <span class="cpf-text" id="cpf-text-${escapeHtml(emp.id)}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
+            <button type="button" class="link-btn" onclick="window.handleToggleCPFVisibility(${jsArg(emp.id)})">mostrar</button>
           ` : '<span class="muted">não informado</span>'}
         </td>
         <td>${emp.role === 'admin' ? 'Administrador' : 'Vendedor'}</td>
@@ -744,10 +738,10 @@ export function renderSecurityView(state) {
         </td>
         <td>
           <div class="row-actions">
-            <button type="button" class="link-btn" onclick="window.handleEditEmployee('${emp.id}')">Editar</button>
-            ${demo ? '' : `<button type="button" class="link-btn" onclick="window.handleResetEmployeePassword('${emp.id}')" title="Envia um e-mail para a pessoa criar uma nova senha">Nova senha</button>`}
-            <button type="button" class="link-btn" onclick="window.handleToggleEmployeeStatus('${emp.id}')">${isBlocked ? 'Liberar' : 'Bloquear'}</button>
-            <button type="button" class="link-btn danger" onclick="window.handleDeleteEmployee('${emp.id}')">Excluir</button>
+            <button type="button" class="link-btn" onclick="window.handleEditEmployee(${jsArg(emp.id)})">Editar</button>
+            ${demo ? '' : `<button type="button" class="link-btn" onclick="window.handleResetEmployeePassword(${jsArg(emp.id)})" title="Envia um e-mail para a pessoa criar uma nova senha">Nova senha</button>`}
+            <button type="button" class="link-btn" onclick="window.handleToggleEmployeeStatus(${jsArg(emp.id)})">${isBlocked ? 'Liberar' : 'Bloquear'}</button>
+            <button type="button" class="link-btn danger" onclick="window.handleDeleteEmployee(${jsArg(emp.id)})">Excluir</button>
           </div>
         </td>
       </tr>

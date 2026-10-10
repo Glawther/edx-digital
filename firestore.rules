@@ -202,6 +202,8 @@ service cloud.firestore {
         || (isMember(resource.data.orgId) && assignedToMe(resource.data));
 
       allow create: if validCustomer(request.resource.data)
+        // o identificador aparece em telas de outras pessoas da empresa: só os caracteres que o app gera
+        && customerId.matches('^[A-Za-z0-9_-]{1,120}$')
         && planAllowsWrites(request.resource.data.orgId)
         && (
           isOrgAdmin(request.resource.data.orgId)

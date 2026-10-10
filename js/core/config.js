@@ -2,34 +2,14 @@
  * EDX Digital - Configuration & Firebase Credentials Storage
  */
 
+import { escapeHtml, safeImageUrl } from './html.js';
+
 const STORAGE_KEYS = {
   LOCAL_DATA: 'edx_local_customers',
   ACTIVITIES_DATA: 'edx_local_activities',
   APP_PREFS: 'edx_preferences',
-  ORGANIZATION: 'edx_organization_config',
-  STORAGE_MODE: 'edx_storage_mode'
+  ORGANIZATION: 'edx_organization_config'
 };
-
-/**
- * True when the user chose to keep data only in this browser (no cloud sync).
- * Without this switch the app always fell back to the default Firebase project,
- * so "disconnect" never really disconnected.
- */
-export function isLocalOnlyMode() {
-  try {
-    return localStorage.getItem(STORAGE_KEYS.STORAGE_MODE) === 'local';
-  } catch {
-    return false;
-  }
-}
-
-export function setLocalOnlyMode(enabled) {
-  if (enabled) {
-    localStorage.setItem(STORAGE_KEYS.STORAGE_MODE, 'local');
-  } else {
-    localStorage.removeItem(STORAGE_KEYS.STORAGE_MODE);
-  }
-}
 
 // Default commercial organization & whitelabel parameters
 export const defaultOrganization = {
@@ -124,7 +104,7 @@ export function applyWhitelabelStyles(org = null) {
   const root = document.documentElement;
 
   // 1. Apply primary brand color and derivations
-  if (currentOrg.brandColor) {
+  if (/^#[0-9a-f]{6}$/i.test(currentOrg.brandColor || '')) {
     const hex = currentOrg.brandColor;
     root.style.setProperty('--color-primary', hex);
     
@@ -150,8 +130,9 @@ export function applyWhitelabelStyles(org = null) {
   // 3. Apply custom logo if set
   const brandIconEl = document.querySelector('.brand-icon');
   if (brandIconEl) {
-    if (currentOrg.logoUrl) {
-      brandIconEl.innerHTML = `<img src="${currentOrg.logoUrl}" alt="${currentOrg.name}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px;">`;
+    const logo = safeImageUrl(currentOrg.logoUrl);
+    if (logo) {
+      brandIconEl.innerHTML = `<img src="${escapeHtml(logo)}" alt="${escapeHtml(currentOrg.name)}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px;">`;
     } else {
       brandIconEl.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="4" height="18"/><rect x="4" y="3" width="17" height="4"/><rect x="4" y="10" width="11" height="4"/><rect x="4" y="17" width="17" height="4"/></svg>`;
     }

@@ -1,6 +1,6 @@
 /**
- * EDX Digital - Enterprise Server Entrypoint
- * Architecture: Clean Modular Server with CID Triad Security & OWASP Guards
+ * EDX Digital - Server
+ * Three jobs: PIX billing, the inbox for leads sent by forms, and serving the site's public files.
  */
 
 const http = require('http');
@@ -13,14 +13,16 @@ const {
   handleAcknowledgeLeads
 } = require('./server/controllers/webhook-controller');
 const { handleStaticFile } = require('./server/controllers/static-controller');
-const { handleApiV1 } = require('./server/routes/api-v1');
 const { handleBilling } = require('./server/billing/billing-controller');
 
-// Initialize local storage files & directories
 initStorage();
 
+function sendJson(res, status, body) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(body));
+}
+
 const server = http.createServer((req, res) => {
-  // Apply Security Headers & CORS
   applySecurityHeaders(res);
 
   if (req.method === 'OPTIONS') {
@@ -31,17 +33,10 @@ const server = http.createServer((req, res) => {
 
   const parsedUrl = (req.url || '/').split('?')[0];
 
-  // Zero Trust API v1 (Multitenant, RBAC, DLP, Audit, Crypto)
-  if (parsedUrl.startsWith('/api/v1/')) {
-    return handleApiV1(req, res, parsedUrl);
-  }
-
-  // Subscription billing by PIX
   if (parsedUrl.startsWith('/api/billing/')) {
     return handleBilling(req, res, parsedUrl);
   }
 
-  // Legacy Webhook Routes
   if (parsedUrl === '/api/webhook/leads' && req.method === 'POST') {
     return handleIngestLead(req, res);
   }
@@ -52,25 +47,31 @@ const server = http.createServer((req, res) => {
     return handleAcknowledgeLeads(req, res);
   }
 
-  // Healthcheck endpoint
   if (parsedUrl === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'healthy', version: '2.0.0', timestamp: new Date().toISOString() }));
-    return;
+    return sendJson(res, 200, { status: 'healthy' });
   }
 
-  // Static File Serving
+  // Nothing else answers under /api. The older /api/v1 (server/routes/api-v1.js) is not mounted:
+  // the app never used it and its token route handed out sessions without checking who asked.
+  if (parsedUrl.startsWith('/api/')) {
+    return sendJson(res, 404, { error: 'not_found' });
+  }
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return sendJson(res, 405, { error: 'method_not_allowed' });
+  }
   handleStaticFile(req, res, parsedUrl);
 });
 
-server.listen(PORT, () => {
-  console.log(`\n======================================================`);
-  console.log(`🚀 EDX Digital Server Online!`);
-  console.log(`📡 URL Local: http://localhost:${PORT}`);
-  console.log(`⚡ Endpoint Webhook: http://localhost:${PORT}/api/webhook/leads`);
-  console.log(`🌐 Landing Page: http://localhost:${PORT}/landing`);
-  console.log(`🛡️ Segurança: Tríade CID, OWASP & Path Traversal Guards`);
-  console.log(`======================================================\n`);
-});
+// A connection that sends its request too slowly is dropped instead of being held open
+server.headersTimeout = 20000;
+server.requestTimeout = 30000;
+
+// Loaded by the tests without opening a port
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`EDX Digital no ar em http://localhost:${PORT}`);
+  });
+}
 
 module.exports = server;

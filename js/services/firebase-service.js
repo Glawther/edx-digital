@@ -7,7 +7,8 @@
  * a query without them is refused.
  */
 
-import { getFirebase } from './firebase-app.js';
+import { getFirebase } from './firebase-app.js';
+import { isSafeId } from '../core/html.js';
 
 let db = null;
 let fs = null;
@@ -75,7 +76,13 @@ export async function subscribeToFirestoreCustomers(onData, onError, scope) {
     (snapshot) => {
       const customers = [];
       snapshot.forEach((doc) => {
+        // Ids are used to find and open records on screen. One with characters this app never
+        // generates was written by hand, around the app, and is left out.
+        if (!isSafeId(doc.id)) return;
         const data = doc.data();
+        ['tasks', 'activities'].forEach(list => {
+          if (Array.isArray(data[list])) data[list] = data[list].filter(item => item && isSafeId(item.id));
+        });
         customers.push({
           ...data,
           id: doc.id,

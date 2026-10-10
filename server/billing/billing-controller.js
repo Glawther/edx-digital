@@ -76,7 +76,7 @@ async function handleBilling(req, res, pathname) {
     if (pathname === '/api/billing/pix' && req.method === 'POST') {
       const user = await authenticate(req);
       throttle(user.uid);
-      const { body } = await parseJsonBody(req, 4096);
+      const { body } = await parseJsonBody(req, 4096).catch(() => { throw new BillingError('invalid_body', 'Pedido inválido.', 400); });
       const charge = await billingService().createCharge(user, String(body.plan || ''));
       return send(res, 200, charge);
     }
