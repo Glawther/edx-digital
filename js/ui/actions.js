@@ -53,7 +53,11 @@ export function setupActions(root = document) {
   root.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     const el = event.target;
-    if (el instanceof Element && el.matches('[data-click][data-enter]')) run(el.dataset.click, el);
+    if (!(el instanceof Element) || !el.matches('[data-click][data-enter]')) return;
+    // without this the same key press would go on to "click" whatever the action focuses next
+    // (the close button of the window it opens)
+    event.preventDefault();
+    run(el.dataset.click, el);
   });
 
   root.addEventListener('change', (event) => {
