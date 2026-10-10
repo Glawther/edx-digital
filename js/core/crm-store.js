@@ -23,7 +23,7 @@ export function getDefaultStageNames() {
  */
 export function applyStageNames(custom) {
   STAGES.forEach(stage => {
-    const name = custom && typeof custom[stage.id] === 'string' ? custom[stage.id].trim() : '';
+    const name = custom && typeof custom[stage.id] === 'string' ? custom[stage.id].replace(/[<>]/g, '').trim().slice(0, 40) : '';
     stage.name = name || DEFAULT_STAGE_NAMES[stage.id];
   });
 }
@@ -32,12 +32,6 @@ export function getStageName(id) {
   const stage = STAGES.find(s => s.id === id || (id === 'contacted' && s.id === 'contact'));
   return stage ? stage.name : String(id || '');
 }
-
-export const PRIORITIES = [
-  { id: 'high', label: 'Alta Prioridade', color: '#e11d48' },
-  { id: 'medium', label: 'Média Prioridade', color: '#d97706' },
-  { id: 'low', label: 'Baixa Prioridade', color: '#16a34a' }
-];
 
 export const LOSS_REASONS = [
   { id: 'price', label: 'Preço ou orçamento' },

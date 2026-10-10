@@ -25,9 +25,3 @@ services:
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: MASTER_ENCRYPTION_KEY
-        generateValue: true
-      - key: WEBHOOK_HMAC_SECRET
-        generateValue: true

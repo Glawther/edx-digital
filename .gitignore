@@ -11,3 +11,6 @@ Thumbs.db
 
 # O arquivo real de produção nunca é versionado; use .env.production.example como modelo
 .env.production
+
+# Gerado por `npm run build`
+dist/

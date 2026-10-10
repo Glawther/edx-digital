@@ -13,8 +13,8 @@ const { ROOT_DIR, SECURITY_HEADERS } = require('../config/constants');
 function applySecurityHeaders(res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-webhook-token, x-signature-256, x-tenant-id, x-hub-signature-256');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-webhook-token');
 
   // OWASP Security Headers
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {

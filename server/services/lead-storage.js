@@ -1,88 +1,76 @@
 /**
- * EDX Digital - Lead Storage Service
- * Handles asynchronous, non-blocking I/O for webhook leads with data sanitization.
+ * EDX Digital - Inbox for leads sent by forms
+ * One JSON file on the server's disk. It is a short-lived queue, not a database: each CRM
+ * account collects its own leads within seconds and they are then kept in the cloud.
  */
 
 const fs = require('fs');
 const fsPromises = fs.promises;
 const { DATA_DIR, WEBHOOK_FILE } = require('../config/constants');
 
-/**
- * Initializes data directory and storage file
- */
+const MAX_TOTAL = 5000;          // across every inbox
+const MAX_PER_INBOX = 500;       // waiting to be collected by one account
+const KEEP_PROCESSED_MS = 24 * 60 * 60 * 1000;
+
 function initStorage() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(WEBHOOK_FILE)) {
-    fs.writeFileSync(WEBHOOK_FILE, JSON.stringify([], null, 2), 'utf-8');
-  }
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(WEBHOOK_FILE)) fs.writeFileSync(WEBHOOK_FILE, '[]', 'utf-8');
 }
 
-/**
- * Escapes HTML characters to prevent XSS payloads
- * @param {string} str 
- * @returns {string}
- */
-function sanitizeString(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .trim()
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
- * Reads leads asynchronously from the webhook JSON file
- * @returns {Promise<Array>}
- */
-async function getWebhookLeads() {
+async function readLeads() {
   try {
-    const raw = await fsPromises.readFile(WEBHOOK_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('[Storage Service] Error reading leads file:', err);
+    const parsed = JSON.parse(await fsPromises.readFile(WEBHOOK_FILE, 'utf-8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
     return [];
   }
 }
 
+// Two requests arriving together used to read the same file and one overwrote the other.
+// Every change now waits for the one before it.
+let queue = Promise.resolve();
+
 /**
- * Writes leads asynchronously to the webhook JSON file
- * @param {Array} leads 
- * @returns {Promise<boolean>}
+ * Reads the list, lets `change` return the new one, and writes it back, one caller at a time
+ * @param {(leads: Array) => Array} change
  */
-async function saveWebhookLeads(leads) {
-  try {
-    await fsPromises.writeFile(WEBHOOK_FILE, JSON.stringify(leads, null, 2), 'utf-8');
-    return true;
-  } catch (err) {
-    console.error('[Storage Service] Error saving leads file:', err);
-    return false;
-  }
+function updateLeads(change) {
+  const run = queue.then(async () => {
+    const cutoff = Date.now() - KEEP_PROCESSED_MS;
+    const current = (await readLeads()).filter(lead => lead.status !== 'processed' || Date.parse(lead.createdAt) > cutoff);
+    const next = change(current);
+    await fsPromises.writeFile(WEBHOOK_FILE, JSON.stringify(next), 'utf-8');
+    return next;
+  });
+  queue = run.catch(() => {});
+  return run;
+}
+
+function getWebhookLeads() {
+  return queue.then(readLeads);
+}
+
+// Plain text with a size limit. Escaping for the screen is the screen's job.
+function text(value, max) {
+  if (typeof value !== 'string' && typeof value !== 'number') return '';
+  return String(value).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F<>]/g, '').trim().slice(0, max);
 }
 
 /**
- * Normalizes and sanitizes an incoming raw lead payload
- * @param {Object} rawData 
- * @returns {Object}
+ * Keeps the fields the CRM understands, under the names it uses
  */
 function normalizeLeadPayload(rawData) {
-  const data = rawData && typeof rawData === 'object' ? rawData : {};
-  
+  const data = rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? rawData : {};
+  const value = Number(data.value ?? data.valor ?? 0);
   return {
-    id: 'lead-wh-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
-    name: sanitizeString(data.name || data.nome || data.full_name) || 'Novo Lead (Tráfego)',
-    email: sanitizeString(data.email || ''),
-    phone: sanitizeString(data.phone || data.whatsapp || data.telefone || data.celular || ''),
-    company: sanitizeString(data.company || data.empresa) || 'Empresa Direta',
-    value: Number(data.value || data.valor || 0) || 0,
-    stage: 'novo',
-    priority: sanitizeString(data.priority || data.prioridade) || 'alta',
-    source: sanitizeString(data.source || data.origem) || 'Webhook (Meta/Kiwify)',
-    notes: sanitizeString(data.notes || data.mensagem || data.message) || 'Lead capturado automaticamente via Webhook API.',
+    id: 'lead-wh-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    name: text(data.name || data.nome || data.full_name, 200),
+    email: text(data.email, 200),
+    phone: text(data.phone || data.whatsapp || data.telefone || data.celular, 40),
+    company: text(data.company || data.empresa, 200),
+    value: Number.isFinite(value) && value > 0 ? Math.min(value, 1000000000) : 0,
+    source: text(data.source || data.origem, 80),
+    notes: text(data.notes || data.mensagem || data.message, 2000),
     createdAt: new Date().toISOString(),
     status: 'unread'
   };
@@ -91,6 +79,8 @@ function normalizeLeadPayload(rawData) {
 module.exports = {
   initStorage,
   getWebhookLeads,
-  saveWebhookLeads,
-  normalizeLeadPayload
+  updateLeads,
+  normalizeLeadPayload,
+  MAX_TOTAL,
+  MAX_PER_INBOX
 };

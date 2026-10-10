@@ -21,6 +21,7 @@ import {
   formatBRL,
   escapeHtml
 } from './ui/ui-renderer.js';
+import { jsArg, safeImageUrl } from './core/html.js';
 import { 
   getSavedOrganization, 
   saveOrganization, 
@@ -117,7 +118,6 @@ import {
   collectCustomFieldValues
 } from './ui/customize-dialog.js';
 import {
-  PLANS,
   currentPlan,
   leadsRoom,
   seatsRoom,
@@ -140,16 +140,9 @@ import {
 // Dynamic Cloud Backend API Base URL Resolver
 // ==========================================================================
 window.getApiBaseUrl = function() {
-  if (typeof window === 'undefined') return '';
-  const custom = localStorage.getItem('edx_cloud_backend_url');
-  if (custom) return custom.replace(/\/$/, '');
-
   const host = window.location.hostname;
-  // If hosted locally or directly on Render (frontend served by same Node process)
-  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('onrender.com')) {
-    return '';
-  }
-  // If hosted on Firebase Hosting (*.web.app or *.firebaseapp.com) or static CDN
+  // Served by the Node server itself (local development or Render): same origin
+  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.onrender.com')) return '';
   return 'https://nexus-crm-yfof.onrender.com';
 };
 
@@ -655,12 +648,12 @@ function setupFilterEvents() {
         : matches.map((c, i) => {
             const stage = STAGES.find(s => s.id === c.stage) || STAGES[0];
             return `
-              <button type="button" class="search-result" role="option" id="search-result-${i}" data-id="${c.id}">
+              <button type="button" class="search-result" role="option" id="search-result-${i}" data-id="${escapeHtml(c.id)}">
                 <span class="search-result-main">
                   <strong>${escapeHtml(c.name)}</strong>
                   <span>${escapeHtml(c.company || 'Sem empresa')}</span>
                 </span>
-                <span class="search-result-side">${stage.name}<br>${formatBRL(c.dealValue)}</span>
+                <span class="search-result-side">${escapeHtml(stage.name)}<br>${formatBRL(c.dealValue)}</span>
               </button>`;
           }).join('');
       searchResults.hidden = false;
@@ -821,7 +814,7 @@ window.handleMoveStage = async function(customerId, newStage) {
     setTimeout(() => window.scrollToKanbanStage(newStage), 100);
   } catch (err) {
     // Revert select back to previous stage
-    const select = document.querySelector(`.lead-card[data-id="${customerId}"] .move-stage-select`);
+    const select = document.querySelector(`.lead-card[data-id="${CSS.escape(customerId)}"] .move-stage-select`);
     if (select && currentStage) select.value = currentStage;
     reportError("Não foi possível mover", err);
   }
@@ -869,7 +862,7 @@ function setupLossReasonEvents() {
     if (activeLossCustomerId) {
       const cust = storage.getCustomer(activeLossCustomerId);
       if (cust) {
-        const select = document.querySelector(`.lead-card[data-id="${activeLossCustomerId}"] .move-stage-select`);
+        const select = document.querySelector(`.lead-card[data-id="${CSS.escape(activeLossCustomerId)}"] .move-stage-select`);
         if (select) select.value = cust.stage || 'negotiation';
       }
       activeLossCustomerId = null;
@@ -1070,7 +1063,7 @@ function setupWhatsAppModalEvents() {
       });
 
       // Open WhatsApp Web
-      window.open(link, '_blank');
+      window.open(link, '_blank', 'noopener');
       closeDialog();
       showToast('WhatsApp aberto. A mensagem ficou registrada no histórico.', 'success');
     });
@@ -1663,10 +1656,11 @@ function setupWhitelabelEvents() {
     if (previewName) previewName.textContent = name || 'EDX Digital';
     if (previewIcon) {
       if (color) previewIcon.style.background = color;
-      if (logo) {
-        previewIcon.innerHTML = `<img src="${logo}" style="width: 100%; height: 100%; object-fit: contain;">`;
+      const safeLogo = safeImageUrl(logo);
+      if (safeLogo) {
+        previewIcon.innerHTML = `<img src="${escapeHtml(safeLogo)}" alt="" style="width: 100%; height: 100%; object-fit: contain;">`;
       } else {
-        previewIcon.textContent = (name || 'N').charAt(0).toUpperCase();
+        previewIcon.textContent = (name || 'E').charAt(0).toUpperCase();
       }
     }
   }
@@ -1926,7 +1920,7 @@ function setupProposalModalEvents() {
           title: 'Proposta avisada pelo WhatsApp',
           text: `Mensagem sobre a proposta de ${formatBRL(customer.dealValue)} enviada para ${customer.phone}.`
         });
-        window.open(link, '_blank');
+        window.open(link, '_blank', 'noopener');
         showToast("WhatsApp aberto com a mensagem. Anexe o PDF da proposta na conversa.", "success");
       }
     });
@@ -2446,7 +2440,7 @@ function setupCommandPalette() {
         items.forEach((item, idx) => {
           const isFirst = cat === 'Ações Rápidas' && idx === 0;
           html += `
-            <div class="command-item ${isFirst ? 'active' : ''}" data-action-id="${item.id}">
+            <div class="command-item ${isFirst ? 'active' : ''}" data-action-id="${escapeHtml(item.id)}">
               <div class="command-item-left">
                 <span class="command-item-icon">${item.icon}</span>
                 <span>${escapeHtml(item.title)}</span>
@@ -2474,7 +2468,7 @@ function setupCommandPalette() {
         html += `<div class="command-group-title">Ações do Sistema</div>`;
         matchedActions.forEach((item, idx) => {
           html += `
-            <div class="command-item ${idx === 0 ? 'active' : ''}" data-action-id="${item.id}">
+            <div class="command-item ${idx === 0 ? 'active' : ''}" data-action-id="${escapeHtml(item.id)}">
               <div class="command-item-left">
                 <span class="command-item-icon">${item.icon}</span>
                 <span>${escapeHtml(item.title)}</span>
@@ -2490,7 +2484,7 @@ function setupCommandPalette() {
         matchedCustomers.forEach((c, idx) => {
           const isAct = matchedActions.length === 0 && idx === 0;
           html += `
-            <div class="command-item ${isAct ? 'active' : ''}" data-customer-id="${c.id}">
+            <div class="command-item ${isAct ? 'active' : ''}" data-customer-id="${escapeHtml(c.id)}">
               <div class="command-item-left">
                 <span class="command-item-icon"></span>
                 <div>
@@ -2613,11 +2607,22 @@ function setupKeyboardShortcuts() {
 // ==========================================================================
 function setupPWA() {
   if ('serviceWorker' in navigator) {
+    // When a new version takes over, the page reloads once so nobody keeps running the old code.
+    // Not on the very first visit (there was no version before), and never while a window is open
+    // or a field has unsaved text: then the new version simply applies on the next visit.
+    const hadVersion = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadVersion || reloaded) return;
+      const busy = document.querySelector('dialog[open]') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+      if (busy) return;
+      reloaded = true;
+      window.location.reload();
+    });
+
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
-        console.log('[EDX Digital PWA] Service Worker registrado com sucesso no escopo:', reg.scope);
-      }).catch((err) => {
-        console.warn('[EDX Digital PWA] Falha ao registrar Service Worker:', err);
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('Service worker não registrado:', err);
       });
     });
   }
@@ -3260,7 +3265,7 @@ function setupAuditTrailView() {
 
       return `<tr>
         <td class="nowrap muted">${when}</td>
-        <td>${formatAuditAction(log.action)}${needsAttention ? ' <span class="status-text blocked">(atenção)</span>' : ''}</td>
+        <td>${escapeHtml(formatAuditAction(log.action))}${needsAttention ? ' <span class="status-text blocked">(atenção)</span>' : ''}</td>
         <td>${escapeHtml(log.userName || '')}<div class="cell-sub">${log.userRole === 'admin' ? 'Administrador' : 'Vendedor'}</div></td>
         <td class="muted">${escapeHtml(parts.join(', ').substring(0, 120))}</td>
       </tr>`;
@@ -3328,7 +3333,7 @@ function setupNotificationCenter() {
         : minutes < 60 ? `há ${minutes} min`
         : minutes < 1440 ? `há ${Math.floor(minutes / 60)} h`
         : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      return `<button type="button" class="notification-item ${n.read ? '' : 'unread'}" onclick="window.handleNotificationClick('${n.id}')">
+      return `<button type="button" class="notification-item ${n.read ? '' : 'unread'}" onclick="window.handleNotificationClick(${jsArg(n.id)})">
         <span class="notification-item-title">${escapeHtml(n.title)}</span>
         <span class="notification-item-body">${escapeHtml(n.body)}</span>
         <span class="notification-item-time">${when}</span>

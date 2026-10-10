@@ -19,7 +19,7 @@ const TOKEN_B = 'nxwh_' + 'b'.repeat(40);
 
 before(async () => {
   server = require('../../server.js');
-  if (!server.listening) await new Promise(resolve => server.once('listening', resolve));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
 

@@ -11,7 +11,6 @@ import {
   getSavedOrganization,
   saveOrganization,
   clearSavedOrganization,
-  setLocalOnlyMode,
   setOrganizationSyncHook,
   getPlanState,
   TRIAL_DAYS
@@ -115,7 +114,6 @@ async function applyFirebaseUser(fbUser) {
   const orgSnap = await fsMod.getDoc(fsMod.doc(db, 'organizations', profile.orgId));
   const org = orgSnap.exists() ? orgSnap.data() : {};
 
-  setLocalOnlyMode(false);
   saveOrganization({ ...org, id: profile.orgId, name: org.name || 'Minha empresa' }, { skipSync: true });
 
   currentRole = profile.role === USER_ROLES.ADMIN ? USER_ROLES.ADMIN : USER_ROLES.EMPLOYEE;
@@ -508,7 +506,6 @@ setOrganizationSyncHook(async (org) => {
 function startDemoSession(role) {
   currentRole = role;
   sessionKind = SESSION_KINDS.DEMO;
-  setLocalOnlyMode(true);
   localStorage.setItem(SESSION_STORAGE_KEY, 'demo');
   localStorage.setItem(ROLE_STORAGE_KEY, role);
   currentUser = demoUserFor(role);

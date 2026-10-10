@@ -1,36 +1,43 @@
 /**
- * EDX Digital - Request Body Parser with Payload Size Limit
- * Defense: Buffer Overflow, Memory Exhaustion & Slowloris Payloads
+ * EDX Digital - Reads a JSON request body, up to a size limit
  */
 
-function parseJsonBody(req, maxSizeBytes = 1048576) { // 1 MB default
+function parseJsonBody(req, maxSizeBytes = 1048576) {
   return new Promise((resolve, reject) => {
-    let rawBuffer = Buffer.alloc(0);
+    const chunks = [];
+    let size = 0;
+    let rejected = false;
 
     req.on('data', (chunk) => {
-      rawBuffer = Buffer.concat([rawBuffer, chunk]);
-      if (rawBuffer.length > maxSizeBytes) {
-        req.destroy();
-        return reject(new Error('PAYLOAD_TOO_LARGE: O payload enviado excede o limite máximo permitido (1 MB).'));
+      size += chunk.length;
+      if (rejected) {
+        // A little more is read and thrown away so the caller can still be told why; then the line is cut
+        if (size > maxSizeBytes * 4) req.destroy();
+        return;
       }
+      if (size > maxSizeBytes) {
+        rejected = true;
+        chunks.length = 0;
+        return reject(new Error('PAYLOAD_TOO_LARGE'));
+      }
+      chunks.push(chunk);
     });
 
     req.on('end', () => {
-      if (rawBuffer.length === 0) {
-        return resolve({ rawBuffer, body: {} });
-      }
+      if (rejected) return;
+      const rawBuffer = Buffer.concat(chunks);
+      if (rawBuffer.length === 0) return resolve({ rawBuffer, body: {} });
       try {
         const body = JSON.parse(rawBuffer.toString('utf8'));
-        resolve({ rawBuffer, body });
-      } catch (err) {
-        reject(new Error('INVALID_JSON: O corpo da requisição não contém um formato JSON válido.'));
+        // null, numbers and strings are valid JSON but never a valid request here
+        resolve({ rawBuffer, body: body && typeof body === 'object' ? body : {} });
+      } catch {
+        reject(new Error('INVALID_JSON'));
       }
     });
 
-    req.on('error', (err) => reject(err));
+    req.on('error', (err) => { if (!rejected) reject(err); });
   });
 }
 
-module.exports = {
-  parseJsonBody
-};
+module.exports = { parseJsonBody };

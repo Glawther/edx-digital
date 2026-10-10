@@ -437,3 +437,13 @@ test('o convite pode ser pausado pelo administrador e deixa de abrir a empresa',
   assert.equal(await patch(company.owner, `invites/${company.code}`, { active: true, pausedBy: null }), OK);
   assert.equal(await put(person, `users/${person.uid}`, profile), OK);
 });
+
+// ---------------------------------------------------------------- identificadores
+
+test('uma oportunidade só é criada com identificador de caracteres simples', async () => {
+  // o identificador aparece na tela de quem administra; um com aspas ou parênteses tentaria virar código
+  const tricky = encodeURIComponent(`x');alert(1);('`);
+  assert.equal(await put(world.ana, `customers/${tricky}`, lead(world.a.orgId, world.ana)), DENIED);
+  assert.equal(await put(world.ana, `customers/${'a'.repeat(121)}`, lead(world.a.orgId, world.ana)), DENIED);
+  assert.equal(await put(world.ana, `customers/lead-ok-${RUN}`, lead(world.a.orgId, world.ana)), OK);
+});

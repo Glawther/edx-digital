@@ -53,9 +53,19 @@ npm run test:rules
 - **Plano e cobrança**: o plano da empresa não pode ser alterado pelo aplicativo (as regras recusam). Enquanto a cobrança não gravar o plano pelo servidor, toda empresa fica em período de teste.
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
-- **Servidor (Render)**: o login do servidor (`/api/v1`) é independente deste. O aplicativo web não depende dele para entrar.
+
+## Proteções do servidor
+
+- **Só arquivos públicos**: o servidor entrega as páginas, `js/`, `css/` e `assets/`. O código dele, a pasta de dados, configurações e arquivos ocultos respondem "não encontrado". A lista fica em `server/controllers/static-controller.js`.
+- **Rotas em uso**: cobrança (`/api/billing`), caixa de entrada de formulários (`/api/webhook/leads`) e `/health`. Qualquer outro endereço em `/api` responde 404.
+- **API antiga desligada**: o código em `server/routes/api-v1.js` e os módulos que ele usa continuam no repositório, com os testes deles, mas não estão ligados ao servidor. O aplicativo nunca usou essa API, e a rota de token dela entregava sessão sem conferir quem pedia.
+- **Caixa de entrada de formulários**: cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
 
 ## Proteções do navegador
+
+- **Dados do banco na tela**: todo texto passa por `escapeHtml`, e todo valor entregue a um clique passa por `jsArg` (`js/core/html.js`). Identificadores com caracteres que o aplicativo não gera são recusados pelas regras do banco na criação e ignorados na leitura. Sem isso, um vendedor poderia gravar um registro que executasse código na tela de quem administra.
+- **Logotipo**: só endereço `https` ou imagem embutida.
+- **Versão nova**: quando uma publicação chega, a página recarrega uma vez sozinha (se não houver janela aberta nem texto sendo digitado), para ninguém continuar no código antigo.
 
 - **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
 - **Exportação**: células que uma planilha executaria como fórmula (começando com `=`, `+`, `-` ou `@`) saem com um apóstrofo na frente.

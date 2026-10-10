@@ -2,34 +2,10 @@
   "hosting": [
     {
       "site": "edx-digital",
-      "public": ".",
+      "public": "dist",
       "cleanUrls": false,
       "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/.git/**",
-        "**/.agents/**",
-        "**/node_modules/**",
-        "server/**",
-        "server.js",
-        "data/**",
-        "README.md",
-        "GEMINI.md",
-        "package*.json",
-        "firestore.rules",
-        ".env*",
-        "*.log",
-        "**/*.log",
-        "tests/**",
-        "docs/**",
-        "HISTORICO_DO_PROJETO.md",
-        "Dockerfile",
-        "docker-compose.yml",
-        "render.yaml",
-        "railway.json",
-        "Procfile",
-        "deploy-cloudrun.*",
-        "legacy-site/**"
+        "**/.*"
       ],
       "headers": [
         {
@@ -102,6 +78,9 @@
           "source": "**",
           "destination": "/index.html"
         }
+      ],
+      "predeploy": [
+        "npm run build"
       ]
     },
     {
