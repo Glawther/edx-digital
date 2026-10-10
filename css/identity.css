@@ -1263,10 +1263,11 @@ body.is-first-run:not([data-view]) #kpi-container { display: none !important; }
   .search-kbd-trigger { display: none !important; }
   #kpi-container { scrollbar-width: none; }
   #kpi-container::-webkit-scrollbar { display: none; }
-  /* The tools menu spans the screen instead of running off its edge */
+  /* The tools menu opens on the side of its button (the right), never wider than the screen */
   #header-tools-menu {
-    position: fixed !important; left: 12px !important; right: 12px !important; top: 52px !important; bottom: auto !important;
-    width: auto !important; max-height: calc(100vh - 72px); overflow-y: auto;
+    position: fixed !important; left: auto !important; right: 12px !important; top: 52px !important; bottom: auto !important;
+    width: min(320px, calc(100vw - 24px)) !important; max-width: none !important;
+    max-height: calc(100vh - 72px); overflow-y: auto;
   }
   .notification-dropdown { position: fixed !important; left: 12px !important; right: 12px !important; top: 100px !important; width: auto !important; }
 }
