@@ -1559,3 +1559,6 @@ body.tour-open { overflow: hidden; }
 /* Message templates in "Funil, campos e mensagens" */
 .template-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; align-items: center; margin-bottom: 0.9rem; }
 .template-row textarea { grid-column: 1 / -1; min-height: 76px; }
+
+/* A link among the tools menu's buttons */
+a.dropdown-item { text-decoration: none; box-sizing: border-box; }

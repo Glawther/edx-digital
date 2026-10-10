@@ -52,7 +52,8 @@ npm run test:rules
 
 - **Plano e cobrança**: o plano da empresa não pode ser alterado pelo aplicativo (as regras recusam). Enquanto a cobrança não gravar o plano pelo servidor, toda empresa fica em período de teste.
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
-- **Limites do plano** (oportunidades em aberto e pessoas com acesso): quem confere é o aplicativo, não o banco. As regras não conseguem contar registros; para valer contra quem burla o aplicativo, a contagem precisa ser feita pelo servidor de cobrança.
+- **Limites do plano** (oportunidades em aberto e pessoas com acesso): o aplicativo confere antes de criar, e o servidor reconta a cada mudança e grava na empresa se o plano está cheio (`usage.leadsFull`, `usage.seatsFull`). As regras leem essa marca e recusam novas oportunidades ou novas pessoas enquanto ela disser cheio. Como a recontagem vem depois da gravação, uma rajada de criações pode passar um pouco do limite antes de a porta fechar.
+- **E-mail confirmado**: uma empresa só é criada por uma conta com o e-mail confirmado (as regras conferem `email_verified`). Entrar por convite não exige confirmação, porque o código já veio de quem administra.
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
 
 ## Proteções do servidor
@@ -72,6 +73,10 @@ Além de separar as empresas, as regras recusam o que poderia prejudicar outra p
 - **Histórico de atividade**: cada pessoa só grava em seu próprio nome e com o seu papel real; os registros têm tamanho limitado e campos fixos. Na tela, o nome de quem fez vem da lista da equipe, não do que foi gravado.
 - **Teste gratuito por e-mail**: a data em que o teste termina fica em `trial_claims/{e-mail}`, criada uma vez e nunca alterada. Uma empresa só é aceita com essa mesma data, então excluir a empresa e registrar outra com o mesmo e-mail não dá 14 dias novos. Um e-mail diferente recebe outro teste; isso as regras não têm como impedir.
 - **Senhas**: no cadastro e na troca, o aplicativo recusa senhas curtas, as mais comuns, só de números e iguais ao nome ou ao e-mail (`passwordProblem` em `js/core/attention.js`).
+
+## Erros das telas
+
+Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/errors`) e o relato vira uma linha de erro no registro das funções, no console do Firebase. Vão a mensagem, o trecho do código, a tela aberta e a versão; nada da pessoa, da empresa ou dos clientes, e o servidor ainda apaga o que tiver formato de e-mail ou de número longo. São no máximo 5 relatos por visita e 10 por minuto por endereço.
 
 ## Proteções do navegador
 

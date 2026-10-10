@@ -86,6 +86,10 @@
           "destination": "/privacidade.html"
         },
         {
+          "source": "/ajuda",
+          "destination": "/ajuda.html"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }

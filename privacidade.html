@@ -103,7 +103,8 @@
         <tr><td>Google (Firebase Authentication, Firestore e Hosting)</td><td>Login, banco de dados e hospedagem do sistema</td><td>Centros de dados do Google, que podem estar fora do Brasil</td></tr>
         <tr><td>Render</td><td>Servidor que recebe os leads enviados por formulários e processa a cobrança</td><td>Estados Unidos</td></tr>
         <tr><td>Mercado Pago</td><td>Gera a cobrança por PIX e confirma o pagamento. Recebe o nome e o e-mail de quem assina e o valor.</td><td>Brasil</td></tr>
-        <tr><td>Google Fonts</td><td>Entrega a fonte usada nas telas; o seu navegador se conecta ao Google para baixá-la</td><td>Global</td></tr>
+        <tr><td>Brevo (só quando o envio de e-mails estiver ativo)</td><td>Envia o resumo do dia e os avisos de vencimento. Recebe o nome e o e-mail de quem tem conta e o texto da mensagem, que cita nomes de clientes e tarefas da própria pessoa.</td><td>União Europeia</td></tr>
+          <tr><td>Google Fonts</td><td>Entrega a fonte usada nas telas; o seu navegador se conecta ao Google para baixá-la</td><td>Global</td></tr>
         <tr><td>Google Gemini (só se você ativar a IA com a sua chave)</td><td>Gera as análises de oportunidade e as sugestões de mensagem. Recebe os dados da oportunidade em questão.</td><td>Global</td></tr>
       </tbody>
     </table>
@@ -134,6 +135,13 @@
       <li><strong>Conta encerrada por falta de pagamento ou inatividade</strong>: dados disponíveis para exportação por 30 dias e depois apagados.</li>
       <li><strong>Registros de acesso</strong>: mantidos pelos provedores de infraestrutura, pelos prazos deles. <strong>Documentos fiscais</strong>: pelo prazo da legislação tributária.</li>
       <li><strong>Leads recebidos por formulário</strong>: ficam no servidor de recebimento até entrarem no seu CRM.</li>
+    </ul>
+
+    <h2>Mensagens que enviamos e erros que registramos</h2>
+    <ul>
+      <li><strong>Resumo do dia por e-mail</strong>: quando o envio está ativo, cada pessoa com conta pode receber de manhã a lista do que tem para fazer. Só é enviado quando há algo pendente, e cada pessoa desliga o próprio em Ferramentas, Minha conta e privacidade.</li>
+      <li><strong>Avisos de vencimento</strong>: quem administra a empresa recebe um aviso quando o teste ou o plano está perto de terminar. Faz parte da prestação do serviço e não pode ser desligado.</li>
+      <li><strong>Erros do sistema</strong>: quando algo falha na tela, o sistema nos envia a mensagem de erro, a tela que estava aberta, a versão e o tipo de navegador, para que possamos corrigir. Não vão o nome da pessoa, a empresa nem dados de clientes, e qualquer trecho com formato de e-mail ou de número longo é apagado antes de ser guardado.</li>
     </ul>
 
     <h2>8. Segurança</h2>

@@ -8,8 +8,8 @@ Funil de vendas, clientes e tarefas para equipes pequenas. Site: https://edx-dig
 |---|---|---|
 | Aplicativo | `index.html`, `js/`, `css/` | Roda inteiro no navegador, em JavaScript puro (módulos ES), sem framework. |
 | Dados e login | Firebase (Authentication e Firestore) | Cada empresa só alcança os próprios dados; quem garante isso são as regras em `firestore.rules`. |
-| Servidor | `cloud.js`, `server/` | Uma função do Firebase, no mesmo projeto: o site entrega a ela tudo o que chega em `/api`. Cobra por PIX (Mercado Pago) e guarda por instantes os contatos enviados por formulários. `server.js` faz o mesmo no seu computador e serve o site. |
-| Páginas públicas | `landing.html`, `termos.html`, `privacidade.html` | Apresentação, termos de uso e política de privacidade. |
+| Servidor | `cloud.js`, `server/` | Uma função do Firebase, no mesmo projeto: o site entrega a ela tudo o que chega em `/api`. Cobra por PIX (Mercado Pago), guarda por instantes os contatos enviados por formulários, conta os limites do plano, envia os e-mails da manhã e recebe os erros das telas. `server.js` faz o mesmo no seu computador e serve o site. |
+| Páginas públicas | `landing.html`, `ajuda.html`, `termos.html`, `privacidade.html` | Apresentação, ajuda, termos de uso e política de privacidade. |
 
 ```
 js/
@@ -70,3 +70,4 @@ Publicar a função exige o plano Blaze do Firebase e os dois segredos do Mercad
 
 - [Login, permissões e segurança](docs/LOGIN_E_SEGURANCA.md)
 - [Cobrança por PIX](docs/COBRANCA_PIX.md)
+- [E-mails enviados pelo sistema](docs/EMAILS.md)

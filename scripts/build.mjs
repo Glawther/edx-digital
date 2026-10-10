@@ -20,7 +20,7 @@ const dist = path.join(root, 'dist');
 const from = (...parts) => path.join(root, ...parts);
 const to = (...parts) => path.join(dist, ...parts);
 
-const PAGES = ['index.html', 'landing.html', 'termos.html', 'privacidade.html'];
+const PAGES = ['index.html', 'landing.html', 'termos.html', 'privacidade.html', 'ajuda.html'];
 
 async function sizeOf(dir) {
   let raw = 0;

@@ -10,7 +10,7 @@ const { ROOT_DIR, MIME_TYPES } = require('../config/constants');
 const { sanitizePath } = require('../middleware/security');
 
 // What a browser is allowed to fetch. Anything not listed here answers 404.
-const PUBLIC_FILES = new Set(['/index.html', '/landing.html', '/termos.html', '/privacidade.html', '/manifest.json', '/sw.js']);
+const PUBLIC_FILES = new Set(['/index.html', '/landing.html', '/termos.html', '/privacidade.html', '/ajuda.html', '/manifest.json', '/sw.js']);
 const PUBLIC_FOLDERS = ['/assets/', '/css/', '/js/'];
 const PUBLIC_EXTENSIONS = new Set(['.html', '.js', '.css', '.json', '.svg', '.png', '.jpg', '.jpeg', '.ico', '.woff2']);
 

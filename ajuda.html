@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajuda | EDX Digital</title>
+  <meta name="description" content="Como usar o EDX Digital: primeiros passos, funil, tarefas, equipe, relatórios, planos e pagamento, conta e problemas comuns.">
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #18212f; --ink-soft: #4a5565; --ink-muted: #6f7a8a; --line: #e4e7ec; --accent: #2447a8; --wash: #f5f6f8; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); }
+    a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .top { border-bottom: 1px solid var(--line); }
+    .top div { max-width: 760px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 600; color: var(--ink); text-decoration: none; }
+    .top nav a { margin-left: 20px; font-size: 0.92rem; color: var(--ink-soft); text-decoration: none; }
+    .top nav a:hover { color: var(--ink); }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+    h1 { font-size: 2rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .meta { color: var(--ink-muted); font-size: 0.98rem; margin: 0 0 28px; max-width: 60ch; }
+    .index { background: var(--wash); border-radius: 8px; padding: 18px 20px; margin: 0 0 12px; columns: 2; column-gap: 32px; }
+    .index a { display: block; padding: 3px 0; text-decoration: none; font-size: 0.95rem; }
+    .index a:hover { text-decoration: underline; }
+    h2 { font-size: 1.2rem; font-weight: 600; margin: 44px 0 6px; }
+    details { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; padding: 14px 28px 14px 0; font-weight: 500; list-style: none; position: relative; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; position: absolute; right: 4px; top: 12px; font-size: 1.2rem; font-weight: 400; color: var(--ink-muted); }
+    details[open] summary::after { content: '\2212'; }
+    details > div { padding: 0 0 16px; max-width: 68ch; }
+    p, li { color: var(--ink-soft); }
+    p { margin: 0 0 10px; }
+    ol, ul { margin: 0 0 10px; padding-left: 22px; }
+    li { margin-bottom: 5px; }
+    strong { color: var(--ink); font-weight: 600; }
+    kbd { font-family: inherit; font-size: 0.85em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; color: var(--ink); background: #fff; }
+    .contact { margin-top: 44px; background: var(--wash); border-radius: 8px; padding: 18px 20px; }
+    .contact p { margin: 0; }
+    footer { border-top: 1px solid var(--line); }
+    footer div { max-width: 760px; margin: 0 auto; padding: 24px; font-size: 0.88rem; color: var(--ink-muted); }
+    footer a { color: var(--ink-soft); margin-right: 18px; text-decoration: none; }
+    @media (max-width: 560px) { .index { columns: 1; } h1 { font-size: 1.6rem; } }
+  </style>
+</head>
+<body>
+  <header class="top"><div>
+    <a class="brand" href="/landing">EDX Digital</a>
+    <nav><a href="/ajuda">Ajuda</a><a href="/termos">Termos</a><a href="index.html">Entrar</a></nav>
+  </div></header>
+  <main>
+
+    <h1>Ajuda</h1>
+    <p class="meta">Respostas curtas para as dúvidas mais comuns. Dentro do sistema, em Ferramentas, o item "Conhecer o sistema" refaz o passeio pelas telas quando você quiser.</p>
+
+    <nav class="index" aria-label="Assuntos">
+      <a href="#comecar">Primeiros passos</a>
+      <a href="#funil">Funil e oportunidades</a>
+      <a href="#tarefas">Tarefas e a tela Hoje</a>
+      <a href="#contatos">Contatos e histórico</a>
+      <a href="#whatsapp">WhatsApp e propostas</a>
+      <a href="#equipe">Equipe e permissões</a>
+      <a href="#relatorios">Relatórios</a>
+      <a href="#dados">Importar e exportar</a>
+      <a href="#planos">Planos e pagamento</a>
+      <a href="#conta">Conta e senha</a>
+      <a href="#problemas">Problemas comuns</a>
+    </nav>
+
+    <h2 id="comecar">Primeiros passos</h2>
+    <details>
+      <summary>Como crio a conta da minha empresa?</summary>
+      <div>
+        <ol>
+          <li>Na tela de entrada, abra <strong>Criar conta</strong> e preencha seu nome, e-mail, o nome da empresa e uma senha.</li>
+          <li>Você recebe um e-mail com um link de confirmação. Clique nele (confira também a caixa de spam).</li>
+          <li>Volte à tela e clique em <strong>Já confirmei, criar empresa</strong>.</li>
+        </ol>
+        <p>Quem cria a empresa é o administrador dela. O teste gratuito dura 14 dias e não pede forma de pagamento.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O e-mail de confirmação não chegou. O que faço?</summary>
+      <div>
+        <p>Espere alguns minutos e olhe a caixa de spam e a de promoções. Se não estiver lá, clique em <strong>Enviar a mensagem de novo</strong>, na própria tela de cadastro. Confira também se o endereço foi digitado certo: se não foi, basta preencher o cadastro de novo com o endereço correto.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Dá para experimentar sem criar conta?</summary>
+      <div>
+        <p>Sim. Na tela de entrada há dois botões de demonstração, um como administrador e outro como vendedor. Os dados são de exemplo e ficam só no seu navegador.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Preciso instalar alguma coisa?</summary>
+      <div>
+        <p>Não. O sistema abre no navegador, no computador e no celular. Se quiser um ícone na tela inicial, use Ferramentas, <strong>Instalar o aplicativo</strong>, ou a opção de instalar do próprio navegador.</p>
+      </div>
+    </details>
+
+    <h2 id="funil">Funil e oportunidades</h2>
+    <details>
+      <summary>O que é uma oportunidade?</summary>
+      <div>
+        <p>É uma venda em andamento com um cliente: quem é, quanto vale, em que etapa está e quem cuida dela. Cada cartão do funil é uma oportunidade.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como cadastro uma oportunidade?</summary>
+      <div>
+        <p>Clique em <strong>Nova oportunidade</strong> (ou aperte <kbd>N</kbd>). Nome e valor bastam para começar. Se o telefone ou o e-mail já estiver cadastrado, o sistema avisa antes de salvar.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como mudo uma oportunidade de etapa?</summary>
+      <div>
+        <p>Arraste o cartão para a outra coluna, ou use a lista de etapas dentro do cartão. No celular, a lista é o jeito mais fácil. Ao marcar como perdida, o sistema pergunta o motivo, que depois aparece nos relatórios.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Posso mudar os nomes das etapas ou criar campos próprios?</summary>
+      <div>
+        <p>Sim, quem administra pode. Em Ferramentas, <strong>Funil, campos e mensagens</strong>, dá para renomear as etapas, criar até 8 campos extras (texto, número ou data) e definir a meta de vendas do mês. A quantidade de etapas é fixa.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O que significa "Parado há X dias"?</summary>
+      <div>
+        <p>Que a oportunidade está em aberto e ninguém a atualizou nesse tempo: não mudou de etapa, não teve contato registrado nem tarefa concluída. A partir de 3 dias ela entra no filtro <strong>Paradas</strong> e na tela Hoje.</p>
+      </div>
+    </details>
+
+    <h2 id="tarefas">Tarefas e a tela Hoje</h2>
+    <details>
+      <summary>Para que serve a tela Hoje?</summary>
+      <div>
+        <p>É a primeira tela ao entrar. Mostra, em ordem, o que precisa de você agora: tarefas atrasadas e do dia, oportunidades com fechamento previsto para os próximos 7 dias, as paradas e as que estão sem próximo passo. Quem administra pode escolher um vendedor no topo e ver o dia dele.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como agendo uma tarefa?</summary>
+      <div>
+        <p>Abra a oportunidade e use o campo <strong>Próximo passo</strong>, com data e, se quiser, horário. Também dá para agendar pela tela Tarefas. Toda oportunidade em aberto deveria ter uma tarefa: é o que evita que ela seja esquecida.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O sistema me avisa das tarefas?</summary>
+      <div>
+        <p>Avisa no navegador, no horário da tarefa, se você permitir as notificações quando o sistema pedir. O sino no topo guarda os avisos recentes. Se você recebe o resumo do dia por e-mail, pode desligá-lo em Ferramentas, Minha conta e privacidade.</p>
+      </div>
+    </details>
+
+    <h2 id="contatos">Contatos e histórico</h2>
+    <details>
+      <summary>Como registro uma ligação ou reunião?</summary>
+      <div>
+        <p>Abra a oportunidade e, em <strong>Registrar um contato</strong>, escolha o tipo (ligação, WhatsApp, e-mail, reunião ou nota), a data em que aconteceu e escreva o que foi conversado. Dá para registrar depois, com a data certa.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Posso apagar um registro do histórico?</summary>
+      <div>
+        <p>Os que você escreveu, sim: cada um tem um botão Excluir. O que o sistema registra sozinho, como mudança de etapa e tarefas, não pode ser apagado.</p>
+      </div>
+    </details>
+
+    <h2 id="whatsapp">WhatsApp e propostas</h2>
+    <details>
+      <summary>O sistema envia mensagens sozinho?</summary>
+      <div>
+        <p>Não. Ele prepara o texto e abre a conversa no WhatsApp com a mensagem escrita; quem envia é você. Isso evita disparo em massa e bloqueio do seu número.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como crio os modelos de mensagem da minha empresa?</summary>
+      <div>
+        <p>Quem administra abre Ferramentas, <strong>Funil, campos e mensagens</strong>, e escreve os modelos na parte Mensagens do WhatsApp. Dentro do texto, campos como <strong>{nome}</strong>, <strong>{empresa}</strong>, <strong>{vendedor}</strong> e <strong>{valor}</strong> são preenchidos com os dados de cada oportunidade. Sem modelos próprios, valem os quatro modelos padrão.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como gero uma proposta?</summary>
+      <div>
+        <p>Abra a oportunidade e clique em <strong>Proposta</strong>. O documento sai com o nome e o logotipo da empresa, os dados do cliente e o valor, pronto para imprimir ou salvar em PDF pelo navegador.</p>
+      </div>
+    </details>
+    <details>
+      <summary>A análise com inteligência artificial é obrigatória?</summary>
+      <div>
+        <p>Não. Ela só funciona se você informar uma chave do Google Gemini, em Ferramentas. A chave fica guardada apenas no seu navegador.</p>
+      </div>
+    </details>
+
+    <h2 id="equipe">Equipe e permissões</h2>
+    <details>
+      <summary>Como coloco minha equipe no sistema?</summary>
+      <div>
+        <p>Na tela <strong>Equipe</strong> fica o código de convite. Envie o código (há botões para e-mail e WhatsApp): a pessoa abre Criar conta, escolhe <strong>Tenho um convite</strong> e entra como vendedor da sua empresa. Também dá para cadastrar alguém direto, com uma senha provisória que a pessoa troca no primeiro acesso.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O que o vendedor consegue ver?</summary>
+      <div>
+        <p>Só as oportunidades atribuídas a ele. Ele não vê a carteira dos colegas, não exclui oportunidades e não acessa Equipe, Auditoria e Segurança. O administrador vê a empresa inteira.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Um vendedor saiu da empresa. O que faço?</summary>
+      <div>
+        <p>Na tela Equipe, <strong>transfira</strong> as oportunidades dele para outra pessoa e depois <strong>bloqueie</strong> ou <strong>exclua</strong> o acesso. O código de convite é trocado sozinho, porque ele conhecia o antigo.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Outra empresa consegue ver os meus dados?</summary>
+      <div>
+        <p>Não. Cada empresa só alcança os próprios dados, e essa separação é feita pelo banco de dados, não apenas pela tela.</p>
+      </div>
+    </details>
+
+    <h2 id="relatorios">Relatórios</h2>
+    <details>
+      <summary>Como a taxa de conversão é calculada?</summary>
+      <div>
+        <p>É quantas oportunidades foram ganhas entre as que foram decididas (ganhas mais perdidas) no período escolhido. As que continuam em aberto não entram na conta. Sem nada decidido, aparece "sem dados".</p>
+      </div>
+    </details>
+    <details>
+      <summary>O que são "conversas registradas"?</summary>
+      <div>
+        <p>As ligações, mensagens, e-mails e reuniões que foram registrados nas oportunidades no período. Um contato que aconteceu e não foi registrado não é contado.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Consigo ver o resultado de cada vendedor?</summary>
+      <div>
+        <p>Sim, quem administra vê em Relatórios a tabela <strong>Por vendedor</strong>, com vendas, valor, ticket médio, conversão e conversas, e a carteira de cada um agora. O botão Exportar baixa a tabela para planilha.</p>
+      </div>
+    </details>
+
+    <h2 id="dados">Importar e exportar</h2>
+    <details>
+      <summary>Como trago os contatos de uma planilha?</summary>
+      <div>
+        <p>Em Ferramentas, <strong>Importar contatos</strong>. Salve a planilha como CSV, ou copie as linhas e cole. O sistema reconhece as colunas (nome, empresa, telefone, e-mail, valor), mostra uma prévia e avisa dos contatos repetidos antes de importar.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como levo meus dados embora?</summary>
+      <div>
+        <p>Em Ferramentas, <strong>Exportar clientes</strong> gera um arquivo que abre no Excel. Em Minha conta e privacidade, quem administra baixa um arquivo com tudo: clientes, oportunidades, tarefas e históricos.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como recebo contatos de um formulário do meu site ou de anúncios?</summary>
+      <div>
+        <p>Em Ferramentas, <strong>Receber leads de formulários</strong> mostra um endereço exclusivo da sua conta. Configure o formulário ou a ferramenta de anúncios para enviar os dados para ele, e cada contato entra no funil como oportunidade nova.</p>
+      </div>
+    </details>
+
+    <h2 id="planos">Planos e pagamento</h2>
+    <details>
+      <summary>Como funciona o teste gratuito?</summary>
+      <div>
+        <p>São 14 dias com tudo liberado, sem informar forma de pagamento. O teste vale uma vez por e-mail: excluir a empresa e criar outra com o mesmo e-mail não começa um teste novo.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como pago?</summary>
+      <div>
+        <p>Por PIX. Quem administra abre Ferramentas, <strong>Plano e uso</strong>, escolhe o plano e paga o código que aparece. A liberação é automática, em alguns segundos. Cada pagamento vale por 30 dias; não há cobrança automática nem cartão guardado.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O que acontece se o plano vencer?</summary>
+      <div>
+        <p>Há 3 dias de tolerância. Depois, o sistema entra em <strong>modo de leitura</strong>: os dados continuam lá, podem ser vistos, exportados e excluídos, mas não dá para criar nem alterar. Ao pagar, tudo volta ao normal na hora.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Qual a diferença entre os planos?</summary>
+      <div>
+        <p>Só a quantidade: quantas oportunidades em aberto e quantas pessoas com acesso cada um comporta. Todos os recursos estão em todos os planos. Oportunidades ganhas e perdidas não contam para o limite.</p>
+      </div>
+    </details>
+
+    <h2 id="conta">Conta e senha</h2>
+    <details>
+      <summary>Esqueci minha senha.</summary>
+      <div>
+        <p>Na tela de entrada, digite seu e-mail e clique em <strong>Esqueci minha senha</strong>. Você recebe um e-mail com um link para criar outra.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como troco meu nome ou minha senha?</summary>
+      <div>
+        <p>Em Ferramentas, <strong>Minha conta e privacidade</strong>.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Como excluo minha conta ou a empresa?</summary>
+      <div>
+        <p>Em Ferramentas, Minha conta e privacidade. O vendedor exclui a própria conta; as oportunidades ficam com a empresa. Quem criou a empresa pode excluí-la inteira, com todos os dados. A exclusão é imediata e não tem volta: exporte antes o que quiser guardar.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Fui desconectado sozinho. Por quê?</summary>
+      <div>
+        <p>Por segurança, a sessão é encerrada depois de um longo tempo sem uso. Basta entrar de novo.</p>
+      </div>
+    </details>
+
+    <h2 id="problemas">Problemas comuns</h2>
+    <details>
+      <summary>A tela parece desatualizada ou algo não funciona depois de uma novidade.</summary>
+      <div>
+        <p>Recarregue a página (<kbd>Ctrl</kbd> + <kbd>F5</kbd> no computador). O sistema se atualiza sozinho, mas uma aba que ficou aberta por muito tempo pode estar numa versão anterior.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Aparece "modo de leitura" e não consigo salvar.</summary>
+      <div>
+        <p>O teste terminou ou o plano venceu. Quem administra resolve em Ferramentas, Plano e uso. Seus dados não foram apagados.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Não consigo cadastrar mais oportunidades ou mais pessoas.</summary>
+      <div>
+        <p>O plano chegou ao limite. Feche ou exclua oportunidades antigas, libere uma vaga na equipe, ou mude de plano em Ferramentas, Plano e uso.</p>
+      </div>
+    </details>
+    <details>
+      <summary>O código de convite não funciona.</summary>
+      <div>
+        <p>Peça o código atual a quem administra: ele é trocado quando alguém é bloqueado ou excluído, e fica pausado quando a equipe está completa no plano.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Estou sem internet. Perco o que fiz?</summary>
+      <div>
+        <p>O sistema abre sem conexão e mostra o que já estava carregado, mas o que for alterado sem internet pode não ser gravado. Espere a conexão voltar antes de cadastrar ou alterar.</p>
+      </div>
+    </details>
+
+    <div class="contact">
+      <p><strong>Não encontrou a resposta?</strong> Escreva para <a href="mailto:glawthers@gmail.com">glawthers@gmail.com</a> contando o que tentou fazer e o que apareceu na tela.</p>
+    </div>
+
+  </main>
+  <footer><div>
+    <a href="/landing">Início</a><a href="/termos">Termos de uso</a><a href="/privacidade">Privacidade</a><a href="index.html">Entrar</a>
+  </div></footer>
+</body>
+</html>
