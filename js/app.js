@@ -600,10 +600,96 @@ function updateNavCounters(state) {
 // Filters & Search
 // ==========================================================================
 function setupFilterEvents() {
+  // Search: filters the lists and, from any screen, offers the matching opportunities to open
   const searchInput = document.getElementById('global-search-input');
-  if (searchInput) {
+  const searchResults = document.getElementById('search-results');
+  if (searchInput && searchResults) {
+    let activeIndex = -1;
+
+    const closeResults = () => {
+      searchResults.hidden = true;
+      searchResults.innerHTML = '';
+      searchInput.setAttribute('aria-expanded', 'false');
+      activeIndex = -1;
+    };
+
+    const findMatches = (query) => {
+      const text = query.toLowerCase().trim();
+      const digits = text.replace(/\D/g, '');
+      return crmStore.getState().visibleCustomers.filter(c => {
+        const haystack = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
+        if (haystack.includes(text)) return true;
+        return digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits);
+      });
+    };
+
+    const renderResults = () => {
+      const query = searchInput.value.trim();
+      if (query.length < 2) { closeResults(); return; }
+      const matches = findMatches(query).slice(0, 6);
+      activeIndex = -1;
+      searchResults.innerHTML = matches.length === 0
+        ? `<div class="search-empty">Nada encontrado para "${escapeHtml(query)}".</div>`
+        : matches.map((c, i) => {
+            const stage = STAGES.find(s => s.id === c.stage) || STAGES[0];
+            return `
+              <button type="button" class="search-result" role="option" id="search-result-${i}" data-id="${c.id}">
+                <span class="search-result-main">
+                  <strong>${escapeHtml(c.name)}</strong>
+                  <span>${escapeHtml(c.company || 'Sem empresa')}</span>
+                </span>
+                <span class="search-result-side">${stage.name}<br>${formatBRL(c.dealValue)}</span>
+              </button>`;
+          }).join('');
+      searchResults.hidden = false;
+      searchInput.setAttribute('aria-expanded', 'true');
+    };
+
+    const openResult = (button) => {
+      if (!button) return;
+      const id = button.dataset.id;
+      closeResults();
+      window.handleOpenLeadDetails(id);
+    };
+
     searchInput.addEventListener('input', (e) => {
       crmStore.setSearchQuery(e.target.value);
+      renderResults();
+    });
+    searchInput.addEventListener('focus', renderResults);
+
+    searchInput.addEventListener('keydown', (e) => {
+      const options = [...searchResults.querySelectorAll('.search-result')];
+      if (e.key === 'Escape') {
+        if (searchInput.value) {
+          searchInput.value = '';
+          crmStore.setSearchQuery('');
+        }
+        closeResults();
+        return;
+      }
+      if (options.length === 0) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = (activeIndex + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+        options.forEach((o, i) => o.classList.toggle('is-active', i === activeIndex));
+        searchInput.setAttribute('aria-activedescendant', options[activeIndex].id);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        openResult(options[activeIndex >= 0 ? activeIndex : 0]);
+      }
+    });
+
+    searchResults.addEventListener('mousedown', (e) => {
+      // mousedown, so the choice lands before the field loses focus
+      const button = e.target.closest('.search-result');
+      if (button) {
+        e.preventDefault();
+        openResult(button);
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-box-large')) closeResults();
     });
   }
 
@@ -1239,6 +1325,8 @@ function setupDialogEvents() {
     if (assignedSelect) {
       fillAssigneeSelect(assignedSelect, getCurrentUser()?.email);
     }
+    const more = document.getElementById('customer-form-more');
+    if (more) more.open = false;
     customerDialog.showModal();
     document.getElementById('input-customer-name').focus();
   };
@@ -1356,6 +1444,8 @@ window.handleOpenEditCustomer = function(customerId) {
   if (assignedSelect) {
     fillAssigneeSelect(assignedSelect, customer.assignedTo?.email);
   }
+  const more = document.getElementById('customer-form-more');
+  if (more) more.open = true;
 
   customerDialog.showModal();
 };

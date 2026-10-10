@@ -1276,3 +1276,87 @@ body.is-first-run[data-view="pipeline"] #kpi-container,
 body.is-first-run:not([data-view]) #kpi-container { display: none; }
 
 @media (max-width: 768px) { .fact-grid { grid-template-columns: 1fr 1fr; } }
+
+
+/* ==========================================================================
+   Opportunity form, search results
+   ========================================================================== */
+.form-more { margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.85rem; }
+.form-more summary { cursor: pointer; font-size: 0.86rem; color: var(--accent); list-style: none; }
+.form-more summary::-webkit-details-marker { display: none; }
+.form-more summary::before { content: '+ '; }
+.form-more[open] summary::before { content: '− '; }
+.form-more[open] summary { margin-bottom: 0.85rem; }
+.form-more summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.search-box-large { position: relative; }
+.search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60;
+  background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12); padding: 4px; max-height: 60vh; overflow-y: auto;
+}
+.search-result {
+  display: flex; justify-content: space-between; gap: 1rem; width: 100%; text-align: left;
+  font: inherit; background: none; border: 0; border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem; cursor: pointer; color: var(--text-primary);
+}
+.search-result:hover, .search-result.is-active { background: var(--accent-soft); }
+.search-result-main { display: flex; flex-direction: column; min-width: 0; }
+.search-result-main strong { font-weight: 600; font-size: 0.88rem; }
+.search-result-main span, .search-result-side { font-size: 0.78rem; color: var(--text-muted); }
+.search-result-side { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.search-empty { padding: 0.75rem 0.6rem; font-size: 0.85rem; color: var(--text-muted); }
+
+
+/* ==========================================================================
+   Phone: the top of the screen is compact so the work is visible at once
+   ========================================================================== */
+@media (max-width: 768px) {
+  .sidebar {
+    display: grid !important; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand footer" "nav nav";
+    align-items: center; gap: 0.25rem 0.5rem; padding: 0.4rem 0.75rem 0 !important; height: auto !important;
+  }
+  .sidebar .brand { grid-area: brand; margin: 0 !important; padding: 0 !important; border: 0 !important; min-width: 0; }
+  .sidebar .brand-name { -webkit-line-clamp: 1; }
+  .sidebar .nav-menu { grid-area: nav; margin: 0 !important; padding: 0 !important; }
+  .sidebar .sidebar-footer {
+    grid-area: footer; display: flex !important; flex-direction: row !important; align-items: center;
+    gap: 0.35rem; padding: 0 !important; margin: 0 !important; border: 0 !important; width: auto !important;
+  }
+  .sidebar-tools-wrapper, #auth-status-container { width: auto !important; flex: none; }
+  .sidebar-tool-btn { width: 38px !important; height: 38px; padding: 0 !important; justify-content: center; }
+  .sidebar-user-card { padding: 0 !important; gap: 0.25rem; }
+
+  .header { flex-wrap: nowrap !important; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem !important; height: auto !important; min-height: 0 !important; }
+  .header-left { display: none !important; }
+  .header-center { flex: 1 1 auto !important; min-width: 0; width: auto !important; order: 0 !important; }
+  .header-right { flex: none !important; gap: 0.25rem !important; width: auto !important; order: 0 !important; }
+  .search-box-large { width: 100%; }
+  #trial-header-pill { display: none !important; }
+  #connection-status-pill { padding: 0 0.3rem; border: 0; background: none; }
+  #connection-status-pill > span:not(.pulse-dot) { display: none; }
+
+  /* Indicators become one swipeable row instead of a tall block */
+  #kpi-container {
+    display: flex !important; overflow-x: auto; gap: 0; scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  #kpi-container > * { flex: 0 0 46%; scroll-snap-align: start; border-bottom: 0 !important; }
+}
+
+
+@media (max-width: 768px) {
+  .search-kbd-trigger { display: none !important; }
+  #kpi-container { scrollbar-width: none; }
+  #kpi-container::-webkit-scrollbar { display: none; }
+  /* The tools menu spans the screen instead of running off its edge */
+  #header-tools-menu {
+    position: fixed !important; left: 12px !important; right: 12px !important; top: 52px !important; bottom: auto !important;
+    width: auto !important; max-height: calc(100vh - 72px); overflow-y: auto;
+  }
+  .notification-dropdown { position: fixed !important; left: 12px !important; right: 12px !important; top: 100px !important; width: auto !important; }
+}
+
+
+.plain-table .row-actions { flex-wrap: nowrap; white-space: nowrap; }
