@@ -1360,3 +1360,55 @@ body.is-first-run:not([data-view]) #kpi-container { display: none; }
 
 
 .plain-table .row-actions { flex-wrap: nowrap; white-space: nowrap; }
+
+
+/* ==========================================================================
+   WhatsApp window, undo, customers as cards on a phone
+   ========================================================================== */
+.dialog-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.wa-templates-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+.wa-templates { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.wa-template {
+  font: inherit; font-size: 0.84rem; cursor: pointer; color: var(--text-secondary);
+  background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-full, 999px);
+  padding: 0.35rem 0.8rem;
+}
+.wa-template:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.wa-template.active { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); font-weight: 500; }
+.wa-template:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wa-message-label { display: flex; justify-content: space-between; align-items: baseline; }
+.wa-message-label .muted { font-size: 0.78rem; font-weight: 400; }
+#wa-message-preview { min-height: 9.5rem; line-height: 1.5; font-size: 0.92rem; width: 100%; }
+.field-hint { display: block; font-size: 0.78rem; color: var(--text-muted); margin-top: 0.35rem; }
+
+.toast-action {
+  margin-left: 0.75rem; flex: none; font: inherit; font-size: 0.84rem; font-weight: 600;
+  color: var(--accent); background: none; border: 0; padding: 0.15rem 0.25rem; cursor: pointer; border-radius: var(--radius-sm);
+}
+.toast-action:hover { text-decoration: underline; }
+.toast-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 768px) {
+  /* Each customer becomes a card: no sideways scrolling */
+  #view-customers .crm-table { min-width: 0; display: block; }
+  #view-customers .crm-table thead { display: none; }
+  #view-customers .crm-table tbody { display: block; }
+  #view-customers .crm-table tr {
+    display: grid; grid-template-columns: 1fr auto; gap: 0.35rem 0.75rem;
+    padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-subtle);
+  }
+  #view-customers .crm-table td { display: block; padding: 0; border: 0; text-align: left; }
+  #view-customers .crm-table td:nth-child(1) { grid-column: 1; }
+  #view-customers .crm-table td:nth-child(4) { grid-column: 2; grid-row: 1; text-align: right; }
+  #view-customers .crm-table td:nth-child(2),
+  #view-customers .crm-table td:nth-child(5) { grid-column: 1 / -1; }
+  #view-customers .crm-table td:nth-child(3) { display: none; }
+  #view-customers .crm-table td:nth-child(5) .cell-sub { display: inline; margin-left: 0.5rem; }
+  #view-customers .crm-table td:nth-child(6) { grid-column: 1 / -1; padding-top: 0.25rem; }
+  #view-customers .crm-table .row-actions { justify-content: flex-start; gap: 1.1rem; flex-wrap: wrap; }
+  #view-customers .crm-table .row-actions .link-btn { padding: 0.35rem 0; font-size: 0.88rem; }
+  #view-customers .table-empty { grid-column: 1 / -1; }
+
+  .dialog-footer { flex-wrap: wrap; }
+  .toast { flex-wrap: wrap; }
+}

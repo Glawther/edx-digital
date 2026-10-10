@@ -711,6 +711,35 @@ class StorageManager {
   }
 
   /**
+   * Puts an opportunity back exactly as it was (used by "Desfazer" after a move or a deletion)
+   */
+  async restoreCustomer(snapshot) {
+    if (!snapshot || !snapshot.id) return;
+    const restored = {
+      ...snapshot,
+      // A move to "lost" adds these; clearing them here undoes it fully
+      lossReason: snapshot.lossReason ?? null,
+      lossDetails: snapshot.lossDetails ?? '',
+      lostAt: snapshot.lostAt ?? null
+    };
+
+    const index = this.currentData.findIndex(c => c.id === snapshot.id);
+    if (index !== -1) this.currentData[index] = restored;
+    else this.currentData.unshift(restored);
+    this.saveLocalData();
+    this.notifyListeners();
+
+    if (this.mode === 'firestore') {
+      try {
+        const { firestoreId, clientLeadId, ...clean } = restored;
+        await firestoreService.addFirestoreCustomer(clean);
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
+    }
+  }
+
+  /**
    * Deletes a customer by ID
    * ENFORCES INTEGRIDADE (I): Somente o perfil Administrador pode excluir permanentemente.
    */

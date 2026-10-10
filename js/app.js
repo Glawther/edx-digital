@@ -716,6 +716,23 @@ window.handleDragStartCard = function(event, customerId) {
   event.currentTarget.classList.add('dragging');
 };
 
+// A copy of the opportunity taken before a change, so the change can be undone
+function snapshotOf(customerId) {
+  const customer = storage.getCustomer(customerId);
+  return customer ? JSON.parse(JSON.stringify(customer)) : null;
+}
+
+function undoAction(snapshot, doneMessage) {
+  if (!snapshot) return null;
+  return {
+    label: 'Desfazer',
+    onClick: async () => {
+      await storage.restoreCustomer(snapshot);
+      showToast(doneMessage, 'info');
+    }
+  };
+}
+
 window.handleDropCard = async function(event, targetStage) {
   event.preventDefault();
   const customerId = draggedCustomerId || event.dataTransfer.getData('text/plain');
@@ -730,11 +747,17 @@ window.handleDropCard = async function(event, targetStage) {
     return;
   }
 
+  const before = snapshotOf(customerId);
+  if (before && before.stage === targetStage) {
+    draggedCustomerId = null;
+    return;
+  }
+
   try {
     await storage.updateStage(customerId, targetStage);
     const stageObj = STAGES.find(s => s.id === targetStage);
     const cust = storage.getCustomer(customerId);
-    showToast(`Oportunidade movida para "${stageObj ? stageObj.name : targetStage}".`, "success");
+    showToast(`${cust?.name || 'Oportunidade'} movida para ${stageObj ? stageObj.name : targetStage}.`, "success", undoAction(before, 'Mudança de etapa desfeita.'));
 
     // Audit & Notification
     if (targetStage === 'won') {
@@ -762,10 +785,11 @@ window.handleMoveStage = async function(customerId, newStage) {
     return;
   }
 
+  const before = snapshotOf(customerId);
   try {
     await storage.updateStage(customerId, newStage);
     const stageObj = STAGES.find(s => s.id === newStage);
-    showToast(`Oportunidade movida para "${stageObj ? stageObj.name : newStage}".`, "success");
+    showToast(`${cust?.name || 'Oportunidade'} movida para ${stageObj ? stageObj.name : newStage}.`, "success", undoAction(before, 'Mudança de etapa desfeita.'));
 
     // Audit & Notification
     if (newStage === 'won') {
@@ -859,13 +883,14 @@ function setupLossReasonEvents() {
 
       try {
         const cust = storage.getCustomer(customerId);
+        const before = snapshotOf(customerId);
         // Store the reason id (the metrics group by id); the label is resolved when displaying
         await storage.setLossReason(customerId, reasonVal, details);
         logAudit(AUDIT_ACTIONS.LEAD_LOST, { customerId, name: cust?.name, reason: reasonLabel, details }, AUDIT_SEVERITY.INFO);
         notifyDealEvent(NOTIFICATION_TYPES.DEAL_LOST, cust?.name || 'Cliente', cust?.dealValue || 0);
         activeLossCustomerId = null;
         dialog.close();
-        showToast("Oportunidade arquivada como perdida.", "info");
+        showToast(`${cust?.name || 'Oportunidade'} marcada como perdida.`, "info", undoAction(before, 'A oportunidade voltou para a etapa anterior.'));
         setTimeout(() => window.scrollToKanbanStage('lost'), 100);
       } catch (err) {
         showToast("Erro ao registrar perda: " + err.message, "error");
@@ -907,7 +932,7 @@ function setupWhatsAppModalEvents() {
     }
     const phone = customer.phone || customer.whatsapp;
     if (!phone) {
-      showToast('Esta oportunidade não possui número de telefone cadastrado.', 'error');
+      showToast('Este contato não tem telefone cadastrado.', 'error');
       return;
     }
 
@@ -916,59 +941,46 @@ function setupWhatsAppModalEvents() {
     const user = getCurrentUser();
 
     if (leadNameEl) leadNameEl.textContent = customer.name;
-    if (leadMetaEl) {
-      const stageName = (STAGES.find(s => s.id === customer.stage) || {}).name || customer.stage;
-      leadMetaEl.textContent = `${customer.company || 'Pessoa Física'} • Funil: ${stageName}`;
-    }
+    if (leadMetaEl) leadMetaEl.textContent = customer.company ? `, ${customer.company}` : '';
     if (leadPhoneEl) leadPhoneEl.textContent = phone;
 
-    // Render fast templates
-    renderTemplatesList([
-      { tone: 'Primeiro Contato', text: OUTREACH_TEMPLATES.first_contact.template(customer, user, org.name) },
-      { tone: 'Acompanhamento de Proposta', text: OUTREACH_TEMPLATES.proposal_followup.template(customer, user, org.name) },
-      { tone: 'Quebra de Objeção', text: OUTREACH_TEMPLATES.negotiation.template(customer, user, org.name) },
-      { tone: 'Reativação de Lead', text: OUTREACH_TEMPLATES.cold_lead.template(customer, user, org.name) }
-    ], customer);
+    // The model that fits the stage the opportunity is in comes first
+    const models = [
+      { key: 'first_contact', tone: 'Primeiro contato', stages: ['lead', 'contact'] },
+      { key: 'proposal_followup', tone: 'Retorno da proposta', stages: ['proposal'] },
+      { key: 'negotiation', tone: 'Negociação', stages: ['negotiation'] },
+      { key: 'cold_lead', tone: 'Retomar contato', stages: ['lost'] }
+    ];
+    models.sort((x, y) => Number(y.stages.includes(customer.stage)) - Number(x.stages.includes(customer.stage)));
+    renderTemplatesList(models.map(m => ({
+      tone: m.tone,
+      text: OUTREACH_TEMPLATES[m.key].template(customer, user, org.name)
+    })), customer);
 
     if (dialog) dialog.showModal();
   };
 
-  function renderTemplatesList(items, customer) {
+  function renderTemplatesList(items) {
     if (!templatesContainer) return;
-    templatesContainer.innerHTML = items.map((item, idx) => `
-      <div class="wa-template-card ${idx === 0 ? 'selected' : ''}" style="background: var(--bg-surface-elevated, #1f2533); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.6rem 0.85rem; cursor: pointer; transition: all 150ms ease;" data-idx="${idx}">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-          <strong style="font-size: 0.78rem; color: var(--color-primary, #3b82f6);">${escapeHtml(item.tone)}</strong>
-          <span style="font-size: 0.68rem; color: var(--text-muted);">Clique para selecionar</span>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(item.text)}
-        </div>
-      </div>
-    `).join('');
 
-    // Set first message
-    if (items[0] && messagePreview) {
-      messagePreview.value = items[0].text;
-      if (charCountEl) charCountEl.textContent = `${items[0].text.length} caracteres`;
-    }
-
-    // Attach click events
-    const cards = templatesContainer.querySelectorAll('.wa-template-card');
-    cards.forEach((card, idx) => {
-      card.addEventListener('click', () => {
-        cards.forEach(c => {
-          c.classList.remove('selected');
-          c.style.borderColor = 'var(--border-color)';
-        });
-        card.classList.add('selected');
-        card.style.borderColor = 'var(--color-primary, #3b82f6)';
-        if (items[idx] && messagePreview) {
-          messagePreview.value = items[idx].text;
-          if (charCountEl) charCountEl.textContent = `${items[idx].text.length} caracteres`;
-        }
+    const select = (idx) => {
+      templatesContainer.querySelectorAll('.wa-template').forEach((button, i) => {
+        button.classList.toggle('active', i === idx);
+        button.setAttribute('aria-pressed', i === idx ? 'true' : 'false');
       });
+      if (items[idx] && messagePreview) {
+        messagePreview.value = items[idx].text;
+        if (charCountEl) charCountEl.textContent = `${items[idx].text.length} caracteres`;
+      }
+    };
+
+    templatesContainer.innerHTML = items.map((item, idx) => `
+      <button type="button" class="wa-template" data-idx="${idx}" aria-pressed="false">${escapeHtml(item.tone)}</button>
+    `).join('');
+    templatesContainer.querySelectorAll('.wa-template').forEach((button, idx) => {
+      button.addEventListener('click', () => select(idx));
     });
+    select(0);
   }
 
   // AI Generator button
@@ -978,7 +990,7 @@ function setupWhatsAppModalEvents() {
       if (!customer) return;
 
       btnGenerateAi.disabled = true;
-      btnGenerateAi.textContent = 'Criando abordagens personalizadas com Gemini...';
+      btnGenerateAi.textContent = 'Gerando sugestões...';
 
       const org = getSavedOrganization();
       const user = getCurrentUser();
@@ -990,12 +1002,12 @@ function setupWhatsAppModalEvents() {
         });
 
         renderTemplatesList(aiOptions, customer);
-        showToast('3 Novas opções de abordagem geradas pela IA!', 'success');
+        showToast('Sugestões prontas. Escolha uma e ajuste o texto.', 'success');
       } catch (err) {
         showToast('Erro ao gerar com IA: ' + err.message, 'error');
       } finally {
         btnGenerateAi.disabled = false;
-        btnGenerateAi.textContent = 'Gerar com IA Gemini';
+        btnGenerateAi.textContent = 'Sugerir com IA';
       }
     });
   }
@@ -1005,11 +1017,11 @@ function setupWhatsAppModalEvents() {
     btnCopy.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(messagePreview.value);
-        showToast('Mensagem copiada para a área de transferência!', 'success');
+        showToast('Mensagem copiada.', 'success');
       } catch {
         messagePreview.select();
         document.execCommand('copy');
-        showToast('Mensagem selecionada e copiada!', 'success');
+        showToast('Mensagem copiada.', 'success');
       }
     });
   }
@@ -1025,7 +1037,7 @@ function setupWhatsAppModalEvents() {
       const link = buildWhatsAppLink(phone, message);
 
       if (!link) {
-        showToast('Número de WhatsApp inválido para envio.', 'error');
+        showToast('O telefone deste contato não é válido para o WhatsApp. Confira o número.', 'error');
         return;
       }
 
@@ -1033,14 +1045,14 @@ function setupWhatsAppModalEvents() {
       recordWhatsAppContact(customer, message);
       await storage.addActivity(customer.id, {
         type: 'whatsapp',
-        title: 'Mensagem de WhatsApp Enviada',
+        title: 'Mensagem pelo WhatsApp',
         text: message
       });
 
       // Open WhatsApp Web
       window.open(link, '_blank');
       closeDialog();
-      showToast('Conversa aberta no WhatsApp Web e registrada no histórico!', 'success');
+      showToast('WhatsApp aberto. A mensagem ficou registrada no histórico.', 'success');
     });
   }
 }
@@ -1295,11 +1307,24 @@ function sanitizeInput(val) {
     .trim();
 }
 
+// Reads an amount typed the Brazilian way (1.234,56) and also 1234.56 or 1234
 function parseSafeDealValue(val) {
-  if (!val) return 0;
-  const cleaned = String(val).replace(/[^\d.,]/g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val < 0 || isNaN(val) ? 0 : Math.min(val, 1000000000);
+  let text = String(val).replace(/[^\d.,]/g, '');
+  if (text.includes(',')) {
+    // comma is the decimal mark; dots are thousands separators
+    text = text.replace(/\./g, '').replace(',', '.');
+  } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
+    // 1.234 or 12.345.678: dots are thousands separators
+    text = text.replace(/\./g, '');
+  }
+  const num = parseFloat(text);
   return isNaN(num) || num < 0 ? 0 : Math.min(num, 1000000000);
+}
+
+function formatMoneyField(amount) {
+  return (Number(amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // ==========================================================================
@@ -1330,6 +1355,19 @@ function setupDialogEvents() {
     customerDialog.showModal();
     document.getElementById('input-customer-name').focus();
   };
+
+  // The amount accepts only digits, dot and comma, and is tidied up when the field is left
+  const valueInput = document.getElementById('input-deal-value');
+  if (valueInput) {
+    valueInput.addEventListener('input', () => {
+      const cleaned = valueInput.value.replace(/[^\d.,]/g, '');
+      if (cleaned !== valueInput.value) valueInput.value = cleaned;
+    });
+    valueInput.addEventListener('blur', () => {
+      if (valueInput.value.trim() !== '') valueInput.value = formatMoneyField(parseSafeDealValue(valueInput.value));
+    });
+    valueInput.addEventListener('focus', () => valueInput.select());
+  }
 
   // (11) 98888-7777 while typing; numbers that start with + are left as typed
   const phoneInput = document.getElementById('input-customer-phone');
@@ -1433,7 +1471,7 @@ window.handleOpenEditCustomer = function(customerId) {
   document.getElementById('input-customer-role').value = customer.role || '';
   document.getElementById('input-customer-email').value = customer.email || '';
   document.getElementById('input-customer-phone').value = customer.phone || '';
-  document.getElementById('input-deal-value').value = customer.dealValue || 0;
+  document.getElementById('input-deal-value').value = formatMoneyField(customer.dealValue);
   document.getElementById('input-deal-stage').value = customer.stage || 'lead';
   document.getElementById('input-deal-priority').value = customer.priority || 'medium';
   document.getElementById('input-deal-forecast').value = customer.expectedCloseDate ? customer.expectedCloseDate.split('T')[0] : '';
@@ -1457,12 +1495,13 @@ window.handleDeleteCustomer = async function(customerId) {
     return;
   }
 
-  if (!confirm("Excluir esta oportunidade? A exclusão fica registrada na auditoria e não pode ser desfeita.")) return;
+  const before = snapshotOf(customerId);
+  if (!confirm(`Excluir ${before?.name || 'esta oportunidade'}? Você pode desfazer logo em seguida; depois disso, não.`)) return;
   try {
     const cust = storage.getCustomer(customerId);
     await storage.deleteCustomer(customerId);
     logAudit(AUDIT_ACTIONS.LEAD_DELETED, { customerId, name: cust?.name, company: cust?.company }, AUDIT_SEVERITY.WARNING);
-    showToast("Oportunidade excluída.", "info");
+    showToast(`${cust?.name || 'Oportunidade'} excluída.`, "info", undoAction(before, 'Oportunidade restaurada.'));
   } catch (err) {
     showToast("Erro ao excluir: " + err.message, "error");
   }
