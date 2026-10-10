@@ -1566,3 +1566,12 @@ a.dropdown-item { text-decoration: none; box-sizing: border-box; }
 /* Owner's panel */
 .cell-sub { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
 #owner-content .figure-row { margin-bottom: 1rem; }
+
+/* Search result found in the notes or in the history */
+.search-snippet { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: var(--text-muted); font-style: normal; white-space: normal; }
+/* A recurring sale on its card */
+.lead-recurring { font-size: 0.78rem; font-weight: 400; color: var(--text-secondary); }
+/* What each stage requires */
+.requirements-table th, .requirements-table td { text-align: center; font-size: 0.8rem; }
+.requirements-table th:first-child, .requirements-table td:first-child { text-align: left; white-space: nowrap; }
+.requirements-table input { width: 16px; height: 16px; }

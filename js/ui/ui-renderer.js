@@ -3,6 +3,7 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
+import { goalProgress, recurringRevenue } from '../core/pipeline-rules.js';
 import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
 import { REPORT_PERIODS, periodReport, sellerReportRows } from '../core/report.js';
 import { todayPanel, daysLabel, CLOSING_WINDOW_DAYS } from '../core/today.js';
@@ -235,7 +236,7 @@ function renderLeadCard(customer, permissions = {}) {
 
       ${company ? `<div class="lead-company">${company}</div>` : ''}
 
-      <div class="lead-value">${formatBRL(customer.dealValue)}</div>
+      <div class="lead-value">${formatBRL(customer.dealValue)}${customer.recurring ? '<span class="lead-recurring" title="Venda recorrente: o valor se repete todo mês"> por mês</span>' : ''}</div>
 
       ${meta.length > 0 ? `<div class="lead-meta">${meta.join('')}</div>` : ''}
 
@@ -536,6 +537,24 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     </section>
   ` : '';
 
+  // Each person's goal of the month: everyone to an administrator, their own to a salesperson
+  const monthPeople = periodId === 'month' ? report.people : periodReport(customers, 'month', new Date(), reportMembers(permissions)).people;
+  const myId = getCurrentUser()?.uid;
+  const goalRows = goalProgress(monthPeople, getSavedOrganization().sellerGoals).filter(row => permissions.isAdmin || row.id === myId);
+  const sellerGoalsHtml = goalRows.length === 0 ? '' : `
+    <section class="settings-section" id="seller-goals">
+      <div class="settings-section-head"><div><h2>${permissions.isAdmin ? 'Meta de cada vendedor' : 'Sua meta do mês'}</h2><p>Vendas fechadas neste mês diante da meta.</p></div></div>
+      <div class="bar-list">${goalRows.map(row => barRow(escapeHtml(row.name), `${row.percent}%<strong>${formatBRL(row.sold)} de ${formatBRL(row.goal)}</strong>`, Math.min(100, row.percent), row.percent >= 100 ? 'won' : '')).join('')}</div>
+    </section>`;
+
+  const recurring = recurringRevenue(customers);
+  const recurringHtml = recurring.contracts + recurring.openCount === 0 ? '' : `
+      <div class="figure-box">
+        <div class="figure-label">Receita recorrente por mês</div>
+        <div class="figure-value">${formatBRL(recurring.monthly)}</div>
+        <div class="figure-note">${recurring.contracts} ${recurring.contracts === 1 ? 'venda mensal fechada' : 'vendas mensais fechadas'}${recurring.openCount ? `. Em aberto: ${formatBRL(recurring.inNegotiation)} por mês.` : '.'}</div>
+      </div>`;
+
   // The month's goal is the company's: shown to whoever administers
   const goal = Number(getSavedOrganization().monthlyGoal) || 0;
   const soldThisMonth = periodId === 'month' ? totals.wonValue : periodReport(customers, 'month').totals.wonValue;
@@ -593,6 +612,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     </div>
 
     ${goalHtml}
+    ${sellerGoalsHtml}
 
     <div class="figure-pair">
       <div class="figure-box">
@@ -604,7 +624,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
         <div class="figure-label">Paradas há 3 dias ou mais</div>
         <div class="figure-value">${metrics.rottingCount}</div>
         <div class="figure-note">Oportunidades em aberto sem nenhuma atualização nesse período.</div>
-      </div>
+      </div>${recurringHtml}
     </div>
 
     <section class="settings-section">
@@ -782,7 +802,7 @@ export function renderLeadTimeline(customer) {
     const fact = (label, value) => value ? `<div class="fact"><dt>${label}</dt><dd>${value}</dd></div>` : '';
     summaryEl.innerHTML = `
       <dl class="fact-grid">
-        ${fact('Valor', `<strong>${formatBRL(customer.dealValue)}</strong>`)}
+        ${fact('Valor', `<strong>${formatBRL(customer.dealValue)}</strong>${customer.recurring ? ' por mês' : ''}`)}
         <div class="fact">
           <dt><label for="lead-details-stage">Etapa</label></dt>
           <dd>

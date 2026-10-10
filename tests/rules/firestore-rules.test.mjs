@@ -605,3 +605,11 @@ test('o administrador grava os modelos de mensagem da empresa; lista grande e ve
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: 'texto' }), DENIED);
   assert.equal(await patch(world.ana, `organizations/${world.a.orgId}`, { messageTemplates: [] }), DENIED);
 });
+
+test('exigências por etapa e metas por vendedor: o administrador grava, com o tipo certo; o vendedor não', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  assert.equal(await patch(world.a.owner, org, { stageRequirements: { proposal: ['value', 'closeDate'] }, sellerGoals: { [world.ana.uid]: 15000 } }), OK);
+  assert.equal(await patch(world.a.owner, org, { stageRequirements: ['proposal'] }), DENIED);
+  assert.equal(await patch(world.a.owner, org, { sellerGoals: 'muito' }), DENIED);
+  assert.equal(await patch(world.ana, org, { sellerGoals: { [world.ana.uid]: 1 } }), DENIED);
+});

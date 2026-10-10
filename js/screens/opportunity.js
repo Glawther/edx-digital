@@ -2,6 +2,8 @@
  * EDX Digital - One opportunity: its window (tasks, contacts, history) and the form that creates or edits it
  */
 
+import { getSavedOrganization } from '../core/config.js';
+import { missingForStage, missingMessage } from '../core/pipeline-rules.js';
 import { crmStore, STAGES } from '../core/crm-store.js';
 import { buildContact, CONTACT_TYPES, toLocalInput } from '../core/history.js';
 import { storage } from '../core/storage-manager.js';
@@ -316,6 +318,7 @@ export function setupDialogEvents() {
         expectedCloseDate,
         tags,
         notes,
+        recurring: document.getElementById('input-deal-recurring')?.checked === true,
         custom: collectCustomFieldValues(),
         assignedTo: {
           id: assignedMember.id,
@@ -323,6 +326,16 @@ export function setupDialogEvents() {
           email: assignedMember.email
         }
       };
+
+      // entering a stage (a new opportunity, or one that changes stage here) asks for what the company set
+      const previous = id ? storage.getCustomer(id) : null;
+      if (!previous || previous.stage !== stage) {
+        const missing = missingForStage({ ...(previous || {}), ...customerPayload }, stage, getSavedOrganization().stageRequirements);
+        if (missing.length > 0) {
+          showToast(missingMessage(STAGES.find(st => st.id === stage)?.name || stage, missing), 'warning');
+          return;
+        }
+      }
 
       if (id) {
         customerPayload.id = id;
@@ -379,6 +392,8 @@ window.handleOpenEditCustomer = function(customerId) {
   document.getElementById('input-deal-forecast').value = customer.expectedCloseDate ? customer.expectedCloseDate.split('T')[0] : '';
   document.getElementById('input-customer-tags').value = (customer.tags || []).join(', ');
   document.getElementById('input-customer-notes').value = customer.notes || '';
+  const recurringBox = document.getElementById('input-deal-recurring');
+  if (recurringBox) recurringBox.checked = customer.recurring === true;
 
   const assignedSelect = document.getElementById('input-customer-assigned');
   if (assignedSelect) {

@@ -823,6 +823,10 @@
               <select id="input-customer-assigned" class="form-select"></select>
             </div>
           </div>
+          <label class="consent-line" style="margin-top: 0.75rem;">
+            <input type="checkbox" id="input-deal-recurring">
+            <span>Venda recorrente: o valor se repete todo mês (mensalidade, assinatura, contrato de serviço).</span>
+          </label>
           <div class="form-grid" id="customer-custom-fields" hidden></div>
         </details>
       </div>
@@ -1187,6 +1191,10 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
 
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">O que cada etapa exige</h3>
+        <p class="empty-note" style="margin: 0 0 0.85rem;">Marque o que uma oportunidade precisa ter para entrar em cada etapa. Sem o que foi marcado, o sistema não deixa mover e diz o que falta.</p>
+        <div class="table-scroll" id="customize-requirements"></div>
+
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Mensagens do WhatsApp</h3>
         <p class="empty-note" style="margin: 0 0 0.5rem;">Os modelos que a equipe vê ao escrever para um cliente. Sem nenhum modelo aqui, valem os quatro modelos padrão do sistema.</p>
         <p class="empty-note" style="margin: 0 0 0.85rem;" id="customize-template-fields"></p>
@@ -1200,6 +1208,8 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
           <label for="customize-goal">Meta (R$)</label>
           <input type="text" id="customize-goal" class="form-input" inputmode="decimal" placeholder="0,00" autocomplete="off">
         </div>
+        <p class="empty-note" style="margin: 1rem 0 0.6rem;">Meta de cada pessoa, se quiser acompanhar uma a uma. Cada vendedor vê a própria em Relatórios. Deixe em branco para quem não tem meta.</p>
+        <div class="form-grid" id="customize-seller-goals"></div>
       </div>
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-customize">Cancelar</button>

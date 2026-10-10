@@ -68,6 +68,7 @@ export const TASK_TYPES = [
   { id: 'followup', label: 'Retorno', icon: '' }
 ];
 
+import { matchCustomer } from './pipeline-rules.js';
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';
 import { matchesFocus, countAttention } from './attention.js';
 
@@ -227,10 +228,8 @@ class CRMStore {
       if (!matchesFocus(c, this.focus)) return false;
       // Search filter
       if (this.searchQuery) {
-        const target = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
-        if (target.includes(this.searchQuery)) return true;
-        const digits = this.searchQuery.replace(/\D/g, '');
-        return digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits);
+        // the same search as the box at the top: name, company, phone, and what was written or said
+        return matchCustomer(c, this.searchQuery) !== null;
       }
       return true;
     });

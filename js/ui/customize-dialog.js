@@ -7,7 +7,10 @@
 import { getSavedOrganization, saveOrganization } from '../core/config.js';
 import { STAGES, getDefaultStageNames } from '../core/crm-store.js';
 import { escapeHtml, showToast } from './ui-renderer.js';
-import { isAdmin, isReadOnly } from '../services/auth-service.js';
+import { isAdmin, isReadOnly, isCloudSession, getCurrentUser } from '../services/auth-service.js';
+import { getEmployees } from '../services/employee-service.js';
+import { crmStore } from '../core/crm-store.js';
+import { REQUIREMENT_FIELDS, REQUIREMENT_STAGES, cleanRequirements, cleanSellerGoals } from '../core/pipeline-rules.js';
 import { parseMoney } from '../services/import-service.js';
 import {
   FIELD_TYPES, MAX_CUSTOM_FIELDS, MAX_LABEL_LENGTH, cleanStageNames, cleanCustomFields, formatCustomValue, readCustomValues
@@ -147,6 +150,50 @@ export function setupCustomizeDialog() {
     renderTemplates();
   });
 
+  // ---- what each stage asks for, and each person's goal
+  const requirementsBox = document.getElementById('customize-requirements');
+  const goalsBox = document.getElementById('customize-seller-goals');
+
+  function renderRequirements(saved) {
+    const current = cleanRequirements(saved);
+    requirementsBox.innerHTML = `
+      <table class="plain-table requirements-table">
+        <thead><tr><th>Para entrar em</th>${REQUIREMENT_FIELDS.map(field => `<th>${field.label}</th>`).join('')}</tr></thead>
+        <tbody>
+          ${REQUIREMENT_STAGES.map(stageId => `
+            <tr>
+              <td>${escapeHtml(STAGES.find(stage => stage.id === stageId)?.name || stageId)}</td>
+              ${REQUIREMENT_FIELDS.map(field => `<td><input type="checkbox" data-stage="${stageId}" data-field="${field.id}" ${(current[stageId] || []).includes(field.id) ? 'checked' : ''} aria-label="${escapeHtml(field.label)} para entrar em ${escapeHtml(STAGES.find(stage => stage.id === stageId)?.name || stageId)}"></td>`).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // In a real account the team list says who is there; in the demonstration, the sample opportunities do
+  function goalMembers() {
+    const members = new Map();
+    if (isCloudSession()) {
+      const me = getCurrentUser();
+      if (me) members.set(me.uid, me.name);
+      getEmployees().filter(person => person.status !== 'blocked').forEach(person => members.set(person.id, person.name));
+    }
+    crmStore.getState().visibleCustomers.forEach(customer => {
+      const id = customer.assignedTo && (customer.assignedTo.id || customer.assignedTo.email);
+      if (id && !members.has(id)) members.set(id, String(customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, ''));
+    });
+    return [...members].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function renderSellerGoals(saved) {
+    const goals = cleanSellerGoals(saved);
+    goalsBox.innerHTML = goalMembers().map(member => `
+      <div class="form-group">
+        <label for="goal-${escapeHtml(member.id)}">${escapeHtml(member.name)}</label>
+        <input type="text" id="goal-${escapeHtml(member.id)}" data-member="${escapeHtml(member.id)}" class="form-input" inputmode="decimal" placeholder="Sem meta" autocomplete="off"
+               value="${goals[member.id] ? goals[member.id].toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}">
+      </div>`).join('');
+  }
+
   btnAdd.addEventListener('click', () => {
     if (fields.length >= MAX_CUSTOM_FIELDS) return;
     fields.push({ label: '', type: 'text' });
@@ -175,6 +222,8 @@ export function setupCustomizeDialog() {
     renderFields();
     templates = cleanTemplates(org.messageTemplates);
     renderTemplates();
+    renderRequirements(org.stageRequirements);
+    renderSellerGoals(org.sellerGoals);
     const goal = Number(org.monthlyGoal) || 0;
     document.getElementById('customize-goal').value = goal > 0 ? goal.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '';
     dialog.showModal();
@@ -201,7 +250,15 @@ export function setupCustomizeDialog() {
       return;
     }
     const monthlyGoal = parseMoney(document.getElementById('customize-goal').value);
-    saveOrganization({ ...getSavedOrganization(), stageNames: cleanStageNames(names, defaults), customFields, messageTemplates, monthlyGoal });
+    const required = {};
+    requirementsBox.querySelectorAll('input[type="checkbox"]:checked').forEach(box => { (required[box.dataset.stage] ||= []).push(box.dataset.field); });
+    const typedGoals = {};
+    goalsBox.querySelectorAll('input[data-member]').forEach(input => { typedGoals[input.dataset.member] = parseMoney(input.value); });
+    saveOrganization({
+      ...getSavedOrganization(),
+      stageNames: cleanStageNames(names, defaults), customFields, messageTemplates, monthlyGoal,
+      stageRequirements: cleanRequirements(required), sellerGoals: cleanSellerGoals(typedGoals)
+    });
     dialog.close();
     showToast('Alterações salvas.', 'success');
   });

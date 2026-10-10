@@ -424,3 +424,57 @@ test('conta recém-criada: o passeio começa sozinho na primeira tela, uma vez s
   await page.waitForTimeout(1500);
   assert.equal(await page.locator('.tour').count(), 0);
 });
+
+test('regras do funil: a etapa exige, o sistema barra a mudança e diz o que falta; meta por vendedor aparece nos relatórios', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+
+  await page.click('#btn-header-tools');
+  await page.click('#btn-menu-customize');
+  await page.check('#customize-requirements input[data-stage="contact"][data-field="company"]');
+  await page.locator('#customize-seller-goals input').first().fill('50.000');
+  await page.click('#customize-form button[type="submit"]');
+  await page.locator('#customize-dialog').waitFor({ state: 'hidden' });
+
+  // uma oportunidade sem empresa não entra em "Primeiro contato"
+  await page.click('#btn-new-lead');
+  await page.fill('#input-customer-name', 'Sem Empresa da Silva');
+  await page.fill('#input-deal-value', '900');
+  await page.locator('#customer-form-more').evaluate(details => { details.open = true; });
+  await page.check('#input-deal-recurring');
+  await page.click('#btn-submit-customer');
+  const card = page.locator('.lead-card', { hasText: 'Sem Empresa da Silva' });
+  await card.waitFor();
+  assert.match(await card.locator('.lead-value').textContent(), /por mês/);
+
+  await card.locator('.move-stage-select').selectOption('contact');
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast')].some(el => /falta: Empresa/.test(el.textContent)));
+  assert.equal(await card.evaluate(el => el.closest('[data-drop]').dataset.drop), 'lead');
+  assert.equal(await card.locator('.move-stage-select').inputValue(), 'lead', 'a lista volta para a etapa em que a oportunidade está');
+
+  await page.click('.nav-item[data-view="metrics"]');
+  await page.locator('#seller-goals .bar-row').first().waitFor();
+  assert.match(await page.textContent('#seller-goals'), /de R\$\s?50\.000/);
+  assert.deepEqual(problems, []);
+});
+
+test('busca: encontra pelo que está no histórico e mostra o trecho', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.fill('#contact-log-text', 'Cliente pediu amostra do produto azul-turquesa');
+  await page.click('#contact-log-form button[type="submit"]');
+  await page.locator('.timeline-item-text', { hasText: 'azul-turquesa' }).waitFor();
+  await page.click('#btn-close-lead-details');
+
+  await page.fill('#global-search-input', 'TURQUESA');
+  const result = page.locator('.search-result').first();
+  await result.waitFor();
+  assert.match(await result.locator('.search-snippet').textContent(), /No histórico: .*azul-turquesa/);
+  assert.equal(await page.locator('.lead-card').count(), 1, 'o funil também filtra pelo histórico');
+  await result.click();
+  await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+  assert.deepEqual(problems, []);
+});
