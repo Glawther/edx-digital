@@ -37,13 +37,13 @@ export function setLocalOnlyMode(enabled) {
 export const defaultOrganization = {
   id: 'org_nexus_default',
   name: 'Empresa Exemplo',
-  legalName: 'Nexus Soluções Comerciais e Tecnologia Ltda',
-  cnpj: '12.345.678/0001-90',
+  legalName: '',
+  cnpj: '',
   logoUrl: '', // Base64 or image URL
   brandColor: '#3b82f6', // Hex color
   plan: 'pro', // 'starter' | 'pro' | 'enterprise'
   planName: 'Nexus Pro',
-  planStatus: 'active', // 'active' | 'trial' | 'past_due'
+  planStatus: 'trial', // 'active' | 'trial' | 'past_due'
   trialDaysLeft: 14,
   maxLeads: 5000,
   maxUsers: 10,

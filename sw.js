@@ -3,7 +3,7 @@
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'nexus-crm-v3.1.0';
+const CACHE_NAME = 'nexus-crm-v3.2.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

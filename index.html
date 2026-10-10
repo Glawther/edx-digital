@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="css/layout.css?v=2.0.0">
   <link rel="stylesheet" href="css/components.css?v=2.0.0">
   <link rel="stylesheet" href="css/animations.css?v=2.0.0">
-  <link rel="stylesheet" href="css/identity.css?v=2.0.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.2.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -252,20 +252,13 @@
         
           <div class="dropdown-menu sidebar-dropdown-menu" id="header-tools-menu" style="display: none;">
             <!-- Inteligência Artificial & Nuvem (Dentro do Menu de Ferramentas) -->
-            <div class="tools-group-title">Inteligência &amp; Nuvem</div>
-            <button type="button" class="dropdown-item" id="sidebar-subscription-btn" onclick="window.openCheckoutModal()">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Assinatura &amp; Planos</span>
-                <span class="dropdown-item-desc">Limites, PIX e cotas do plano</span>
-              </div>
-            </button>
+            <div class="tools-group-title">Conta</div>
 
             <button type="button" class="dropdown-item" id="sidebar-gemini-btn">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Gemini AI Config</span>
-                <span class="dropdown-item-desc">Ajustar chave API e modelos</span>
+                <span class="dropdown-item-title">Inteligência artificial</span>
+                <span class="dropdown-item-desc">Chave do Gemini para as análises</span>
               </div>
             </button>
             
@@ -279,39 +272,39 @@
 
             <div class="dropdown-divider" id="tools-divider-company"></div>
 
-            <div class="tools-group-title" id="tools-group-company">Empresa &amp; Comercial</div>
+            <div class="tools-group-title" id="tools-group-company">Empresa</div>
             <button type="button" class="dropdown-item" id="btn-menu-whitelabel">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Minha Empresa &amp; Whitelabel</span>
-                <span class="dropdown-item-desc">Nome, Logotipo e Cores da Marca</span>
+                <span class="dropdown-item-title">Minha empresa</span>
+                <span class="dropdown-item-desc">Nome, logotipo e cor</span>
               </div>
             </button>
 
             <button type="button" class="dropdown-item" id="btn-menu-billing">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Assinatura &amp; Cota de IA</span>
-                <span class="dropdown-item-desc">Plano Nexus e medidor de consumo</span>
+                <span class="dropdown-item-title">Plano e uso</span>
+                <span class="dropdown-item-desc">Plano atual, limites e assinatura</span>
               </div>
             </button>
 
             <div class="dropdown-divider"></div>
 
-            <div class="tools-group-title">Operações &amp; Dados</div>
+            <div class="tools-group-title">Dados</div>
             <button type="button" class="dropdown-item" id="btn-menu-import">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Importar Leads</span>
-                <span class="dropdown-item-desc">Planilha Excel ou arquivo CSV</span>
+                <span class="dropdown-item-title">Importar contatos</span>
+                <span class="dropdown-item-desc">De uma planilha ou arquivo CSV</span>
               </div>
             </button>
             
             <button type="button" class="dropdown-item" id="btn-menu-export-csv">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Exportar Clientes</span>
-                <span class="dropdown-item-desc">Planilha formatada para Excel (CSV)</span>
+                <span class="dropdown-item-title">Exportar clientes</span>
+                <span class="dropdown-item-desc">Arquivo CSV, abre no Excel</span>
               </div>
             </button>
             
@@ -319,23 +312,23 @@
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
                 <span class="dropdown-item-title">Exportar auditoria</span>
-                <span class="dropdown-item-desc">Relatório de integridade e logs</span>
+                <span class="dropdown-item-desc">Histórico de atividade em CSV</span>
               </div>
             </button>
 
             <button type="button" class="dropdown-item" id="btn-menu-webhook">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Webhooks &amp; Captura de Leads</span>
-                <span class="dropdown-item-desc">Meta Ads, Hotmart, Kiwify e Sites</span>
+                <span class="dropdown-item-title">Receber leads de formulários</span>
+                <span class="dropdown-item-desc">Anúncios, sites e outras ferramentas</span>
               </div>
             </button>
 
             <a href="/landing" class="dropdown-item" style="text-decoration: none; color: inherit;">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Página Comercial &amp; Planos</span>
-                <span class="dropdown-item-desc">Conheça os recursos e preços oficiais</span>
+                <span class="dropdown-item-title">Recursos e planos</span>
+                <span class="dropdown-item-desc">Página de apresentação do produto</span>
               </div>
             </a>
 
@@ -344,16 +337,16 @@
             <button type="button" class="dropdown-item" id="btn-menu-shortcuts">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Atalhos de Teclado</span>
-                <span class="dropdown-item-desc">Guia rápido de produtividade (?)</span>
+                <span class="dropdown-item-title">Atalhos de teclado</span>
+                <span class="dropdown-item-desc">Lista de atalhos</span>
               </div>
             </button>
             
             <button type="button" class="dropdown-item" id="btn-menu-pwa" style="display: none;">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Instalar Aplicativo</span>
-                <span class="dropdown-item-desc">Usar Nexus CRM como App nativo</span>
+                <span class="dropdown-item-title">Instalar o aplicativo</span>
+                <span class="dropdown-item-desc">Abrir o CRM como um app neste aparelho</span>
               </div>
             </button>
           </div>
@@ -435,10 +428,10 @@
         <button type="button" id="btn-install-pwa" style="display: none;"></button>
       </header>
 
-      <!-- Floating Action Button: Nova Oportunidade no Canto Inferior Direito (FAB) -->
+      <!-- Floating Action Button: Nova oportunidade no Canto Inferior Direito (FAB) -->
       <button type="button" class="fab-bottom-right-lead" id="btn-bottom-right-lead" title="Cadastrar nova oportunidade comercial (N)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        <span>Nova Oportunidade</span>
+        <span>Nova oportunidade</span>
       </button>
 
     <!-- ======================================================================
@@ -488,25 +481,21 @@
       <section class="view-section" id="view-customers">
         <div class="table-container">
           <div class="table-header-bar">
-            <h2 style="font-size: 1rem; font-weight: 600;">Todos os Clientes e Oportunidades</h2>
+            <h2 id="customers-count-label">Clientes</h2>
           </div>
           <div style="overflow-x: auto;">
             <table class="crm-table">
               <thead>
                 <tr>
-                  <th>Cliente &amp; Empresa</th>
+                  <th>Cliente</th>
                   <th>Contato</th>
                   <th>Responsável</th>
-                  <th>Valor Negócio</th>
-                  <th>Estágio Atual</th>
-                  <th>Prioridade</th>
-                  <th>Tags</th>
-                  <th style="text-align: right;">Ações</th>
+                  <th class="num">Valor</th>
+                  <th>Etapa</th>
+                  <th></th>
                 </tr>
               </thead>
-              <tbody id="customer-table-body">
-                <!-- Populated dynamically by ui-renderer.js -->
-              </tbody>
+              <tbody id="customer-table-body"></tbody>
             </table>
           </div>
         </div>
@@ -517,13 +506,10 @@
         <div class="tasks-layout">
           <div class="tasks-card">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-              <div>
-                <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">Agenda de Tarefas &amp; Follow-up</h2>
-                <p style="font-size: 0.8rem; color: var(--text-secondary);">Metodologia de Vendas Baseada em Atividades (Activity-Based Selling)</p>
-              </div>
+              <h2 class="section-title">Tarefas</h2>
               <div class="filter-pills" id="task-filter-pills">
                 <span class="filter-pill active" data-task-filter="pending">Pendentes</span>
-                <span class="filter-pill" data-task-filter="today">Para Hoje</span>
+                <span class="filter-pill" data-task-filter="today">Hoje</span>
                 <span class="filter-pill" data-task-filter="all">Todas</span>
                 <span class="filter-pill" data-task-filter="completed">Concluídas</span>
               </div>
@@ -535,37 +521,37 @@
           </div>
 
           <div class="tasks-card">
-            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--text-primary);">Nova Atividade / Tarefa</h3>
+            <h2 class="section-title" style="margin-bottom: 1rem;">Nova tarefa</h2>
             <form id="new-task-form">
               <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label for="task-input-title">Título da Atividade *</label>
-                <input type="text" id="task-input-title" class="form-input" placeholder="Ex: Ligar para alinhar minuta" required>
+                <label for="task-input-title">O que precisa ser feito</label>
+                <input type="text" id="task-input-title" class="form-input" placeholder="Ligar para alinhar a minuta" required>
               </div>
 
               <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label for="task-input-type">Tipo de Atividade</label>
+                <label for="task-input-type">Tipo</label>
                 <select id="task-input-type" class="form-select">
                   <option value="call">Ligação</option>
                   <option value="meeting">Reunião</option>
                   <option value="whatsapp" selected>WhatsApp</option>
-                  <option value="followup">Follow-up / Proposta</option>
+                  <option value="followup">Retorno</option>
                 </select>
               </div>
 
               <div class="form-group" style="margin-bottom: 0.85rem;">
-                <label for="task-input-customer">Vincular a uma Oportunidade *</label>
+                <label for="task-input-customer">Cliente</label>
                 <select id="task-input-customer" class="form-select" required>
                   <!-- Populated dynamically with leads -->
                 </select>
               </div>
 
               <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label for="task-input-date">Data Prevista *</label>
+                <label for="task-input-date">Para quando</label>
                 <input type="date" id="task-input-date" class="form-input" required>
               </div>
 
               <button type="submit" class="btn btn-primary" style="width: 100%;">
-                Agendar Tarefa
+                Agendar tarefa
               </button>
             </form>
           </div>
@@ -574,136 +560,7 @@
 
       <!-- VIEW 4: Detailed Metrics & Sales Intelligence -->
       <section class="view-section" id="view-metrics">
-        <!-- Top Metrics Alert Bar -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-          <div class="table-container" style="padding: 1.25rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-              <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Previsão de Fechamento (Mês)</span>
-              <span style="font-size: 1.1rem; color: #2563eb;"></span>
-            </div>
-            <div class="kpi-value" id="metrics-forecast-value" style="color: #2563eb; font-size: 1.6rem;">R$ 0</div>
-            <p style="font-size: 0.75rem; color: var(--text-muted);">Estimativa de receita com base na data prevista das oportunidades ativas.</p>
-          </div>
-
-          <div class="table-container" style="padding: 1.25rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-              <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Leads Estagnados (Deal Rotting)</span>
-              <span style="font-size: 1.1rem; color: #d97706;"></span>
-            </div>
-            <div class="kpi-value" id="metrics-rotting-value" style="color: #d97706; font-size: 1.6rem;">0</div>
-            <p style="font-size: 0.75rem; color: var(--text-muted);">Oportunidades em aberto sem interação recente há mais de 3 dias.</p>
-          </div>
-        </div>
-
-        <!-- Commercial Target & Commissions Card (Gamificação & Metas de Venda) -->
-        <div class="sales-goals-grid">
-          <div class="goal-card">
-            <div class="goal-header">
-              <span class="goal-title">Meta Comercial da Equipe</span>
-              <span id="target-percentage-badge" style="font-size: 0.75rem; font-weight: 700; color: var(--color-won); background: var(--color-won-bg); padding: 2px 7px; border-radius: 4px;">0% Atingido</span>
-            </div>
-            <div style="display: flex; align-items: baseline; justify-content: space-between;">
-              <div>
-                <span style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary);" id="target-realized-value">R$ 0</span>
-                <span style="font-size: 0.8rem; color: var(--text-muted);"> de R$ 250.000 (Meta Q4)</span>
-              </div>
-            </div>
-            <div class="goal-progress-wrap">
-              <div class="goal-progress-bar">
-                <div class="goal-progress-fill" id="target-progress-fill" style="width: 0%;"></div>
-              </div>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between;">
-              <span id="target-remaining-label">Faltam R$ 0 para a meta máxima</span>
-              <span style="font-weight: 600; color: #10b981;">Acelerador Ativo</span>
-            </div>
-          </div>
-
-          <div class="goal-card">
-            <div class="goal-header">
-              <span class="goal-title">Extrato de Comissões &amp; Desempenho</span>
-              <span style="font-size: 0.72rem; color: var(--text-muted);">Taxa: 5% por negócio ganho</span>
-            </div>
-            <div id="commissions-leaderboard">
-              <!-- Rendered dynamically -->
-            </div>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-          <div class="table-container" style="padding: 1.5rem;">
-            <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Distribuição de Valor por Etapa do Funil</h2>
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">
-              Visão consolidada do volume financeiro alocado em cada fase do ciclo de vendas.
-            </p>
-            <div id="metrics-funnel-bars" style="display: flex; flex-direction: column; gap: 1rem;">
-              <!-- Simple elegant visual distribution bars -->
-              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem;">
-                <span style="color: #0284c7; font-weight: 600;">Novo Lead</span>
-                <span style="color: var(--text-muted);">Início do funil</span>
-              </div>
-              <div style="width: 100%; height: 8px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden;">
-                <div style="height: 100%; width: 45%; background: #0284c7; border-radius: 4px;"></div>
-              </div>
-
-              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; margin-top: 0.5rem;">
-                <span style="color: #d97706; font-weight: 600;">Proposta Enviada</span>
-                <span style="color: var(--text-muted);">Em avaliação</span>
-              </div>
-              <div style="width: 100%; height: 8px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden;">
-                <div style="height: 100%; width: 65%; background: #d97706; border-radius: 4px;"></div>
-              </div>
-
-              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; margin-top: 0.5rem;">
-                <span style="color: #7c3aed; font-weight: 600;">Negociação</span>
-                <span style="color: var(--text-muted);">Fase decisiva</span>
-              </div>
-              <div style="width: 100%; height: 8px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden;">
-                <div style="height: 100%; width: 75%; background: #7c3aed; border-radius: 4px;"></div>
-              </div>
-
-              <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; margin-top: 0.5rem;">
-                <span style="color: #16a34a; font-weight: 600;">Fechado Ganho</span>
-                <span style="color: var(--text-muted);">Convertido</span>
-              </div>
-              <div style="width: 100%; height: 8px; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; overflow: hidden;">
-                <div style="height: 100%; width: 35%; background: #16a34a; border-radius: 4px;"></div>
-              </div>
-            </div>
-          </div>
-
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <!-- Loss Reasons Breakdown Card -->
-            <div class="table-container" style="padding: 1.5rem;">
-              <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem; color: #dc2626;">Análise de Motivos de Perda</h2>
-              <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 1rem;">
-                Razões mais frequentes registradas ao encerrar oportunidades como perdidas.
-              </p>
-              <div id="metrics-loss-reasons" style="display: flex; flex-direction: column; gap: 0.65rem;">
-                <!-- Populated dynamically -->
-              </div>
-            </div>
-
-            <!-- Database Info -->
-            <div class="table-container" style="padding: 1.5rem;">
-              <h2 style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.85rem;">Banco de Dados</h2>
-              <div style="background: var(--bg-deep); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
-                  <span style="width: 8px; height: 8px; border-radius: 50%; background: #16a34a;"></span>
-                  <strong style="font-size: 0.85rem;">Google Cloud Firestore</strong>
-                </div>
-                <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4;">
-                  Sincronização multi-cliente em tempo real via <code>onSnapshot</code>.
-                </p>
-              </div>
-              <ul style="list-style: none; font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.4rem;">
-                <li>✓ Histórico de atividades sincronizado</li>
-                <li>✓ Agenda de tarefas em tempo real</li>
-                <li>✓ Suporte offline nativo</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <div id="metrics-content"></div>
       </section>
 
       <!-- VIEW 5: Team Management & Invites -->
@@ -751,68 +608,38 @@
 
       <!-- VIEW 6: Audit Trail & Logs -->
       <section class="view-section" id="view-audit">
-        <div class="audit-layout">
-          <!-- Audit Stats -->
-          <div class="team-stats-grid" id="audit-stats-grid">
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="audit-stat-total">0</div>
-                <div class="team-stat-label">Total de Registros</div>
-              </div>
-            </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="audit-stat-today">0</div>
-                <div class="team-stat-label">Ações Hoje</div>
-              </div>
-            </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="audit-stat-warnings">0</div>
-                <div class="team-stat-label">Alertas</div>
-              </div>
-            </div>
-            <div class="team-stat-card">
-              <div class="team-stat-icon" style="background: rgba(239,68,68,0.12); color: #ef4444;"></div>
-              <div class="team-stat-data">
-                <div class="team-stat-value" id="audit-stat-critical">0</div>
-                <div class="team-stat-label">Críticos</div>
-              </div>
-            </div>
+        <div class="team-summary" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="team-summary-item">
+            <div class="team-summary-value" id="audit-stat-total">0</div>
+            <div class="team-summary-label">Registros guardados</div>
           </div>
-
-          <!-- Audit Log Table -->
-          <div class="table-container" style="padding: 1.5rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.2rem;"></span>
-                <h2 style="font-size: 1.1rem; font-weight: 700;">Trilha de Auditoria Completa</h2>
-              </div>
-              <button type="button" class="btn btn-outline btn-sm" id="btn-export-audit-csv">
-                Exportar Auditoria (CSV)
-              </button>
-            </div>
-            <div style="overflow-x: auto;">
-              <table class="crm-table" id="audit-table">
-                <thead>
-                  <tr>
-                    <th>Data / Hora</th>
-                    <th>Ação</th>
-                    <th>Severidade</th>
-                    <th>Usuário</th>
-                    <th>Detalhes</th>
-                  </tr>
-                </thead>
-                <tbody id="audit-table-body">
-                  <!-- Populated dynamically -->
-                </tbody>
-              </table>
-            </div>
+          <div class="team-summary-item">
+            <div class="team-summary-value" id="audit-stat-today">0</div>
+            <div class="team-summary-label">Hoje</div>
+          </div>
+          <div class="team-summary-item">
+            <div class="team-summary-value" id="audit-stat-warnings">0</div>
+            <div class="team-summary-label">Pedem atenção</div>
           </div>
         </div>
+
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <div>
+              <h2>Histórico de atividade</h2>
+              <p>Quem fez o quê: entradas, alterações em oportunidades, mudanças na equipe e exportações. Os registros não podem ser editados.</p>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-export-audit-csv">Exportar em CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="plain-table" id="audit-table">
+              <thead>
+                <tr><th>Quando</th><th>O quê</th><th>Quem</th><th>Detalhes</th></tr>
+              </thead>
+              <tbody id="audit-table-body"></tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <!-- VIEW 7: Security & Governance (Tríade CID & RBAC) -->
@@ -833,7 +660,7 @@
        ======================================================================== -->
   <dialog id="customer-dialog" class="crm-dialog">
     <div class="dialog-header">
-      <h2 class="dialog-title" id="customer-dialog-title">Nova Oportunidade / Lead</h2>
+      <h2 class="dialog-title" id="customer-dialog-title">Nova oportunidade</h2>
       <button type="button" class="action-btn" id="btn-close-customer-dialog" aria-label="Fechar modal">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -845,37 +672,37 @@
       <div class="dialog-body">
         <div class="form-grid">
           <div class="form-group full-width">
-            <label for="input-customer-name">Nome do Contato *</label>
-            <input type="text" id="input-customer-name" class="form-input" placeholder="Ex: Mariana Albuquerque" required>
+            <label for="input-customer-name">Nome do contato</label>
+            <input type="text" id="input-customer-name" class="form-input" placeholder="Mariana Albuquerque" required>
           </div>
 
           <div class="form-group">
-            <label for="input-customer-company">Empresa / Organização</label>
-            <input type="text" id="input-customer-company" class="form-input" placeholder="Ex: TechCorp Inovações">
+            <label for="input-customer-company">Empresa</label>
+            <input type="text" id="input-customer-company" class="form-input" placeholder="Albuquerque Móveis">
           </div>
 
           <div class="form-group">
-            <label for="input-customer-role">Cargo / Posição</label>
-            <input type="text" id="input-customer-role" class="form-input" placeholder="Ex: Diretora de Tecnologia">
+            <label for="input-customer-role">Cargo</label>
+            <input type="text" id="input-customer-role" class="form-input" placeholder="Diretora de compras">
           </div>
 
           <div class="form-group">
-            <label for="input-customer-email">Email Corporativo</label>
+            <label for="input-customer-email">E-mail</label>
             <input type="email" id="input-customer-email" class="form-input" placeholder="mariana@empresa.com">
           </div>
 
           <div class="form-group">
-            <label for="input-customer-phone">Telefone / WhatsApp</label>
+            <label for="input-customer-phone">Telefone ou WhatsApp</label>
             <input type="tel" id="input-customer-phone" class="form-input" placeholder="+55 11 98888-7777">
           </div>
 
           <div class="form-group">
-            <label for="input-deal-value">Valor da Oportunidade (R$) *</label>
+            <label for="input-deal-value">Valor (R$)</label>
             <input type="number" id="input-deal-value" class="form-input" placeholder="50000" min="0" step="0.01" inputmode="decimal" required>
           </div>
 
           <div class="form-group">
-            <label for="input-deal-stage">Estágio Inicial do Funil</label>
+            <label for="input-deal-stage">Etapa do funil</label>
             <select id="input-deal-stage" class="form-select">
               <option value="lead">Novo Lead</option>
               <option value="contact">Primeiro Contato</option>
@@ -889,19 +716,19 @@
           <div class="form-group">
             <label for="input-deal-priority">Prioridade</label>
             <select id="input-deal-priority" class="form-select">
-              <option value="high">Alta Prioridade</option>
-              <option value="medium" selected>Média Prioridade</option>
-              <option value="low">Baixa Prioridade</option>
+              <option value="high">Alta</option>
+              <option value="medium" selected>Média</option>
+              <option value="low">Baixa</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="input-deal-forecast">Previsão de Fechamento</label>
+            <label for="input-deal-forecast">Previsão de fechamento</label>
             <input type="date" id="input-deal-forecast" class="form-input" title="Data prevista para assinatura ou fechamento">
           </div>
 
           <div class="form-group">
-            <label for="input-customer-tags">Tags / Etiquetas (separadas por vírgula)</label>
+            <label for="input-customer-tags">Etiquetas, separadas por vírgula</label>
             <input type="text" id="input-customer-tags" class="form-input" placeholder="Indicação, Varejo, Urgente">
           </div>
 
@@ -915,15 +742,15 @@
           </div>
 
           <div class="form-group full-width">
-            <label for="input-customer-notes">Anotações / Resumo da Oportunidade</label>
-            <textarea id="input-customer-notes" class="form-textarea" placeholder="Detalhes da conversa, principais dores do cliente e próximos passos..."></textarea>
+            <label for="input-customer-notes">Anotações</label>
+            <textarea id="input-customer-notes" class="form-textarea" placeholder="O que o cliente precisa, o que foi combinado e o próximo passo. Este texto vai para a proposta."></textarea>
           </div>
         </div>
       </div>
 
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-customer-dialog">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-submit-customer">Salvar Oportunidade</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-customer">Salvar</button>
       </div>
     </form>
   </dialog>
@@ -934,8 +761,7 @@
   <dialog id="loss-reason-dialog" class="crm-dialog" style="max-width: 500px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="color: #dc2626; font-size: 1.2rem;"></span>
-        <h2 class="dialog-title">Qual o motivo da perda?</h2>
+        <h2 class="dialog-title">Por que esta oportunidade foi perdida?</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-loss-dialog" aria-label="Fechar modal">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -946,31 +772,31 @@
       <input type="hidden" id="loss-customer-id">
       <div class="dialog-body">
         <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem;">
-          Registrar o motivo de perda ajuda a entender objeções comerciais e aprimorar a estratégia de vendas.
+          O motivo aparece em Relatórios e ajuda a ver por que as vendas não fecham.
         </p>
 
         <div class="form-group" style="margin-bottom: 1rem;">
-          <label for="select-loss-reason">Motivo Principal *</label>
+          <label for="select-loss-reason">Motivo</label>
           <select id="select-loss-reason" class="form-select" required>
-            <option value="price">Preço / Orçamento insuficiente</option>
-            <option value="competitor">Optou pelo Concorrente</option>
-            <option value="timing">Timing / Projeto adiado</option>
-            <option value="features">Falta de recursos / Produto</option>
-            <option value="ghosting">Parou de responder (Ghosting)</option>
-            <option value="cancelled">Iniciativa cancelada pelo cliente</option>
+            <option value="price">Preço ou orçamento</option>
+            <option value="competitor">Fechou com um concorrente</option>
+            <option value="timing">Projeto adiado</option>
+            <option value="features">O produto não atendia</option>
+            <option value="ghosting">Parou de responder</option>
+            <option value="cancelled">O cliente desistiu da compra</option>
             <option value="other">Outro motivo</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="input-loss-details">Observações / Detalhes Adicionais</label>
-          <textarea id="input-loss-details" class="form-textarea" placeholder="Ex: Fechou com concorrente X por causa de prazo de entrega..."></textarea>
+          <label for="input-loss-details">Detalhes (opcional)</label>
+          <textarea id="input-loss-details" class="form-textarea" placeholder="Fechou com outro fornecedor por causa do prazo de entrega"></textarea>
         </div>
       </div>
 
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-loss-dialog">Cancelar</button>
-        <button type="submit" class="btn btn-primary" style="background: #dc2626; border-color: #dc2626;">Confirmar Perda</button>
+        <button type="submit" class="btn btn-primary">Marcar como perdida</button>
       </div>
     </form>
   </dialog>
@@ -995,13 +821,13 @@
       <!-- Quick Action Toolbar -->
       <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
-          Registrar Ligação
+          Registrar ligação
         </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-meeting">
-          Registrar Reunião
+          Registrar reunião
         </button>
         <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-note">
-          Adicionar Nota
+          Adicionar nota
         </button>
       </div>
 
@@ -1009,16 +835,16 @@
       <div id="quick-activity-form-container" style="display: none; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
         <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);" id="quick-activity-title">Registrar Interação</h4>
         <input type="hidden" id="quick-activity-type" value="note">
-        <textarea id="quick-activity-text" class="form-textarea" placeholder="Descreva os pontos principais da conversa..." style="min-height: 70px; margin-bottom: 0.75rem;"></textarea>
+        <textarea id="quick-activity-text" class="form-textarea" placeholder="O que foi conversado" style="min-height: 70px; margin-bottom: 0.75rem;"></textarea>
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
           <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-quick-activity">Cancelar</button>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-save-quick-activity">Salvar Registro</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-quick-activity">Salvar</button>
         </div>
       </div>
 
       <!-- Timeline Title -->
       <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>Linha do Tempo &amp; Histórico</span>
+        <span>Histórico</span>
       </h3>
 
       <div class="timeline-container" id="lead-details-timeline">
@@ -1031,67 +857,6 @@
     </div>
   </dialog>
 
-  <!-- ========================================================================
-       MODAL: Google Cloud Firestore Config Dialog
-       ======================================================================== -->
-  <dialog id="firebase-dialog" class="crm-dialog">
-    <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        <h2 class="dialog-title">Conexão com Google Cloud Firestore</h2>
-      </div>
-      <button type="button" class="action-btn" id="btn-close-firebase-dialog" aria-label="Fechar modal">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <form id="firebase-config-form">
-      <div class="dialog-body">
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-          <strong>Como obter suas chaves:</strong> Acesse seu <a href="https://console.firebase.google.com/" target="_blank" rel="noopener" style="color: #2563eb; text-decoration: underline; font-weight: 500;">Console do Firebase</a>, selecione seu projeto, vá em <em>Configurações do Projeto (ícone de engrenagem) &gt; Seus Aplicativos (Web &lt;/&gt;)</em> e copie as credenciais abaixo:
-        </div>
-
-        <div class="form-grid">
-          <div class="form-group full-width">
-            <label for="fb-input-projectid">Project ID *</label>
-            <input type="text" id="fb-input-projectid" class="form-input" placeholder="ex: meu-crm-firebase-123" required>
-          </div>
-
-          <div class="form-group full-width">
-            <label for="fb-input-apikey">API Key (Web) *</label>
-            <input type="password" id="fb-input-apikey" class="form-input" placeholder="AIzaSy..." required>
-          </div>
-
-          <div class="form-group">
-            <label for="fb-input-authdomain">Auth Domain</label>
-            <input type="text" id="fb-input-authdomain" class="form-input" placeholder="meu-crm.firebaseapp.com">
-          </div>
-
-          <div class="form-group">
-            <label for="fb-input-storagebucket">Storage Bucket</label>
-            <input type="text" id="fb-input-storagebucket" class="form-input" placeholder="meu-crm.appspot.com">
-          </div>
-
-          <div class="form-group full-width">
-            <label for="fb-input-appid">App ID</label>
-            <input type="text" id="fb-input-appid" class="form-input" placeholder="1:123456789:web:abcdef">
-          </div>
-        </div>
-      </div>
-
-      <div class="dialog-footer">
-        <button type="button" class="btn btn-danger-ghost" id="btn-disconnect-firebase" style="display: none; margin-right: auto;">
-          Desconectar / Voltar ao Modo Local
-        </button>
-        <button type="button" class="btn btn-outline" id="btn-cancel-firebase-dialog">Fechar</button>
-        <button type="submit" class="btn btn-primary" id="btn-save-firebase">Conectar e Sincronizar</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- ========================================================================
-       MODAL 3: Gemini AI Analysis Modal
-       ======================================================================== -->
   <dialog id="gemini-dialog" class="crm-dialog" style="max-width: 650px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
@@ -1099,7 +864,7 @@
           
         </div>
         <div>
-          <h2 class="dialog-title" id="gemini-dialog-customer-name">Análise com Google Gemini AI</h2>
+          <h2 class="dialog-title" id="gemini-dialog-customer-name">Análise da oportunidade</h2>
           <div style="font-size: 0.75rem; color: var(--text-muted);" id="gemini-dialog-customer-meta">Oportunidade Comercial</div>
         </div>
       </div>
@@ -1111,9 +876,8 @@
     <div class="dialog-body" id="gemini-dialog-body">
       <!-- Loading State -->
       <div id="gemini-loading" style="text-align: center; padding: 3rem 1rem;">
-        <div class="gemini-sparkle-icon" style="font-size: 2.5rem; margin-bottom: 1rem; display: inline-block; color: #2563eb;"></div>
-        <p style="font-weight: 600; color: var(--text-primary);">O Google Gemini está analisando esta oportunidade...</p>
-        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">Calculando probabilidade de conversão, riscos e gerando proposta personalizada.</p>
+        <p style="font-weight: 600; color: var(--text-primary);">Analisando a oportunidade</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">Isso leva alguns segundos.</p>
       </div>
 
       <!-- Results View -->
@@ -1121,7 +885,7 @@
         <!-- Probability Gauge -->
         <div class="gemini-insight-card">
           <div class="gemini-insight-title">
-            <span>Probabilidade de Fechamento</span>
+            <span>Chance estimada de fechar</span>
             <span id="gemini-probability-number" style="font-size: 1rem; color: #10b981; margin-left: auto;">0%</span>
           </div>
           <div class="probability-bar-wrapper">
@@ -1133,27 +897,27 @@
         <!-- Key Points & Objections -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
           <div class="gemini-insight-card" style="margin-bottom: 0;">
-            <div class="gemini-insight-title" style="color: #38bdf8;">✓ Pontos Estratégicos</div>
+            <div class="gemini-insight-title" style="color: #38bdf8;">Pontos a favor</div>
             <ul id="gemini-keypoints-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
           <div class="gemini-insight-card" style="margin-bottom: 0;">
-            <div class="gemini-insight-title" style="color: #f59e0b;">Como Contornar Objeções</div>
+            <div class="gemini-insight-title" style="color: #f59e0b;">Objeções prováveis e como responder</div>
             <ul id="gemini-objections-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
         </div>
 
         <!-- Recommended Action -->
         <div class="gemini-insight-card" style="border-left: 3px solid #10b981;">
-          <div class="gemini-insight-title" style="color: #10b981;">Próxima Ação Recomendada</div>
+          <div class="gemini-insight-title" style="color: #10b981;">Próximo passo sugerido</div>
           <p id="gemini-recommended-action" style="font-size: 0.85rem; color: var(--text-primary); font-weight: 500;"></p>
         </div>
 
         <!-- Commercial Email Draft -->
         <div class="gemini-insight-card">
           <div class="gemini-insight-title" style="display: flex; align-items: center; justify-content: space-between;">
-            <span>Rascunho de E-mail de Proposta</span>
+            <span>Rascunho de e-mail</span>
             <button type="button" class="btn btn-outline btn-sm" id="btn-copy-proposal-email" style="font-size: 0.75rem; padding: 2px 8px;">
-              Copiar E-mail
+              Copiar e-mail
             </button>
           </div>
           <div class="email-draft-box" id="gemini-email-draft"></div>
@@ -1172,8 +936,7 @@
   <dialog id="gemini-key-dialog" class="crm-dialog">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="color: #a855f7; font-size: 1.2rem;"></span>
-        <h2 class="dialog-title">Chave de API do Google Gemini</h2>
+        <h2 class="dialog-title">Chave do Google Gemini</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-gemini-key-dialog" aria-label="Fechar modal">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1183,7 +946,7 @@
     <form id="gemini-key-form">
       <div class="dialog-body">
         <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-          <strong>Opcional:</strong> Se você já possui uma chave de API do Gemini (obtida gratuitamente em <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color: #2563eb; text-decoration: underline; font-weight: 500;">Google AI Studio</a>), insira-a abaixo para ativar a inteligência artificial em tempo real. Se deixar em branco, o CRM utilizará o motor heurístico inteligente de análise de vendas.
+          <strong>Opcional:</strong> Se você já possui uma chave de API do Gemini (obtida gratuitamente em <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color: #2563eb; text-decoration: underline; font-weight: 500;">Google AI Studio</a>), cole abaixo para as análises usarem o Gemini. Sem chave, a análise é feita por regras simples, sem IA.
         </div>
 
         <div class="form-group">
@@ -1194,7 +957,7 @@
 
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-gemini-key">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-save-gemini-key">Salvar Chave</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-gemini-key">Salvar</button>
       </div>
     </form>
   </dialog>
@@ -1204,10 +967,7 @@
        ======================================================================== -->
   <dialog id="proposal-dialog" class="crm-dialog" style="max-width: 820px; width: 95%;">
     <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;"></span>
-        <h2 class="dialog-title" id="proposal-dialog-title">Proposta Comercial Executiva</h2>
-      </div>
+      <h2 class="dialog-title" id="proposal-dialog-title">Proposta comercial</h2>
       <button type="button" class="action-btn" id="btn-close-proposal-dialog" aria-label="Fechar proposta">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -1215,76 +975,44 @@
 
     <div class="dialog-body" style="padding: 1.5rem;">
       <div class="proposal-sheet" id="proposal-print-area">
-        <!-- Timbre / Header -->
         <div class="proposal-letterhead">
           <div>
-            <div class="proposal-company-name">NEXUS CRM</div>
-            <div style="font-size: 0.85rem; color: #475569; font-weight: 500;">Soluções Corporativas em Gestão e Vendas</div>
-            <div style="font-size: 0.78rem; color: #64748b;">CNPJ 12.345.678/0001-90 • contato@nexuscrm.com • (11) 4002-8922</div>
+            <div class="proposal-company-name" id="prop-issuer-name"></div>
+            <div class="proposal-issuer-line" id="prop-issuer-details"></div>
           </div>
           <div class="proposal-meta-box">
-            <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;" id="prop-number">PROP-2026-001</div>
-            <div>Emissão: <strong id="prop-date">24/09/2026</strong></div>
-            <div>Validade: <strong>15 dias corridos</strong></div>
+            <div class="proposal-number" id="prop-number"></div>
+            <div>Emitida em <strong id="prop-date"></strong></div>
+            <div>Válida por 15 dias</div>
           </div>
         </div>
 
-        <!-- Dados das Partes -->
-        <div class="proposal-section-title">1. Dados do Cliente &amp; Proponente</div>
-        <div class="proposal-info-grid">
-          <div class="proposal-info-block">
-            <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700;">Cliente / Contratante</div>
-            <div><strong>Nome:</strong> <span id="prop-client-name">-</span></div>
-            <div><strong>Empresa:</strong> <span id="prop-client-company">-</span></div>
-            <div><strong>Cargo:</strong> <span id="prop-client-role">-</span></div>
-            <div><strong>E-mail:</strong> <span id="prop-client-email">-</span></div>
-            <div><strong>Telefone:</strong> <span id="prop-client-phone">-</span></div>
-          </div>
-          <div class="proposal-info-block">
-            <div style="font-size: 0.72rem; text-transform: uppercase; color: #64748b; font-weight: 700;">Consultor Comercial / Nexus CRM</div>
-            <div><strong>Responsável:</strong> <span id="prop-assigned-name">Lucas Mendes</span></div>
-            <div><strong>E-mail Comercial:</strong> <span id="prop-assigned-email">lucas.vendas@nexuscrm.com</span></div>
-            
-          </div>
+        <div class="proposal-section-title">Para</div>
+        <div class="proposal-block">
+          <div><strong id="prop-client-name"></strong><span id="prop-client-role"></span></div>
+          <div id="prop-client-company"></div>
+          <div id="prop-client-contact"></div>
         </div>
 
-        <!-- Objeto e Escopo -->
-        <div class="proposal-section-title">2. Objeto da Proposta &amp; Escopo da Solução</div>
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.6; color: #334155;">
-          <p id="prop-scope-text" style="margin-bottom: 0.75rem;">
-            Fornecimento de solução corporativa integrada Nexus CRM com automação de funil de vendas, módulo de inteligência artificial Gemini para qualificação de oportunidades e sincronização em nuvem.
-          </p>
-          <ul style="padding-left: 1.25rem; color: #475569; font-size: 0.82rem;">
-            <li>Licenciamento completo e suporte técnico comercial especializado.</li>
-            <li>Auditoria contínua de transações com histórico de atividades.</li>
-            <li>Integração de comunicação rápida via WhatsApp com templates executivos.</li>
-          </ul>
-        </div>
+        <div class="proposal-section-title">O que está sendo proposto</div>
+        <div class="proposal-block" id="prop-scope-text"></div>
 
-        <!-- Investimento -->
-        <div class="proposal-section-title">3. Investimento &amp; Condições Comerciais</div>
+        <div class="proposal-section-title">Valor</div>
         <div class="proposal-price-box">
-          <div>
-            <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: #166534;">Valor Total do Investimento</div>
-            <div class="proposal-price-val" id="prop-price-display">R$ 0,00</div>
-            <div style="font-size: 0.75rem; color: #15803d;">Faturamento direto com emissão de Nota Fiscal de Serviços</div>
-          </div>
-          <div style="text-align: right; font-size: 0.82rem; color: #334155; line-height: 1.4;">
-            <div><strong>Condição Especial:</strong> 5% de desconto à vista</div>
-            <div><strong>Parcelamento:</strong> Até 3x sem juros (PIX / Boleto)</div>
-            <div><strong>Início das Atividades:</strong> Imediato após aceite</div>
-          </div>
+          <div class="proposal-price-val" id="prop-price-display"></div>
         </div>
 
-        <!-- Assinaturas -->
+        <div class="proposal-block proposal-contact">
+          Dúvidas sobre esta proposta: <span id="prop-assigned-name"></span>, <span id="prop-assigned-email"></span>
+        </div>
+
         <div class="proposal-signatures">
           <div class="proposal-sign-line">
-            <strong id="prop-sign-client">Cliente</strong><br>
-            De Acordo / Assinatura do Contratante
+            <strong id="prop-sign-client"></strong><br>
+            De acordo
           </div>
           <div class="proposal-sign-line">
-            <strong>NEXUS CRM SOLUÇÕES CORPORATIVAS</strong><br>
-            Diretoria Comercial &amp; Vendas
+            <strong id="prop-sign-issuer"></strong>
           </div>
         </div>
       </div>
@@ -1292,12 +1020,8 @@
 
     <div class="dialog-footer" style="justify-content: space-between;">
       <div style="display: flex; gap: 0.5rem;">
-        <button type="button" class="btn btn-outline" id="btn-print-proposal">
-          Imprimir / Salvar PDF
-        </button>
-        <button type="button" class="btn btn-outline" id="btn-send-proposal-wa" style="color: #15803d; border-color: #bbf7d0;">
-          Enviar no WhatsApp
-        </button>
+        <button type="button" class="btn btn-outline" id="btn-print-proposal">Imprimir ou salvar em PDF</button>
+        <button type="button" class="btn btn-outline" id="btn-send-proposal-wa">Avisar pelo WhatsApp</button>
       </div>
       <button type="button" class="btn btn-primary" id="btn-close-proposal-footer">Fechar</button>
     </div>
@@ -1309,8 +1033,7 @@
   <dialog id="import-dialog" class="crm-dialog" style="max-width: 680px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;"></span>
-        <h2 class="dialog-title">Importar Leads (Planilha Excel / CSV)</h2>
+        <h2 class="dialog-title">Importar contatos</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-import-dialog" aria-label="Fechar importador">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1319,19 +1042,19 @@
 
     <div class="dialog-body">
       <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-        <strong>Importação Rápida:</strong> Carregue um arquivo <code>.csv</code> ou cole seus contatos abaixo. Formato recomendado por linha:<br>
+        <strong></strong> Carregue um arquivo <code>.csv</code> ou cole seus contatos abaixo. Formato recomendado por linha:<br>
         <code>Nome, Empresa, Telefone, Valor Estimado, Email</code>
       </div>
 
       <div class="import-dropzone" id="import-dropzone-area">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" style="margin-bottom: 0.5rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.25rem;">Clique para selecionar arquivo .CSV ou arraste aqui</div>
-        <div style="font-size: 0.75rem; color: var(--text-muted);">Suporta arquivos exportados do Excel, Google Sheets ou outros CRMs</div>
+        <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 0.25rem;">Clique para escolher um arquivo .csv, ou arraste para cá</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Serve o arquivo exportado do Excel, do Google Planilhas ou de outro CRM</div>
         <input type="file" id="input-csv-file" accept=".csv, .txt" style="display: none;">
       </div>
 
       <div class="form-group" style="margin-bottom: 1rem;">
-        <label for="textarea-import-raw">Ou Cole sua Lista de Contatos Aqui:</label>
+        <label for="textarea-import-raw">Ou cole a lista aqui</label>
         <textarea id="textarea-import-raw" class="form-textarea" rows="4" placeholder="Exemplo:
 Marcos Vinicius, Banco Safra, +55 11 98888-1111, 45000, marcos@safra.com.br
 Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"></textarea>
@@ -1359,7 +1082,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
 
     <div class="dialog-footer">
       <button type="button" class="btn btn-outline" id="btn-cancel-import">Cancelar</button>
-      <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled>Confirmar e Inserir no Pipeline</button>
+      <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled>Importar</button>
     </div>
   </dialog>
 
@@ -1385,13 +1108,12 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   </dialog>
 
   <!-- ========================================================================
-       MODAL 8: Guia de Atalhos de Teclado (?)
+       MODAL 8: Guia de Atalhos de teclado (?)
        ======================================================================== -->
   <dialog id="shortcuts-dialog" class="crm-dialog" style="max-width: 520px; width: 90%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <span style="font-size: 1.25rem;"></span>
-        <h2 class="dialog-title">Atalhos de Teclado</h2>
+        <h2 class="dialog-title">Atalhos de teclado</h2>
       </div>
       <button type="button" class="action-btn" id="btn-close-shortcuts-dialog" aria-label="Fechar atalhos">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1423,32 +1145,32 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           </div>
         </div>
         <div>
-          <div class="shortcuts-column-title">Ações Rápidas</div>
+          <div class="shortcuts-column-title">Ações</div>
           <div class="shortcut-row">
-            <span>Busca / Comandos</span>
+            <span>Busca e comandos</span>
             <kbd class="kbd-badge">Ctrl K</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Nova Oportunidade</span>
+            <span>Nova oportunidade</span>
             <kbd class="kbd-badge">N</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Importar Leads</span>
+            <span>Importar contatos</span>
             <kbd class="kbd-badge">I</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Atalhos de Ajuda</span>
+            <span>Esta lista</span>
             <kbd class="kbd-badge">?</kbd>
           </div>
           <div class="shortcut-row">
-            <span>Fechar Janela</span>
+            <span>Fechar janela</span>
             <kbd class="kbd-badge">Esc</kbd>
           </div>
         </div>
       </div>
     </div>
     <div class="dialog-footer">
-      <button type="button" class="btn btn-primary" id="btn-close-shortcuts-footer">Entendido</button>
+      <button type="button" class="btn btn-primary" id="btn-close-shortcuts-footer">Fechar</button>
     </div>
   </dialog>
 
@@ -1458,7 +1180,6 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="employee-dialog" class="crm-dialog" style="max-width: 620px;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.6rem;">
-        <span style="font-size: 1.25rem;"></span>
         <div>
           <h2 class="dialog-title" id="employee-dialog-title">Cadastrar colaborador</h2>
         </div>
@@ -1603,12 +1324,9 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="whitelabel-dialog" class="crm-dialog" style="max-width: 600px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          
-        </div>
         <div>
-          <h2 class="dialog-title">Minha Empresa &amp; Whitelabel</h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Identidade Visual, Nome da Empresa e Cores da Marca</span>
+          <h2 class="dialog-title">Minha empresa</h2>
+          <span style="font-size: 0.72rem; color: var(--text-secondary);">O nome, o logotipo e a cor aparecem no CRM e nas propostas.</span>
         </div>
       </div>
       <button type="button" class="dialog-close" id="btn-close-whitelabel-dialog" aria-label="Fechar">&times;</button>
@@ -1625,27 +1343,24 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             </div>
             <div>
               <div id="whitelabel-preview-name" style="font-weight: 700; font-size: 1rem; color: var(--text-primary);">Nexus CRM</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">Prévia da sua marca no sistema</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Como fica na lateral do CRM</div>
             </div>
           </div>
-          <span class="badge" style="background: var(--color-primary-light); color: var(--color-primary); border: 1px solid var(--color-primary); font-size: 0.75rem; font-weight: 600;">
-            PRODUTO LICENCIADO
-          </span>
         </div>
 
         <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
           <div class="form-group">
-            <label for="whitelabel-input-name">Nome Fantasia / Marca *</label>
+            <label for="whitelabel-input-name">Nome da empresa</label>
             <input type="text" id="whitelabel-input-name" class="form-input" placeholder="Ex: Vanguard Negócios" required>
           </div>
           <div class="form-group">
-            <label for="whitelabel-input-legal">Razão Social / CNPJ</label>
+            <label for="whitelabel-input-legal">Razão social e CNPJ</label>
             <input type="text" id="whitelabel-input-legal" class="form-input" placeholder="Ex: 00.000.000/0001-00">
           </div>
         </div>
 
         <div class="form-group">
-          <label for="whitelabel-input-logo">Logotipo da Empresa (URL ou Arquivo)</label>
+          <label for="whitelabel-input-logo">Logotipo (endereço da imagem ou arquivo)</label>
           <div style="display: flex; gap: 0.5rem;">
             <input type="text" id="whitelabel-input-logo" class="form-input" placeholder="https://suaempresa.com/logo.png">
             <label class="btn btn-secondary btn-sm" style="cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;">
@@ -1653,11 +1368,11 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
               <input type="file" id="whitelabel-file-logo" accept="image/*" style="display: none;">
             </label>
           </div>
-          <span style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">Recomendado: imagem transparente PNG ou SVG.</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; display: block;">De preferência PNG ou SVG com fundo transparente.</span>
         </div>
 
         <div class="form-group">
-          <label>Cor Primária da Marca</label>
+          <label>Cor da marca</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.35rem;">
             <button type="button" class="whitelabel-color-btn active" data-color="#3b82f6" style="background: #3b82f6; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;" title="Azul Nexus"></button>
             <button type="button" class="whitelabel-color-btn" data-color="#10b981" style="background: #10b981; width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;" title="Verde Esmeralda"></button>
@@ -1666,7 +1381,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
             <button type="button" class="whitelabel-color-btn" data-color="#ef4444" style="background: #ef4444; width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;" title="Vermelho Rubi"></button>
             <button type="button" class="whitelabel-color-btn" data-color="#06b6d4" style="background: #06b6d4; width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;" title="Ciano Moderno"></button>
             <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
-              <span style="font-size: 0.75rem; color: var(--text-secondary);">Customizada:</span>
+              <span style="font-size: 0.75rem; color: var(--text-secondary);">Outra cor</span>
               <input type="color" id="whitelabel-input-color" value="#3b82f6" style="width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;">
             </div>
           </div>
@@ -1675,8 +1390,8 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       </div>
 
       <div class="dialog-footer" style="display: flex; justify-content: space-between;">
-        <button type="button" class="btn btn-secondary" id="btn-whitelabel-reset">Restaurar Padrão Nexus</button>
-        <button type="submit" class="btn btn-primary" style="padding: 9px 20px;">Salvar Identidade Visual</button>
+        <button type="button" class="btn btn-secondary" id="btn-whitelabel-reset">Voltar ao padrão</button>
+        <button type="submit" class="btn btn-primary" style="padding: 9px 20px;">Salvar</button>
       </div>
     </form>
   </dialog>
@@ -1684,121 +1399,74 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ======================================================================
        DIALOG: ASSINATURA & COTA DE IA
        ====================================================================== -->
-  <dialog id="billing-dialog" class="crm-dialog" style="max-width: 650px; width: 95%;">
+  <dialog id="billing-dialog" class="crm-dialog" style="max-width: 680px; width: 95%;">
     <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-          
-        </div>
-        <div>
-          <h2 class="dialog-title">Assinatura &amp; Consumo de IA</h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Plano Comercial Nexus e Métricas de Recursos</span>
-        </div>
-      </div>
+      <h2 class="dialog-title">Plano e uso</h2>
       <button type="button" class="dialog-close" id="btn-close-billing-dialog" aria-label="Fechar">&times;</button>
     </div>
 
-    <div class="dialog-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
-      
-      <!-- Current Subscription Status -->
-      <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.08)); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 1.2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-          <div>
-            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--color-primary); letter-spacing: 0.5px;">Plano Atual</div>
-            <div style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary);" id="billing-plan-name">Nexus Pro (Período de Teste)</div>
-          </div>
-          <span class="badge" id="billing-plan-badge" style="background: #10b981; color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px;">
-            ATIVO • 14 DIAS RESTANTES
-          </span>
+    <div class="dialog-body">
+      <div class="plan-current">
+        <div>
+          <div class="figure-label">Plano atual</div>
+          <div class="plan-current-name" id="billing-plan-name"></div>
         </div>
+        <span class="status-text" id="billing-plan-badge"></span>
+      </div>
 
-        <!-- AI Usage Progress Bar -->
-        <div style="margin-top: 1rem;">
-          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.35rem;">
-            <span style="font-weight: 600; color: var(--text-primary);">Análises de IA (Google Gemini Flash):</span>
-            <strong id="billing-ai-count" style="color: var(--color-primary);">14 / 150 chamadas este mês (9%)</strong>
-          </div>
-          <div style="height: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 20px; overflow: hidden; border: 1px solid var(--border-color);">
-            <div id="billing-ai-bar" style="height: 100%; width: 9%; background: linear-gradient(90deg, #3b82f6, #10b981); border-radius: 20px; transition: width 0.4s ease;"></div>
-          </div>
-          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
-            Renovação da cota mensal no dia 1º de cada mês.
-          </div>
+      <div class="team-summary" style="margin: 1rem 0 1.25rem;">
+        <div class="team-summary-item">
+          <div class="team-summary-value" id="billing-leads-count"></div>
+          <div class="team-summary-label">Oportunidades</div>
+        </div>
+        <div class="team-summary-item">
+          <div class="team-summary-value" id="billing-users-count"></div>
+          <div class="team-summary-label">Pessoas na equipe</div>
+        </div>
+        <div class="team-summary-item">
+          <div class="team-summary-value" id="billing-ai-count"></div>
+          <div class="team-summary-label">Análises com IA neste mês</div>
+          <div class="bar-track" style="margin-top: 0.4rem;"><div class="bar-fill" id="billing-ai-bar" style="width: 0%"></div></div>
         </div>
       </div>
 
-      <!-- Resource Metrics Grid -->
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
-        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; text-align: center;">
-          <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary);" id="billing-leads-count">6 / 5.000</div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase;">Capacidade de Leads</div>
+      <h3 class="section-title" style="margin-bottom: 0.65rem;">Planos</h3>
+      <div class="plan-grid">
+        <div class="plan-option">
+          <div class="plan-option-name">Starter</div>
+          <div class="plan-option-price">R$ 97<span>/mês</span></div>
+          <ul>
+            <li>Até 500 oportunidades</li>
+            <li>2 pessoas na equipe</li>
+            <li>30 análises com IA por mês</li>
+          </ul>
+          <button type="button" class="btn btn-outline btn-sm btn-plan-select" data-plan="starter">Escolher Starter</button>
         </div>
-        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; text-align: center;">
-          <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary);" id="billing-users-count">2 / 10</div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase;">Membros da Equipe</div>
+        <div class="plan-option">
+          <div class="plan-option-name">Professional</div>
+          <div class="plan-option-price">R$ 197<span>/mês</span></div>
+          <ul>
+            <li>Até 5.000 oportunidades</li>
+            <li>10 pessoas na equipe</li>
+            <li>150 análises com IA por mês</li>
+            <li>Sua marca e suas cores</li>
+          </ul>
+          <button type="button" class="btn btn-outline btn-sm btn-plan-select" data-plan="pro">Escolher Professional</button>
         </div>
-        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; text-align: center;">
-          <div style="font-size: 1.2rem; font-weight: 800; color: #10b981;">100%</div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase;">SLA Nuvem Google</div>
-        </div>
-      </div>
-
-      <!-- Commercial Plans Selection Preview -->
-      <div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.65rem;">
-          Planos Disponíveis para o seu CRM:
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
-          
-          <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem; background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">Starter</div>
-              <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 4px 0;">R$ 49<span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted);">/mês</span></div>
-              <ul style="font-size: 0.72rem; color: var(--text-secondary); padding-left: 1rem; margin: 0.5rem 0;">
-                <li>Até 500 leads</li>
-                <li>2 Vendedores</li>
-                <li>30 Análises IA/mês</li>
-              </ul>
-            </div>
-            <button type="button" class="btn btn-outline btn-sm btn-plan-select" data-plan="starter" style="width: 100%; justify-content: center; font-size: 0.75rem;">Escolher Starter</button>
-          </div>
-
-          <div style="border: 2px solid var(--color-primary); border-radius: 10px; padding: 0.85rem; background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-            <div style="position: absolute; top: -10px; right: 10px; background: var(--color-primary); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 10px; text-transform: uppercase;">Mais Popular</div>
-            <div>
-              <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary);">Nexus Pro</div>
-              <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 4px 0;">R$ 149<span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted);">/mês</span></div>
-              <ul style="font-size: 0.72rem; color: var(--text-secondary); padding-left: 1rem; margin: 0.5rem 0;">
-                <li>Até 5.000 leads</li>
-                <li>10 Vendedores</li>
-                <li>150 Análises IA/mês</li>
-                <li>Whitelabel Completo</li>
-              </ul>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm btn-plan-select" data-plan="pro" style="width: 100%; justify-content: center; font-size: 0.75rem;">Plano Atual</button>
-          </div>
-
-          <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem; background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">Enterprise</div>
-              <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-primary); margin: 4px 0;">R$ 349<span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted);">/mês</span></div>
-              <ul style="font-size: 0.72rem; color: var(--text-secondary); padding-left: 1rem; margin: 0.5rem 0;">
-                <li>Leads Ilimitados</li>
-                <li>Equipe Ilimitada</li>
-                <li>IA Ilimitada (BYOK)</li>
-                <li>Suporte Dedicado</li>
-              </ul>
-            </div>
-            <button type="button" class="btn btn-outline btn-sm btn-plan-select" data-plan="enterprise" style="width: 100%; justify-content: center; font-size: 0.75rem;">Escolher Enterprise</button>
-          </div>
-
+        <div class="plan-option">
+          <div class="plan-option-name">Enterprise</div>
+          <div class="plan-option-price">R$ 497<span>/mês</span></div>
+          <ul>
+            <li>Oportunidades sem limite</li>
+            <li>Equipe sem limite</li>
+            <li>IA com a sua própria chave</li>
+          </ul>
+          <button type="button" class="btn btn-outline btn-sm btn-plan-select" data-plan="enterprise">Escolher Enterprise</button>
         </div>
       </div>
-
     </div>
 
-    <div class="dialog-footer" style="display: flex; justify-content: space-between; align-items: center;">
-      <span style="font-size: 0.75rem; color: var(--text-muted);">Pagamentos recorrentes seguros via Stripe / Pix</span>
+    <div class="dialog-footer">
       <button type="button" class="btn btn-secondary" id="btn-close-billing-dialog-footer">Fechar</button>
     </div>
   </dialog>
@@ -1809,13 +1477,9 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="checkout-dialog" class="crm-dialog" style="max-width: 720px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2)); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-          
-        </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
             Checkout Seguro Nexus CRM
-            <span style="font-size: 0.65rem; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-weight: 700;">SSL 256-BIT</span>
           </h2>
           <span style="font-size: 0.72rem; color: var(--text-secondary);">Ativação Imediata com Garantia de Satisfação de 7 dias</span>
         </div>
@@ -1983,15 +1647,11 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="whatsapp-dialog" class="crm-dialog" style="max-width: 620px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); color: #25d366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
-          
-        </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
-            Abordagem WhatsApp
-            <span style="font-size: 0.65rem; background: rgba(37, 211, 102, 0.2); color: #25d366; border: 1px solid rgba(37, 211, 102, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 700;">PROSPECÇÃO 1-CLIQUE</span>
+            Mensagem pelo WhatsApp
           </h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Gerador de Mensagens de Alta Conversão com IA Gemini</span>
+          <span style="font-size: 0.72rem; color: var(--text-secondary);">Escolha um modelo ou escreva a sua mensagem.</span>
         </div>
       </div>
       <button type="button" class="dialog-close" id="btn-close-whatsapp-dialog" aria-label="Fechar">&times;</button>
@@ -2006,7 +1666,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           <div id="wa-lead-meta" style="font-size: 0.75rem; color: var(--text-secondary);">—</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">WhatsApp / Celular</div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Número</div>
           <div id="wa-lead-phone" style="font-weight: 700; font-size: 0.95rem; color: #25d366;">—</div>
         </div>
       </div>
@@ -2014,9 +1674,9 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Quick Templates / AI Buttons -->
       <div style="margin-bottom: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">Modelos Prontos de Abordagem:</span>
+          <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">Modelos</span>
           <button type="button" id="btn-wa-generate-ai" class="btn btn-sm btn-outline" style="font-size: 0.72rem; gap: 0.35rem; color: var(--accent); border-color: var(--accent-line);">
-            Gerar com IA Gemini
+            Gerar com IA
           </button>
         </div>
         <div id="wa-templates-container" style="display: flex; flex-direction: column; gap: 0.45rem;">
@@ -2027,7 +1687,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Editable Message Area -->
       <div class="form-group" style="margin-bottom: 1.25rem;">
         <label for="wa-message-preview" style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.35rem;">
-          <span style="font-weight: 600;">Texto da Mensagem:</span>
+          <span style="font-weight: 600;">Mensagem</span>
           <span id="wa-char-count" style="color: var(--text-muted); font-size: 0.72rem;">0 caracteres</span>
         </label>
         <textarea id="wa-message-preview" class="form-input" rows="4" style="resize: vertical; font-size: 0.85rem; line-height: 1.4; width: 100%; box-sizing: border-box;"></textarea>
@@ -2036,10 +1696,10 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Quick Action Buttons -->
       <div style="display: flex; gap: 0.75rem;">
         <button type="button" class="btn btn-secondary" id="btn-wa-copy" style="flex: 1; justify-content: center; font-size: 0.85rem;">
-          Copiar Texto
+          Copiar
         </button>
         <button type="button" class="btn btn-primary" id="btn-wa-send-direct" style="flex: 1.5; justify-content: center; font-size: 0.88rem; background: #25d366; color: #000; border-color: #25d366; font-weight: 700;">
-          Abrir no WhatsApp Web
+          Abrir no WhatsApp
         </button>
       </div>
     </div>
@@ -2051,15 +1711,11 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <dialog id="webhook-dialog" class="crm-dialog" style="max-width: 660px; width: 95%;">
     <div class="dialog-header">
       <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
-          
-        </div>
         <div>
           <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
-            Webhooks &amp; Captura de Leads
-            <span style="font-size: 0.65rem; background: rgba(59, 130, 246, 0.2); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 700;">TRÁFEGO AUTOMÁTICO</span>
+            Receber leads de formulários
           </h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Receba leads instantaneamente do Facebook/Instagram Ads, Kiwify, Hotmart ou Typeform</span>
+          <span style="font-size: 0.72rem; color: var(--text-secondary);">Formulários, anúncios e outras ferramentas enviam os contatos para este endereço e eles entram no funil.</span>
         </div>
       </div>
       <button type="button" class="dialog-close" id="btn-close-webhook-dialog" aria-label="Fechar">&times;</button>
@@ -2069,7 +1725,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Webhook Endpoint Box -->
       <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.35rem; text-transform: uppercase;">
-          URL do Seu Webhook (POST)
+          Endereço de envio (POST)
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <input type="text" id="webhook-url-input" class="form-input" style="font-family: monospace; font-size: 0.8rem;" readonly>
@@ -2080,8 +1736,8 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Secret Token Box -->
       <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-          <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Token Secreto (Header: x-webhook-token)</span>
-          <button type="button" id="btn-regenerate-webhook-token" style="background: none; border: none; color: var(--color-primary); font-size: 0.72rem; cursor: pointer;">Gerar Novo</button>
+          <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Token (cabeçalho x-webhook-token ou ?token= no endereço)</span>
+          <button type="button" id="btn-regenerate-webhook-token" style="background: none; border: none; color: var(--color-primary); font-size: 0.72rem; cursor: pointer;">Gerar outro</button>
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <input type="password" id="webhook-token-input" class="form-input" style="font-family: monospace; font-size: 0.8rem;" readonly>
@@ -2093,7 +1749,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
       <!-- Payload Sample -->
       <div style="margin-bottom: 1.25rem;">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.35rem;">
-          Exemplo de Payload JSON (Compatível com Make, Zapier e Elementor):
+          Exemplo do que enviar (JSON)
         </div>
         <pre style="background: var(--bg-deep); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem; font-size: 0.72rem; color: var(--text-secondary); overflow-x: auto; margin: 0;">{
   "nome": "João da Silva",
@@ -2112,7 +1768,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
           Fechar
         </button>
         <button type="button" class="btn btn-primary" id="btn-send-test-webhook" style="flex: 2; justify-content: center; font-weight: 700; gap: 0.5rem;">
-          Simular Envio de Lead via Webhook
+          Enviar um lead de teste
         </button>
       </div>
     </div>
@@ -2121,139 +1777,88 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ======================================================================
        Modal: Gestão de Assinatura, Planos & Pagamento PIX 1-Clique
        ====================================================================== -->
-  <dialog id="modal-checkout" class="crm-modal" style="max-width: 650px; width: 95%; padding: 0; border: 1px solid var(--border-color); background: #0f1420; color: var(--text-primary); border-radius: 20px; box-shadow: 0 25px 70px rgba(0,0,0,0.8);">
-    <div style="padding: 1.5rem 1.75rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; background: var(--bg-surface-elevated);">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 1.4rem;"></span>
+  <dialog id="modal-checkout" class="crm-dialog" style="max-width: 640px; width: 95%;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Assinar um plano</h2>
+      <button type="button" class="dialog-close" id="btn-close-checkout-modal" aria-label="Fechar">&times;</button>
+    </div>
+
+    <div class="dialog-body">
+      <div class="plan-current">
         <div>
-          <h2 style="font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0;">Assinatura &amp; Planos Comerciais</h2>
-          <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0;">Gerencie seu plano, cotas de usuários e faturamento</p>
+          <div class="figure-label" id="chk-current-status-title">Situação atual</div>
+          <div class="plan-current-name" id="chk-current-plan-badge"></div>
         </div>
+        <span class="status-text pending" id="chk-trial-days-badge"></span>
       </div>
-      <button type="button" class="modal-close-btn" id="btn-close-checkout-modal" style="background: none; border: none; color: var(--text-secondary); font-size: 1.4rem; cursor: pointer;">&times;</button>
-    </div>
+      <span id="chk-quota-users" hidden></span><span id="chk-quota-leads" hidden></span>
 
-    <div style="padding: 1.5rem 1.75rem; max-height: 80vh; overflow-y: auto;">
-      <!-- Active Subscription Status Banner -->
-      <div style="background: var(--accent-soft); border: 1px solid var(--accent-line); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 4px;" id="chk-current-plan-badge">PROFESSIONAL</span>
-            <span style="font-size: 0.85rem; font-weight: 600; color: #fff;" id="chk-current-status-title">Período de Testes Ativo</span>
-          </div>
-          <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent);" id="chk-trial-days-badge">7 dias restantes</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle);">
-          <div>Usuários: <strong id="chk-quota-users">1 / 15</strong></div>
-          <div>Leads no Funil: <strong id="chk-quota-leads">1 / 25.000</strong></div>
-        </div>
-      </div>
-
-      <!-- Plan Selection Grid -->
-      <div style="font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">Escolha seu Plano para Efetivar a Assinatura:</div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 1.25rem;">
-        <!-- Starter Card -->
-        <div class="checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')" style="cursor: pointer; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem; background: var(--bg-surface-elevated); transition: all 0.2s;">
-          <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">Starter</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 97<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary);">Até 3 usuários e 5.000 leads</div>
-        </div>
-
-        <!-- Pro Card (Selected by default) -->
-        <div class="checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')" style="cursor: pointer; border: 2px solid var(--accent); border-radius: 12px; padding: 1rem; background: var(--accent-soft); transition: all 0.2s;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">Professional</span>
-            <span style="font-size: 0.65rem; background: var(--accent); color: #000; font-weight: 800; padding: 1px 5px; border-radius: 3px;">TOP</span>
-          </div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 197<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary);">Até 15 usuários + IA Gemini</div>
-        </div>
-
-        <!-- Enterprise Card -->
-        <div class="checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')" style="cursor: pointer; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem; background: var(--bg-surface-elevated); transition: all 0.2s;">
-          <div style="font-size: 0.85rem; font-weight: 700; color: #fff;">Enterprise</div>
-          <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent); margin: 4px 0;">R$ 497<span style="font-size: 0.7rem; font-weight: 500; color: var(--text-secondary);">/mês</span></div>
-          <div style="font-size: 0.72rem; color: var(--text-secondary);">Usuários ilimitados + Whitelabel</div>
-        </div>
-      </div>
-
-      <!-- Payment Section: PIX 1-Click + Gateway Link -->
-      <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 1.25rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-          <div style="font-size: 0.85rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
-            <span>Pagamento Instantâneo via PIX</span>
-          </div>
-          <span style="font-size: 0.72rem; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 12px;">Liberação Automática</span>
-        </div>
-
-        <div style="display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;">
-          <div style="background: #fff; padding: 8px; border-radius: 10px; display: flex; align-items: center; justify-content: center; width: 140px; height: 140px;">
-            <img id="chk-pix-qrcode-img" src="" alt="QR Code PIX" style="width: 100%; height: 100%; object-fit: contain;">
-          </div>
-          <div style="flex: 1; min-width: 220px;">
-            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 4px;">Código PIX Copia e Cola:</div>
-            <div style="display: flex; gap: 6px; margin-bottom: 0.75rem;">
-              <input type="text" id="chk-pix-copypaste-input" readonly class="form-input" style="font-size: 0.75rem; font-family: monospace;" value="...">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-copy-pix-code" style="white-space: nowrap;">Copiar PIX</button>
-            </div>
-            <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4;">
-              Abra seu aplicativo do banco, escolha <strong>PIX Copia e Cola</strong> e efetue o pagamento. O acesso é liberado instantaneamente.
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <a href="#" id="chk-whatsapp-receipt-link" target="_blank" rel="noopener" class="btn btn-sm" style="background: #25d366; color: #fff; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; font-size: 0.78rem;">
-            <span>Já paguei! Enviar Comprovante</span>
-          </a>
-          <a href="#" id="chk-gateway-card-link" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="font-size: 0.78rem;">
-            Pagar com Cartão de Crédito
-          </a>
-        </div>
-      </div>
-
-      <!-- Admin Payment & Cloud Configuration Drawer (Visible for Admins ONLY) -->
-      <div id="chk-admin-settings-section" style="display: none; margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
-        <button type="button" id="btn-toggle-payment-settings" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; gap: 6px; font-size: 0.75rem; border-color: rgba(255,255,255,0.15);">
-          <span>Configurar Meu PIX Real &amp; Backend na Nuvem (Admin)</span>
+      <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Escolha o plano</h3>
+      <div class="plan-grid">
+        <button type="button" class="plan-option checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')">
+          <span class="plan-option-name">Starter</span>
+          <span class="plan-option-price">R$ 97<span>/mês</span></span>
+          <span class="plan-option-note">2 pessoas, 500 oportunidades</span>
         </button>
+        <button type="button" class="plan-option checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')">
+          <span class="plan-option-name">Professional</span>
+          <span class="plan-option-price">R$ 197<span>/mês</span></span>
+          <span class="plan-option-note">10 pessoas, 5.000 oportunidades</span>
+        </button>
+        <button type="button" class="plan-option checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')">
+          <span class="plan-option-name">Enterprise</span>
+          <span class="plan-option-price">R$ 497<span>/mês</span></span>
+          <span class="plan-option-note">Sem limites, com a sua marca</span>
+        </button>
+      </div>
 
-        <div id="chk-admin-settings-drawer" style="display: none; margin-top: 1rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 1rem;">
-          <div style="font-size: 0.8rem; font-weight: 700; color: var(--accent); margin-bottom: 0.5rem;">Configurações de Recebimento do SaaS</div>
-          <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Digite sua chave PIX para o dinheiro cair direto na sua conta bancária sem intermediários, ou informe a URL do seu backend na nuvem.</p>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
-            <div>
-              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Sua Chave PIX (CPF/CNPJ/Email/EVP):</label>
-              <input type="text" id="cfg-pix-key" class="form-input" placeholder="ex: 12345678900 ou seu@email.com" style="font-size: 0.75rem;">
+      <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Pague por PIX</h3>
+      <div class="pix-box">
+        <div class="pix-qr">
+          <img id="chk-pix-qrcode-img" src="" alt="QR Code do PIX">
+        </div>
+        <div class="pix-steps">
+          <label for="chk-pix-copypaste-input">PIX copia e cola</label>
+          <div style="display: flex; gap: 6px; margin-bottom: 0.75rem;">
+            <input type="text" id="chk-pix-copypaste-input" readonly class="form-input" style="font-family: var(--font-mono, monospace); font-size: 0.78rem;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-copy-pix-code" style="white-space: nowrap;">Copiar</button>
+          </div>
+          <p>Pague no aplicativo do seu banco e depois envie o comprovante. O plano é liberado quando o pagamento for conferido.</p>
+          <div class="row-actions" style="margin-top: 0.75rem;">
+            <a href="#" id="chk-whatsapp-receipt-link" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Enviar comprovante pelo WhatsApp</a>
+            <a href="#" id="chk-gateway-card-link" target="_blank" rel="noopener" class="link-btn">Pagar com cartão</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recebimento: só para quem opera a plataforma (localStorage nexus_platform_owner = 1) -->
+      <div id="chk-admin-settings-section" style="display: none; margin-top: 1.25rem;">
+        <button type="button" id="btn-toggle-payment-settings" class="link-btn">Configurar o recebimento</button>
+        <div id="chk-admin-settings-drawer" style="display: none; margin-top: 0.75rem;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cfg-pix-key">Chave PIX de recebimento</label>
+              <input type="text" id="cfg-pix-key" class="form-input">
             </div>
-            <div>
-              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">Nome do Titular / Razão Social:</label>
-              <input type="text" id="cfg-pix-name" class="form-input" placeholder="ex: SEU NOME OU EMPRESA" style="font-size: 0.75rem;">
+            <div class="form-group">
+              <label for="cfg-pix-name">Nome do titular</label>
+              <input type="text" id="cfg-pix-name" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="cfg-support-whatsapp">WhatsApp para comprovantes, com DDD</label>
+              <input type="text" id="cfg-support-whatsapp" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="cfg-backend-url">Endereço do servidor</label>
+              <input type="text" id="cfg-backend-url" class="form-input">
             </div>
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 0.75rem;">
-            <div>
-              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">WhatsApp p/ Comprovantes (com DDD):</label>
-              <input type="text" id="cfg-support-whatsapp" class="form-input" placeholder="ex: 11999998888" style="font-size: 0.75rem;">
-            </div>
-            <div>
-              <label style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">URL do Backend na Nuvem (Render/Railway):</label>
-              <input type="text" id="cfg-backend-url" class="form-input" placeholder="https://nexus-crm-yfof.onrender.com" style="font-size: 0.75rem;">
-            </div>
-          </div>
-
-          <div style="display: flex; justify-content: flex-end; gap: 8px;">
-            <button type="button" id="btn-save-payment-settings" class="btn btn-primary btn-sm" style="font-size: 0.75rem;">
-              Salvar Configurações
-            </button>
-          </div>
+          <button type="button" id="btn-save-payment-settings" class="btn btn-primary btn-sm" style="margin-top: 0.75rem;">Salvar</button>
         </div>
       </div>
     </div>
 
-    <div style="padding: 1rem 1.75rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: flex-end; background: var(--bg-surface-elevated);">
+    <div class="dialog-footer">
       <button type="button" class="btn btn-secondary" id="btn-close-checkout-footer">Fechar</button>
     </div>
   </dialog>
@@ -2265,7 +1870,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.1.0"></script>
+  <script type="module" src="js/app.js?v=3.2.0"></script>
 
 </body>
 </html>

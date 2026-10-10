@@ -70,7 +70,8 @@ export async function initAuth() {
     }
   } catch (err) {
     console.warn('Could not restore the session:', err);
-    clearSession();
+    // Leave a session alone if one was started while this check was still running
+    if (sessionKind === SESSION_KINDS.NONE) clearSession();
   }
   return currentUser;
 }

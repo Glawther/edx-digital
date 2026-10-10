@@ -3,1473 +3,368 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexus CRM | O CRM de Vendas Inteligente com IA Gemini & WhatsApp</title>
-  <meta name="description" content="Acelere o fechamento de vendas com o Nexus CRM Enterprise: Funil Kanban em tempo real, disparos de WhatsApp com 1 clique, IA Gemini integrada, captura automática de leads via Webhooks e segurança bancária com a Tríade CID.">
-  <meta name="keywords" content="CRM de vendas, funil kanban, whatsapp crm, ia gemini vendas, webhook leads, crm offline first, crm b2b">
-  <meta property="og:title" content="Nexus CRM | Feche mais negócios em menos tempo">
-  <meta property="og:description" content="A plataforma comercial definitiva para equipes de alta performance. Funil visual, IA generativa, WhatsApp 1-clique e Webhooks de tráfego pago.">
-  <meta property="og:type" content="website">
+  <title>Nexus CRM | Funil de vendas para equipes pequenas</title>
+  <meta name="description" content="CRM para equipes de vendas: funil em quadro, tarefas, propostas, mensagens pelo WhatsApp e relatórios. Cada vendedor vê a própria carteira; o gestor vê tudo.">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
-
-  <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #07090e;
-      --bg-card: #0f1420;
-      --bg-card-hover: #161e30;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-accent: rgba(217, 249, 66, 0.3);
-      --primary: #d9f942; /* Cyber lime */
-      --primary-hover: #e5ff54;
-      --primary-glow: rgba(217, 249, 66, 0.25);
-      --accent-blue: #3b82f6;
-      --accent-purple: #8b5cf6;
-      --accent-green: #25d366;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
+      --ink: #18212f;
+      --ink-soft: #4a5565;
+      --ink-muted: #6f7a8a;
+      --line: #e4e7ec;
+      --paper: #ffffff;
+      --wash: #f5f6f8;
+      --accent: #2447a8;
+      --accent-soft: #eef2fb;
+      --won: #1a7f4b;
+      --radius: 6px;
+      --page: 1080px;
     }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      overflow-x: hidden;
-      line-height: 1.6;
+      margin: 0; background: var(--paper); color: var(--ink);
+      font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
     }
+    a { color: var(--accent); }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .wrap { max-width: var(--page); margin: 0 auto; padding: 0 24px; }
 
-    h1, h2, h3, h4, .brand-font {
-      font-family: 'Outfit', sans-serif;
-      letter-spacing: -0.02em;
-    }
+    /* ---------- top bar ---------- */
+    .top { border-bottom: 1px solid var(--line); }
+    .top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 16px; }
+    .brand { font-weight: 600; font-size: 1.05rem; color: var(--ink); text-decoration: none; }
+    .top nav { display: flex; align-items: center; gap: 22px; font-size: 0.92rem; }
+    .top nav a { color: var(--ink-soft); text-decoration: none; }
+    .top nav a:hover { color: var(--ink); }
 
-    /* Glow backdrop lights */
-    .glow-sphere {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(120px);
-      pointer-events: none;
-      z-index: 0;
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      font: inherit; font-size: 0.95rem; font-weight: 500; text-decoration: none;
+      padding: 10px 18px; border-radius: var(--radius); border: 1px solid transparent; cursor: pointer;
     }
-    .glow-1 {
-      width: 500px;
-      height: 500px;
-      background: radial-gradient(circle, rgba(217, 249, 66, 0.12) 0%, transparent 70%);
-      top: -100px;
-      left: 20%;
-    }
-    .glow-2 {
-      width: 600px;
-      height: 600px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
-      top: 300px;
-      right: 5%;
-    }
+    .btn-primary { background: var(--ink); color: #fff; }
+    .btn-primary:hover { background: #0e1520; }
+    .btn-quiet { background: var(--paper); color: var(--ink); border-color: #cfd4dc; }
+    .btn-quiet:hover { border-color: var(--ink-muted); }
+    .top nav .btn { padding: 7px 14px; font-size: 0.9rem; color: #fff; }
 
-    /* Header Nav */
-    header.landing-nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 74px;
-      background: rgba(7, 9, 14, 0.85);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 5%;
-      z-index: 100;
-    }
+    /* ---------- hero ---------- */
+    .hero { padding: 72px 0 64px; }
+    .hero .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 56px; align-items: center; }
+    h1 { font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 18px; }
+    .hero p { font-size: 1.1rem; color: var(--ink-soft); margin: 0 0 28px; max-width: 46ch; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-note { font-size: 0.88rem; color: var(--ink-muted); margin-top: 16px; }
 
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-      color: #fff;
-    }
-    .brand-icon-box {
-      width: 36px;
-      height: 36px;
-      background: var(--primary);
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #000;
-      box-shadow: 0 0 20px var(--primary-glow);
-    }
-    .brand-text {
-      font-size: 1.35rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-    .brand-badge {
-      font-size: 0.65rem;
-      background: rgba(217, 249, 66, 0.15);
-      color: var(--primary);
-      border: 1px solid var(--border-accent);
-      padding: 2px 7px;
-      border-radius: 20px;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
+    /* product preview: the funnel as it looks in the app */
+    .preview { background: var(--wash); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+    .preview-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .preview-col-head { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink-soft); margin-bottom: 8px; }
+    .preview-col-head span:last-child { white-space: nowrap; }
+    .preview-col-head span:first-child { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--ink); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .dot.won { background: var(--won); }
+    .card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 11px; margin-bottom: 8px; }
+    .card-name { font-size: 0.84rem; font-weight: 600; }
+    .card-co { font-size: 0.74rem; color: var(--ink-muted); }
+    .card-val { font-size: 0.86rem; font-weight: 600; margin-top: 6px; }
+    .card-meta { font-size: 0.72rem; color: var(--ink-muted); margin-top: 2px; }
+    .card-meta.late { color: #a35a00; }
 
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      list-style: none;
-    }
-    .nav-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 0.92rem;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    .nav-link:hover {
-      color: #fff;
-    }
+    /* ---------- sections ---------- */
+    section { padding: 64px 0; border-top: 1px solid var(--line); }
+    h2 { font-size: 1.6rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 10px; }
+    .lede { color: var(--ink-soft); margin: 0 0 36px; max-width: 60ch; }
 
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
+    .does { display: grid; grid-template-columns: 1fr 1fr; gap: 0 56px; }
+    .does-item { padding: 18px 0; border-top: 1px solid var(--line); }
+    .does-item:nth-child(-n+2) { border-top: 0; padding-top: 0; }
+    .does-item h3 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+    .does-item p { margin: 0; color: var(--ink-soft); font-size: 0.95rem; max-width: 48ch; }
 
-    .btn-login {
-      color: #fff;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
-      padding: 8px 18px;
-      border-radius: 8px;
-      border: 1px solid var(--border-subtle);
-      transition: all 0.2s;
-    }
-    .btn-login:hover {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
+    .roles { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .role { background: var(--wash); border-radius: 10px; padding: 24px; }
+    .role h3 { margin: 0 0 8px; font-size: 1.05rem; font-weight: 600; }
+    .role ul { margin: 0; padding-left: 18px; color: var(--ink-soft); font-size: 0.95rem; }
+    .role li { margin-bottom: 4px; }
 
-    .btn-cta {
-      background: var(--primary);
-      color: #000;
-      text-decoration: none;
-      font-size: 0.92rem;
-      font-weight: 700;
-      padding: 10px 22px;
-      border-radius: 9px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 20px var(--primary-glow);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .btn-cta:hover {
-      background: var(--primary-hover);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 28px rgba(217, 249, 66, 0.4);
-    }
+    .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
+    .plan { border: 1px solid var(--line); border-radius: 10px; padding: 24px; display: flex; flex-direction: column; }
+    .plan.pick { border-color: var(--ink); }
+    .plan h3 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+    .plan-for { font-size: 0.88rem; color: var(--ink-muted); min-height: 2.8em; margin: 2px 0 14px; }
+    .price { font-size: 2rem; font-weight: 600; letter-spacing: -0.02em; }
+    .price span { font-size: 0.9rem; font-weight: 400; color: var(--ink-muted); letter-spacing: 0; }
+    .plan ul { list-style: none; padding: 0; margin: 18px 0 22px; font-size: 0.93rem; color: var(--ink-soft); flex: 1; }
+    .plan li { padding: 6px 0; border-top: 1px solid var(--line); }
+    .plan .btn { width: 100%; }
+    .plans-note { font-size: 0.9rem; color: var(--ink-muted); margin-top: 20px; max-width: 70ch; }
 
-    /* Hero Section */
-    section.hero {
-      position: relative;
-      padding: 160px 5% 90px;
-      text-align: center;
-      max-width: 1200px;
-      margin: 0 auto;
-      z-index: 1;
-    }
+    .faq { max-width: 720px; }
+    details { border-top: 1px solid var(--line); padding: 16px 0; }
+    details:last-child { border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--ink-muted); font-weight: 400; }
+    details[open] summary::after { content: '−'; }
+    details p { margin: 10px 0 0; color: var(--ink-soft); max-width: 64ch; }
 
-    .hero-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-subtle);
-      padding: 6px 14px;
-      border-radius: 30px;
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-    }
-    .hero-pill-badge {
-      background: var(--primary);
-      color: #000;
-      font-weight: 800;
-      font-size: 0.68rem;
-      padding: 2px 6px;
-      border-radius: 12px;
-      text-transform: uppercase;
-    }
+    .closing { text-align: left; }
+    .closing .hero-actions { margin-top: 24px; }
 
-    .hero h1 {
-      font-size: clamp(2.5rem, 5.5vw, 4.4rem);
-      font-weight: 900;
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-    }
-    .hero h1 span.gradient-text {
-      background: linear-gradient(135deg, #ffffff 30%, var(--primary) 90%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+    footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 0.88rem; color: var(--ink-muted); }
+    footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    footer a { color: var(--ink-soft); text-decoration: none; margin-left: 18px; }
+    footer a:first-child { margin-left: 0; }
+    footer a:hover { color: var(--ink); }
 
-    .hero-subtitle {
-      font-size: clamp(1.05rem, 2vw, 1.25rem);
-      color: var(--text-muted);
-      max-width: 780px;
-      margin: 0 auto 2.5rem;
-      font-weight: 400;
-    }
-
-    .hero-cta-group {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 3.5rem;
-    }
-
-    .btn-cta-large {
-      font-size: 1.05rem;
-      padding: 15px 32px;
-      border-radius: 11px;
-    }
-
-    .btn-demo-outline {
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      text-decoration: none;
-      font-size: 1rem;
-      font-weight: 600;
-      padding: 14px 28px;
-      border-radius: 11px;
-      border: 1px solid var(--border-subtle);
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-demo-outline:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.25);
-      transform: translateY(-2px);
-    }
-
-    /* Live Preview Mockup Container */
-    .hero-mockup-wrapper {
-      position: relative;
-      max-width: 1060px;
-      margin: 0 auto;
-      border-radius: 16px;
-      padding: 8px;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(217, 249, 66, 0.2) 50%, rgba(59, 130, 246, 0.2) 100%);
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
-    }
-    .hero-mockup-inner {
-      background: #0b0e17;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .mockup-header-bar {
-      height: 38px;
-      background: #121724;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      gap: 8px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .mockup-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-    }
-    .dot-red { background: #ff5f56; }
-    .dot-yellow { background: #ffbd2e; }
-    .dot-green { background: #27c93f; }
-    .mockup-url-bar {
-      margin-left: 20px;
-      background: #080a10;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 6px;
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      padding: 2px 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Interactive Showcase Grid */
-    .mockup-content {
-      padding: 24px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      text-align: left;
-    }
-    .mockup-stat-card {
-      background: #141a29;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .mockup-stat-title {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .mockup-stat-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      font-family: 'Outfit', sans-serif;
-      color: #fff;
-    }
-    .mockup-stat-value.lime { color: var(--primary); }
-    .mockup-stat-badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 600;
-      background: rgba(37, 211, 102, 0.15);
-      color: #25d366;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-top: 6px;
-    }
-
-    /* Section Headers */
-    .section-header {
-      text-align: center;
-      max-width: 700px;
-      margin: 0 auto 3.5rem;
-    }
-    .section-tag {
-      font-size: 0.8rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--primary);
-      margin-bottom: 0.75rem;
-      display: block;
-    }
-    .section-title {
-      font-size: clamp(2rem, 3.8vw, 2.8rem);
-      font-weight: 800;
-      margin-bottom: 1rem;
-    }
-    .section-desc {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-    }
-
-    /* Pillars / Features Grid */
-    section.features {
-      padding: 100px 5%;
-      max-width: 1200px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-      gap: 24px;
-    }
-    .feature-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 32px;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      position: relative;
-      overflow: hidden;
-    }
-    .feature-card:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-accent);
-      transform: translateY(-4px);
-    }
-    .feature-icon-wrapper {
-      width: 52px;
-      height: 52px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.6rem;
-      margin-bottom: 1.5rem;
-    }
-    .feature-card h3 {
-      font-size: 1.35rem;
-      font-weight: 700;
-      margin-bottom: 0.85rem;
-    }
-    .feature-card p {
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-
-    /* Interactive Comparison Highlight */
-    section.comparison {
-      padding: 90px 5%;
-      background: #0b0f19;
-      border-top: 1px solid var(--border-subtle);
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .comparison-container {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    .comparison-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 2rem;
-      font-size: 0.95rem;
-    }
-    .comparison-table th, .comparison-table td {
-      padding: 16px 20px;
-      text-align: left;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-    .comparison-table th {
-      background: rgba(255, 255, 255, 0.02);
-      color: var(--text-muted);
-      font-weight: 700;
-      font-size: 0.85rem;
-      text-transform: uppercase;
-    }
-    .comparison-table th.highlight {
-      background: rgba(217, 249, 66, 0.08);
-      color: var(--primary);
-      border-top: 2px solid var(--primary);
-    }
-    .comparison-table td.highlight {
-      background: rgba(217, 249, 66, 0.03);
-      font-weight: 600;
-    }
-
-    /* Pricing Section */
-    section.pricing {
-      padding: 110px 5%;
-      max-width: 1200px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .billing-toggle-wrapper {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 3.5rem;
-    }
-    .toggle-label {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-      cursor: pointer;
-    }
-    .toggle-label.active {
-      color: #fff;
-      font-weight: 700;
-    }
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 52px;
-      height: 28px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #1e2638;
-      border-radius: 34px;
-      transition: .3s;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 20px;
-      width: 20px;
-      left: 4px;
-      bottom: 4px;
-      background-color: var(--primary);
-      border-radius: 50%;
-      transition: .3s;
-    }
-    input:checked + .slider {
-      background-color: var(--accent-blue);
-    }
-    input:checked + .slider:before {
-      transform: translateX(24px);
-      background-color: #fff;
-    }
-    .discount-badge {
-      background: rgba(37, 211, 102, 0.15);
-      color: #25d366;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 12px;
-      border: 1px solid rgba(37, 211, 102, 0.3);
-    }
-
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 28px;
-      align-items: stretch;
-    }
-    .pricing-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 20px;
-      padding: 40px 32px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .pricing-card:hover {
-      transform: translateY(-6px);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-    .pricing-card.featured {
-      background: linear-gradient(180deg, #131b2e 0%, #0d121f 100%);
-      border: 2px solid var(--primary);
-      box-shadow: 0 10px 40px rgba(217, 249, 66, 0.15);
-    }
-    .popular-tag {
-      position: absolute;
-      top: -14px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--primary);
-      color: #000;
-      font-size: 0.72rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      padding: 4px 14px;
-      border-radius: 20px;
-      letter-spacing: 0.05em;
-    }
-    .pricing-title {
-      font-size: 1.4rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
-    }
-    .pricing-desc {
-      color: var(--text-muted);
-      font-size: 0.88rem;
-      margin-bottom: 1.75rem;
-      min-height: 42px;
-    }
-    .pricing-price {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-      margin-bottom: 2rem;
-    }
-    .price-currency {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-muted);
-    }
-    .price-amount {
-      font-size: 3rem;
-      font-weight: 900;
-      font-family: 'Outfit', sans-serif;
-      color: #fff;
-    }
-    .price-period {
-      font-size: 0.88rem;
-      color: var(--text-dim);
-    }
-
-    .pricing-features {
-      list-style: none;
-      margin-bottom: 2.5rem;
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .pricing-features li {
-      font-size: 0.92rem;
-      color: #cbd5e1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .pricing-features li svg {
-      flex-shrink: 0;
-      color: var(--primary);
-    }
-
-    .btn-pricing {
-      width: 100%;
-      justify-content: center;
-      padding: 13px;
-      font-size: 0.98rem;
-    }
-
-    /* Testimonials */
-    section.testimonials {
-      padding: 90px 5%;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .testimonial-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-    }
-    .testimonial-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 30px;
-    }
-    .testimonial-stars {
-      color: #fbbf24;
-      font-size: 1.1rem;
-      margin-bottom: 1rem;
-    }
-    .testimonial-text {
-      color: #e2e8f0;
-      font-size: 0.95rem;
-      margin-bottom: 1.5rem;
-      line-height: 1.6;
-    }
-    .testimonial-author {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .author-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--accent-blue);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #fff;
-    }
-    .author-name {
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-    .author-role {
-      font-size: 0.78rem;
-      color: var(--text-dim);
-    }
-
-    /* CTA Banner */
-    section.cta-banner {
-      padding: 90px 5%;
-      max-width: 1100px;
-      margin: 0 auto 100px;
-    }
-    .cta-banner-box {
-      background: linear-gradient(135deg, #172138 0%, #0d121f 100%);
-      border: 1px solid var(--border-accent);
-      border-radius: 24px;
-      padding: 60px 40px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-    }
-    .cta-banner-box h2 {
-      font-size: clamp(2rem, 3.5vw, 2.8rem);
-      font-weight: 800;
-      margin-bottom: 1rem;
-    }
-    .cta-banner-box p {
-      color: var(--text-muted);
-      font-size: 1.1rem;
-      max-width: 600px;
-      margin: 0 auto 2.5rem;
-    }
-
-    /* Footer */
-    footer.landing-footer {
-      border-top: 1px solid var(--border-subtle);
-      padding: 60px 5% 40px;
-      background: #04060a;
-      font-size: 0.88rem;
-      color: var(--text-dim);
-    }
-    .footer-top {
-      max-width: 1200px;
-      margin: 0 auto 40px;
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 40px;
-    }
-    .footer-brand p {
-      margin-top: 12px;
-      color: var(--text-muted);
-      max-width: 320px;
-      line-height: 1.5;
-    }
-    .footer-col h4 {
-      color: #fff;
-      font-size: 0.95rem;
-      margin-bottom: 1rem;
-    }
-    .footer-col ul {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .footer-col a {
-      color: var(--text-dim);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    .footer-col a:hover {
-      color: #fff;
-    }
-    .footer-bottom {
-      max-width: 1200px;
-      margin: 0 auto;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
-      padding-top: 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    /* FAQ Accordion Section */
-    section.faq-section {
-      padding: 90px 5%;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .faq-list {
-      margin-top: 40px;
-    }
-    .faq-item {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      margin-bottom: 14px;
-      overflow: hidden;
-      transition: all 0.25s;
-    }
-    .faq-item:hover {
-      border-color: rgba(217, 249, 66, 0.25);
-    }
-    .faq-question {
-      padding: 22px 24px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: #fff;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
-    .faq-question:hover {
-      color: var(--primary);
-    }
-    .faq-icon {
-      font-size: 1.3rem;
-      color: var(--primary);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      display: inline-block;
-      line-height: 1;
-    }
-    .faq-item.open .faq-icon {
-      transform: rotate(45deg);
-    }
-    .faq-answer {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s;
-      padding: 0 24px;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1.6;
-    }
-    .faq-item.open .faq-answer {
-      max-height: 300px;
-      padding: 0 24px 22px;
-    }
-
-    /* Floating WhatsApp Conversion Widget */
-    .whatsapp-float-btn {
-      position: fixed;
-      bottom: 28px;
-      right: 28px;
-      width: 60px;
-      height: 60px;
-      background: #25d366;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 8px 30px rgba(37, 211, 102, 0.45);
-      z-index: 9999;
-      text-decoration: none;
-      transition: transform 0.25s, box-shadow 0.25s;
-    }
-    .whatsapp-float-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 12px 35px rgba(37, 211, 102, 0.6);
-    }
-    .whatsapp-float-pulse {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: #25d366;
-      opacity: 0.6;
-      animation: waPulse 2s infinite;
-      z-index: -1;
-    }
-    @keyframes waPulse {
-      0% { transform: scale(1); opacity: 0.6; }
-      100% { transform: scale(1.6); opacity: 0; }
+    @media (max-width: 860px) {
+      .hero { padding: 44px 0 40px; }
+      .hero .wrap, .does, .roles, .plans { grid-template-columns: 1fr; }
+      .hero .wrap { gap: 32px; }
+      .does-item:nth-child(2) { border-top: 1px solid var(--line); padding-top: 18px; }
+      .top nav a:not(.btn) { display: none; }
+      section { padding: 48px 0; }
+      .plan-for { min-height: 0; }
+    }
+    @media (max-width: 520px) {
+      .preview-cols { grid-template-columns: 1fr 1fr; }
+      .preview-cols > div:last-child { display: none; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Background Ambience -->
-  <div class="glow-sphere glow-1"></div>
-  <div class="glow-sphere glow-2"></div>
-
-  <!-- Navigation Bar -->
-  <header class="landing-nav">
-    <a href="/landing" class="brand-logo">
-      <div class="brand-icon-box">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      </div>
-      <span class="brand-text">Nexus CRM</span>
-      <span class="brand-badge">Enterprise</span>
-    </a>
-
-    <ul class="nav-links">
-      <li><a href="#features" class="nav-link">Recursos</a></li>
-      <li><a href="#webhooks" class="nav-link">Webhooks & Ads</a></li>
-      <li><a href="#comparison" class="nav-link">Diferenciais</a></li>
-      <li><a href="#pricing" class="nav-link">Planos & Preços</a></li>
-      <li><a href="#security" class="nav-link">Tríade CID</a></li>
-    </ul>
-
-    <div class="nav-actions">
-      <a href="index.html" class="btn-login">Entrar no Painel</a>
-      <a href="index.html#register" class="btn-cta">
-        <span>Testar Grátis</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="/landing">Nexus CRM</a>
+      <nav aria-label="Principal">
+        <a href="#recursos">Recursos</a>
+        <a href="#planos">Planos</a>
+        <a href="#duvidas">Dúvidas</a>
+        <a href="index.html">Entrar</a>
+        <a class="btn btn-primary" href="index.html#register">Criar conta</a>
+      </nav>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-pill">
-      <span class="hero-pill-badge">NOVO v1.4.3</span>
-      <span>IA Google Gemini 1.5 Flash + Webhooks Automáticos</span>
-    </div>
-
-    <h1>
-      Transforme Leads em Contratos com<br>
-      <span class="gradient-text">Inteligência Comercial Máxima</span>
-    </h1>
-
-    <p class="hero-subtitle">
-      O único CRM com funil visual em tempo real, disparos de abordagem no WhatsApp em 1 clique, análise preditiva com IA Gemini e arquitetura corporativa respaldada pela Tríade CID.
-    </p>
-
-    <div class="hero-cta-group">
-      <a href="index.html#register" class="btn-cta btn-cta-large">
-        <span>Começar Demonstração Gratuita</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
-      <a href="index.html" class="btn-demo-outline">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-        <span>Ver Plataforma em Ação</span>
-      </a>
-    </div>
-
-    <!-- Product Showcase Mockup -->
-    <div class="hero-mockup-wrapper">
-      <div class="hero-mockup-inner">
-        <div class="mockup-header-bar">
-          <span class="mockup-dot dot-red"></span>
-          <span class="mockup-dot dot-yellow"></span>
-          <span class="mockup-dot dot-green"></span>
-          <div class="mockup-url-bar">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span>nexuscrm.web.app/pipeline</span>
-          </div>
-        </div>
-
-        <div class="mockup-content">
-          <div class="mockup-stat-card">
-            <div class="mockup-stat-title">Pipeline em Aberto</div>
-            <div class="mockup-stat-value lime">R$ 145.800</div>
-            <div class="mockup-stat-badge">⚡ 12 Oportunidades Ativas</div>
-          </div>
-
-          <div class="mockup-stat-card">
-            <div class="mockup-stat-title">Taxa de Conversão</div>
-            <div class="mockup-stat-value">54.2%</div>
-            <div class="mockup-stat-badge" style="color: #60a5fa; background: rgba(59, 130, 246, 0.15);">🎯 +18% após IA Gemini</div>
-          </div>
-
-          <div class="mockup-stat-card">
-            <div class="mockup-stat-title">Abordagem WhatsApp</div>
-            <div class="mockup-stat-value">3.2 seg</div>
-            <div class="mockup-stat-badge" style="color: #4ade80; background: rgba(37, 211, 102, 0.15);">🚀 1-Clique sem salvar contato</div>
-          </div>
-
-          <div class="mockup-stat-card">
-            <div class="mockup-stat-title">Disponibilidade (SLA)</div>
-            <div class="mockup-stat-value">100%</div>
-            <div class="mockup-stat-badge">🛡️ Tríade CID Ativa</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Core Features Grid -->
-  <section class="features" id="features">
-    <div class="section-header">
-      <span class="section-tag">Engenharia Comercial de Ponta</span>
-      <h2 class="section-title">Tudo o que sua equipe precisa para vender mais</h2>
-      <p class="section-desc">Elimine planilhas confusas e processos manuais. O Nexus CRM centraliza a jornada comercial com alta tecnologia.</p>
-    </div>
-
-    <div class="features-grid">
-      <!-- Feature 1 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #d9f942;">📊</div>
-        <h3>Funil Kanban com Previsão de Receita</h3>
-        <p>Arraste oportunidades entre os 6 estágios do pipeline com cálculo em tempo real de forecast financeiro, alertas de leads estagnados (deal rotting) e metas.</p>
-      </div>
-
-      <!-- Feature 2 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #25d366;">💬</div>
-        <h3>Abordagem WhatsApp em 1-Clique</h3>
-        <p>Inicie conversas no WhatsApp Web sem precisar salvar o contato na agenda do telefone. Modelos prontos de Primeiro Contato, Quebra de Objeção e Reativação.</p>
-      </div>
-
-      <!-- Feature 3 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #3b82f6;">✨</div>
-        <h3>Copiloto de Vendas com IA Google Gemini</h3>
-        <p>Gere diagnósticos situacionais dos seus clientes, recomendações cirúrgicas de fechamento e copy persuasivo personalizado diretamente para cada oportunidade.</p>
-      </div>
-
-      <!-- Feature 4 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #f59e0b;">⚡</div>
-        <h3>Webhooks Universais de Captura</h3>
-        <p>Conecte seus formulários do Meta Ads (Facebook/Instagram), Kiwify, Hotmart, Typeform ou sites WordPress via endpoint JSON com token secreto blindado.</p>
-      </div>
-
-      <!-- Feature 5 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #ec4899;">🛡️</div>
-        <h3>Segurança Bancária com a Tríade CID</h3>
-        <p>Confidencialidade com RBAC rígido por papel, Integridade com trilha de auditoria criptografada e Disponibilidade com PWA Offline-First e backup 1-clique.</p>
-      </div>
-
-      <!-- Feature 6 -->
-      <div class="feature-card">
-        <div class="feature-icon-wrapper" style="color: #8b5cf6;">🎨</div>
-        <h3>Modo Whitelabel para Agências</h3>
-        <p>Personalize logotipo, paleta de cores corporativa, nome da empresa e domínio para entregar um CRM exclusivo aos seus clientes e parceiros de negócio.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Webhooks Highlight -->
-  <section class="comparison" id="webhooks">
-    <div class="comparison-container">
-      <div class="section-header">
-        <span class="section-tag">Tráfego Pago & Automação</span>
-        <h2 class="section-title">Receba Leads em Tempo Real do Meta Ads</h2>
-        <p class="section-desc">Adeus digitação manual de formulários. Quando o lead clica no anúncio, o Nexus CRM notifica seu time imediatamente.</p>
-      </div>
-
-      <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; align-items: center;">
+  <main>
+    <div class="hero">
+      <div class="wrap">
         <div>
-          <h3 style="font-size: 1.4rem; margin-bottom: 1rem;">Integração Instantânea via Endpoint Seguro</h3>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-            Basta configurar a URL do seu webhook no Make, Zapier ou direto nas campanhas de Lead Ads. Nosso motor inteligente higieniza telefones, impede duplicatas e distribui a oportunidade para a equipe.
-          </p>
-          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; color: #cbd5e1; font-size: 0.92rem;">
-            <li style="display: flex; align-items: center; gap: 8px;">✅ Ingestão automática em menos de 1 segundo</li>
-            <li style="display: flex; align-items: center; gap: 8px;">✅ Notificação sonora e push para o vendedor responsável</li>
-            <li style="display: flex; align-items: center; gap: 8px;">✅ Token criptografado de autenticação (Header x-webhook-token)</li>
-          </ul>
+          <h1>O funil de vendas da sua equipe, fora da planilha.</h1>
+          <p>Cada oportunidade em uma etapa, com valor, responsável e próximo passo. O vendedor vê a própria carteira; quem gerencia vê a empresa inteira.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="index.html#register">Criar conta e testar por 14 dias</a>
+            <a class="btn btn-quiet" href="index.html">Ver com dados de exemplo</a>
+          </div>
+          <div class="hero-note">A demonstração abre sem cadastro, direto no navegador.</div>
         </div>
 
-        <div style="background: #080a10; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 20px; font-family: monospace; font-size: 0.8rem; color: #94a3b8;">
-          <div style="color: var(--primary); margin-bottom: 8px;">// Payload Enviado pelo Anúncio:</div>
-          <pre style="color: #a5b4fc; margin: 0; line-height: 1.4;">{
-  "nome": "Dr. Marcelo Sampaio",
-  "whatsapp": "(11) 98765-4321",
-  "empresa": "Sampaio Advocacia",
-  "valor": 18000,
-  "origem": "Meta Ads (Instagram)",
-  "mensagem": "Quero automatizar meu time comercial"
-}</pre>
-          <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); color: #25d366; display: flex; align-items: center; gap: 6px;">
-            <span>⚡ Status: 200 OK • Cadastrado no Pipeline</span>
+        <div class="preview" aria-label="Exemplo do funil de vendas no Nexus CRM">
+          <div class="preview-cols">
+            <div>
+              <div class="preview-col-head"><span><i class="dot"></i>Primeiro contato</span><span>R$ 120.000</span></div>
+              <div class="card">
+                <div class="card-name">Rodrigo Alcantara</div>
+                <div class="card-co">Vanguard Logística</div>
+                <div class="card-val">R$ 120.000</div>
+                <div class="card-meta late">Parado há 4 dias</div>
+              </div>
+            </div>
+            <div>
+              <div class="preview-col-head"><span><i class="dot"></i>Proposta enviada</span><span>R$ 88.000</span></div>
+              <div class="card">
+                <div class="card-name">Camila Drummond</div>
+                <div class="card-co">Orion Health Tech</div>
+                <div class="card-val">R$ 88.000</div>
+                <div class="card-meta">Fecha em 18/10, 1 tarefa</div>
+              </div>
+            </div>
+            <div>
+              <div class="preview-col-head"><span><i class="dot won"></i>Fechado</span><span>R$ 95.000</span></div>
+              <div class="card">
+                <div class="card-name">Juliana Fernandes</div>
+                <div class="card-co">SolarSul Energia</div>
+                <div class="card-val">R$ 95.000</div>
+                <div class="card-meta">Contrato assinado</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Comparison Table -->
-  <section class="comparison" id="comparison">
-    <div class="comparison-container">
-      <div class="section-header">
-        <span class="section-tag">Por Que Escolher a Nexus</span>
-        <h2 class="section-title">Nexus CRM vs Outras Ferramentas do Mercado</h2>
-        <p class="section-desc">Entenda por que empresas modernas estão migrando para o ecossistema Nexus.</p>
-      </div>
-
-      <div style="overflow-x: auto;">
-        <table class="comparison-table">
-          <thead>
-            <tr>
-              <th>Recurso Comercial</th>
-              <th class="highlight">Nexus CRM Enterprise</th>
-              <th>CRMs Tradicionais</th>
-              <th>Planilhas de Vendas</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Disparo WhatsApp em 1-Clique</strong></td>
-              <td class="highlight">✅ Integrado com Copiloto IA</td>
-              <td>❌ Requer plugins pagos extras</td>
-              <td>❌ Manual e sem histórico</td>
-            </tr>
-            <tr>
-              <td><strong>IA Preditiva com Google Gemini</strong></td>
-              <td class="highlight">✅ Nativa (Diagnóstico & Copy)</td>
-              <td>❌ Cobrada à parte em dólares</td>
-              <td>❌ Inexistente</td>
-            </tr>
-            <tr>
-              <td><strong>Captura Automática (Webhooks)</strong></td>
-              <td class="highlight">✅ Ilimitada sem custo por lead</td>
-              <td>⚠️ Cobrada por faixas de contatos</td>
-              <td>❌ Sem conexão direta</td>
-            </tr>
-            <tr>
-              <td><strong>Funciona 100% Offline (PWA)</strong></td>
-              <td class="highlight">✅ Sim (Sincroniza ao reconectar)</td>
-              <td>❌ Não (Trava sem internet)</td>
-              <td>⚠️ Requer sincronização em nuvem</td>
-            </tr>
-            <tr>
-              <td><strong>Segurança Tríade CID & LGPD</strong></td>
-              <td class="highlight">✅ Auditoria imutável nativa</td>
-              <td>⚠️ Apenas planos Enterprise caros</td>
-              <td>❌ Totalmente desprotegida</td>
-            </tr>
-            <tr>
-              <td><strong>Whitelabel para Agências</strong></td>
-              <td class="highlight">✅ 100% customizável</td>
-              <td>❌ Inexistente</td>
-              <td>❌ Não aplicável</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Pricing Section -->
-  <section class="pricing" id="pricing">
-    <div class="section-header">
-      <span class="section-tag">Investimento Transparente</span>
-      <h2 class="section-title">Planos Desenhados para Escalar sua Empresa</h2>
-      <p class="section-desc">Sem contratos de fidelidade forçada. Cancele ou altere de plano quando quiser.</p>
-    </div>
-
-    <!-- Toggle Monthly / Annual -->
-    <div class="billing-toggle-wrapper">
-      <span class="toggle-label active" id="label-monthly">Faturamento Mensal</span>
-      <label class="switch">
-        <input type="checkbox" id="pricing-toggle">
-        <span class="slider"></span>
-      </label>
-      <span class="toggle-label" id="label-annual">Faturamento Anual</span>
-      <span class="discount-badge">20% OFF</span>
-    </div>
-
-    <div class="pricing-grid">
-      <!-- Starter Plan -->
-      <div class="pricing-card">
-        <h3 class="pricing-title">Plano Starter</h3>
-        <p class="pricing-desc">Ideal para consultores autônomos e pequenos times que querem organizar suas vendas.</p>
-        <div class="pricing-price">
-          <span class="price-currency">R$</span>
-          <span class="price-amount" id="price-starter">97</span>
-          <span class="price-period" id="period-starter">/mês</span>
-        </div>
-        <ul class="pricing-features">
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Até 2 usuários inclusos
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Funil de Vendas Kanban completo
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Abordagem WhatsApp 1-Clique
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Armazenamento Local & PWA Offline
-          </li>
-        </ul>
-        <a href="index.html#register?plan=starter" class="btn-demo-outline btn-pricing">Assinar Starter</a>
-      </div>
-
-      <!-- Professional Plan (Featured) -->
-      <div class="pricing-card featured">
-        <div class="popular-tag">Mais Escolhido</div>
-        <h3 class="pricing-title">Plano Professional</h3>
-        <p class="pricing-desc">Para empresas em expansão que exigem IA Gemini, Webhooks de tráfego e nuvem em tempo real.</p>
-        <div class="pricing-price">
-          <span class="price-currency">R$</span>
-          <span class="price-amount" id="price-pro">197</span>
-          <span class="price-period" id="period-pro">/mês</span>
-        </div>
-        <ul class="pricing-features">
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Até 10 usuários inclusos
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>IA Google Gemini 1.5 Flash ilimitada</strong>
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>Webhooks de Ingestão (Meta Ads & Kiwify)</strong>
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Sincronização Cloud Firestore em Tempo Real
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Gestão de Tarefas, Follow-up & Linha do Tempo
-          </li>
-        </ul>
-        <a href="index.html#register?plan=pro" class="btn-cta btn-pricing">Assinar Professional</a>
-      </div>
-
-      <!-- Enterprise Plan -->
-      <div class="pricing-card">
-        <h3 class="pricing-title">Plano Enterprise</h3>
-        <p class="pricing-desc">Para grandes operações, franquias e agências com personalização Whitelabel e auditoria CID.</p>
-        <div class="pricing-price">
-          <span class="price-currency">R$</span>
-          <span class="price-amount" id="price-enterprise">497</span>
-          <span class="price-period" id="period-enterprise">/mês</span>
-        </div>
-        <ul class="pricing-features">
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Usuários e equipes ilimitadas
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <strong>Whitelabel Completo (Sua Marca & Cores)</strong>
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Trilha de Auditoria Criptografada (Tríade CID)
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Gerador de Propostas Comerciais em PDF
-          </li>
-          <li>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Suporte VIP Dedicado via WhatsApp
-          </li>
-        </ul>
-        <a href="index.html#register?plan=enterprise" class="btn-demo-outline btn-pricing">Assinar Enterprise</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Testimonials -->
-  <section class="testimonials">
-    <div class="section-header">
-      <span class="section-tag">Depoimentos Reais</span>
-      <h2 class="section-title">Quem usa o Nexus CRM recomenda</h2>
-    </div>
-
-    <div class="testimonial-grid">
-      <div class="testimonial-card">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">
-          "O botão de disparar mensagem no WhatsApp com copy da IA Gemini fez nossos consultores aumentarem a taxa de resposta em 42% na primeira semana."
-        </p>
-        <div class="testimonial-author">
-          <div class="author-avatar">RF</div>
-          <div>
-            <div class="author-name">Ricardo Fontes</div>
-            <div class="author-role">Diretor Comercial • NuScale</div>
+    <section id="recursos">
+      <div class="wrap">
+        <h2>O que dá para fazer</h2>
+        <p class="lede">O essencial para acompanhar vendas do primeiro contato ao fechamento, sem configurar nada antes de começar.</p>
+        <div class="does">
+          <div class="does-item">
+            <h3>Funil em quadro</h3>
+            <p>Arraste a oportunidade de uma etapa para a outra. O total de cada etapa e as oportunidades paradas há dias aparecem na hora.</p>
+          </div>
+          <div class="does-item">
+            <h3>Tarefas ligadas ao cliente</h3>
+            <p>Ligação, reunião ou retorno com data. A lista do dia mostra o que está para hoje e o que atrasou.</p>
+          </div>
+          <div class="does-item">
+            <h3>Mensagem pelo WhatsApp</h3>
+            <p>Escolha um modelo, ajuste o texto e o WhatsApp abre com a mensagem pronta para aquele contato. O envio fica registrado no histórico.</p>
+          </div>
+          <div class="does-item">
+            <h3>Proposta em PDF</h3>
+            <p>A proposta sai com o nome da sua empresa, os dados do cliente, a descrição e o valor da oportunidade, pronta para imprimir ou salvar.</p>
+          </div>
+          <div class="does-item">
+            <h3>Relatórios</h3>
+            <p>Valor por etapa, previsão do mês, resultado por vendedor e os motivos das vendas perdidas.</p>
+          </div>
+          <div class="does-item">
+            <h3>Leads de formulários e anúncios</h3>
+            <p>Seu site ou ferramenta de anúncios envia o contato para um endereço da sua conta e ele entra no funil.</p>
+          </div>
+          <div class="does-item">
+            <h3>Análise com IA, se você quiser</h3>
+            <p>Com a sua chave do Google Gemini, o CRM sugere o próximo passo e um rascunho de e-mail para cada oportunidade.</p>
+          </div>
+          <div class="does-item">
+            <h3>Importação e exportação</h3>
+            <p>Traga os contatos de uma planilha em CSV e exporte tudo quando precisar. Os dados são seus.</p>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="testimonial-card">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">
-          "Conectamos nossos anúncios do Instagram direto via Webhook. O lead cai no funil na hora e a equipe já aborda pelo WhatsApp. Reduziu o tempo de primeiro contato a quase zero."
-        </p>
-        <div class="testimonial-author">
-          <div class="author-avatar" style="background: #10b981;">CV</div>
-          <div>
-            <div class="author-name">Dra. Camila Vasconcelos</div>
-            <div class="author-role">Sócia Fundadora • Clínica Vasconcelos</div>
+    <section>
+      <div class="wrap">
+        <h2>Cada pessoa vê o que deve ver</h2>
+        <p class="lede">O acesso é por e-mail e senha, e as permissões valem no servidor, não só na tela.</p>
+        <div class="roles">
+          <div class="role">
+            <h3>Vendedor</h3>
+            <ul>
+              <li>Vê e edita só as oportunidades atribuídas a ele</li>
+              <li>Cadastra novas oportunidades na própria carteira</li>
+              <li>Não exclui registros</li>
+            </ul>
+          </div>
+          <div class="role">
+            <h3>Administrador</h3>
+            <ul>
+              <li>Vê a empresa inteira e os números de cada vendedor</li>
+              <li>Convida, bloqueia e remove pessoas da equipe</li>
+              <li>Consulta o histórico de quem fez o quê</li>
+            </ul>
           </div>
         </div>
       </div>
+    </section>
 
-      <div class="testimonial-card">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">
-          "O módulo Whitelabel permitiu entregar o CRM com a marca da nossa agência para nossos clientes corporativos. Foi um divisor de águas no faturamento recorrente."
-        </p>
-        <div class="testimonial-author">
-          <div class="author-avatar" style="background: #8b5cf6;">GS</div>
-          <div>
-            <div class="author-name">Glawther Soares</div>
-            <div class="author-role">CEO • Agência Inova Growth</div>
+    <section id="planos">
+      <div class="wrap">
+        <h2>Planos</h2>
+        <p class="lede">Todos começam com 14 dias de teste, sem informar forma de pagamento.</p>
+        <div class="plans">
+          <div class="plan">
+            <h3>Starter</h3>
+            <div class="plan-for">Para quem vende sozinho ou em dupla.</div>
+            <div class="price">R$ 97<span>/mês</span></div>
+            <ul>
+              <li>2 pessoas na equipe</li>
+              <li>Até 500 oportunidades</li>
+              <li>30 análises com IA por mês</li>
+            </ul>
+            <a class="btn btn-quiet" href="index.html#register?plan=starter">Começar no Starter</a>
+          </div>
+          <div class="plan pick">
+            <h3>Professional</h3>
+            <div class="plan-for">Para uma equipe de vendas com gestor.</div>
+            <div class="price">R$ 197<span>/mês</span></div>
+            <ul>
+              <li>10 pessoas na equipe</li>
+              <li>Até 5.000 oportunidades</li>
+              <li>150 análises com IA por mês</li>
+              <li>Sua marca e suas cores no CRM</li>
+            </ul>
+            <a class="btn btn-primary" href="index.html#register?plan=pro">Começar no Professional</a>
+          </div>
+          <div class="plan">
+            <h3>Enterprise</h3>
+            <div class="plan-for">Para operações maiores.</div>
+            <div class="price">R$ 497<span>/mês</span></div>
+            <ul>
+              <li>Equipe sem limite</li>
+              <li>Oportunidades sem limite</li>
+              <li>IA com a sua própria chave</li>
+            </ul>
+            <a class="btn btn-quiet" href="index.html#register?plan=enterprise">Começar no Enterprise</a>
           </div>
         </div>
+        <p class="plans-note">O pagamento é por PIX, dentro do CRM. Depois de pagar você envia o comprovante e o plano é liberado quando o pagamento for conferido.</p>
       </div>
-    </div>
-  <!-- FAQ Section (Objeções & Dúvidas Frequentes) -->
-  <section class="faq-section" id="faq">
-    <div class="section-header" style="text-align: center;">
-      <span class="section-tag">Perguntas Frequentes</span>
-      <h2 class="section-title">Tire suas dúvidas antes de assinar</h2>
-      <p class="section-subtitle">Tudo o que você precisa saber sobre a segurança, contratação e funcionamento do Nexus CRM.</p>
-    </div>
+    </section>
 
-    <div class="faq-list">
-      <div class="faq-item open">
-        <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-          <span>Como funciona o período de testes grátis de 7 dias?</span>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          Você cria sua conta em menos de 1 minuto sem precisar cadastrar cartão de crédito. Durante os 7 dias, sua equipe tem acesso irrestrito ao funil Kanban, IA Gemini e automação de WhatsApp. Se decidir assinar, basta efetuar o pagamento via PIX ou cartão pelo painel.
-        </div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-          <span>Posso cancelar a assinatura quando quiser?</span>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          Sim! Nossos planos não possuem fidelidade nem multas rescisórias. O cancelamento pode ser feito em 1 clique direto na aba de governança e você mantém o acesso ativo até o encerramento do ciclo já pago.
-        </div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-          <span>Meus dados de clientes e contatos estão seguros?</span>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          Absolutamente. O Nexus CRM utiliza arquitetura Zero Trust com Row-Level Security (RLS) no PostgreSQL, criptografia em repouso AES-256-GCM com identificadores isolados por empresa e trilha de auditoria criptográfica imutável (ISO 27001 e conformidade total com a LGPD).
+    <section id="duvidas">
+      <div class="wrap">
+        <h2>Dúvidas comuns</h2>
+        <div class="faq">
+          <details>
+            <summary>Preciso instalar alguma coisa?</summary>
+            <p>Não. O CRM abre no navegador, no computador e no celular. Se quiser, dá para instalar como aplicativo pelo próprio navegador.</p>
+          </details>
+          <details>
+            <summary>Como coloco minha equipe?</summary>
+            <p>O administrador tem um código de convite: quem recebe o código cria a própria conta e já entra como vendedor da empresa. Também dá para cadastrar a pessoa direto, com uma senha temporária que ela troca no primeiro acesso.</p>
+          </details>
+          <details>
+            <summary>Consigo trazer os contatos que já tenho?</summary>
+            <p>Sim. Exporte sua planilha em CSV com nome, empresa, telefone, valor e e-mail e use a importação. Também é possível colar a lista.</p>
+          </details>
+          <details>
+            <summary>O WhatsApp é enviado automaticamente?</summary>
+            <p>Não. O CRM prepara a mensagem e abre a conversa no WhatsApp; quem envia é você. Isso evita disparos em massa e bloqueio do seu número.</p>
+          </details>
+          <details>
+            <summary>Quem consegue ver os dados da minha empresa?</summary>
+            <p>Só as pessoas que você colocou na equipe, cada uma dentro do seu perfil. Uma empresa não alcança os dados de outra.</p>
+          </details>
+          <details>
+            <summary>E se eu quiser sair?</summary>
+            <p>Você pode exportar seus clientes em CSV a qualquer momento e levar os dados com você.</p>
+          </details>
         </div>
       </div>
+    </section>
 
-      <div class="faq-item">
-        <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-          <span>Consigo importar meus leads e clientes de outros sistemas ou planilhas?</span>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          Sim! O sistema possui importador automático de planilhas CSV e Excel. Em menos de 30 segundos sua carteira inteira de clientes é mapeada para os estágios do funil.
-        </div>
-      </div>
-
-      <div class="faq-item">
-        <div class="faq-question" onclick="this.parentElement.classList.toggle('open')">
-          <span>O aplicativo funciona no celular ou se a internet cair?</span>
-          <span class="faq-icon">+</span>
-        </div>
-        <div class="faq-answer">
-          Sim! Desenvolvido como Progressive Web App (PWA) de alta performance, ele instala como aplicativo nativo no Android, iOS, Windows e Mac, permitindo cadastrar leads, visualizar tarefas e gerenciar o pipeline mesmo sem sinal de internet (Offline-First).
+    <section class="closing">
+      <div class="wrap">
+        <h2>Veja com os seus próprios dados</h2>
+        <p class="lede" style="margin-bottom: 0;">Crie a conta, importe uma planilha e em alguns minutos o funil está montado.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="index.html#register">Criar conta</a>
+          <a class="btn btn-quiet" href="index.html">Ver a demonstração</a>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <!-- Final CTA Banner -->
-  <section class="cta-banner">
-    <div class="cta-banner-box">
-      <h2>Pronto para Revolucionar suas Vendas?</h2>
-      <p>Cadastre-se agora e comece a operar com inteligência artificial, WhatsApp rápido e funil em tempo real hoje mesmo.</p>
-      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-        <a href="index.html#register" class="btn-cta btn-cta-large">
-          <span>Criar Minha Conta Gratuita</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="landing-footer">
-    <div class="footer-top">
-      <div class="footer-brand">
-        <a href="/landing" class="brand-logo">
-          <div class="brand-icon-box">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-          </div>
-          <span class="brand-text">Nexus CRM</span>
-        </a>
-        <p>A plataforma corporativa de aceleração de vendas B2B desenvolvida com Google Cloud Firestore, IA Gemini e arquitetura de Tríade CID.</p>
-      </div>
-
-      <div class="footer-col">
-        <h4>Produto</h4>
-        <ul>
-          <li><a href="#features">Funil Kanban</a></li>
-          <li><a href="#features">Abordagem WhatsApp</a></li>
-          <li><a href="#webhooks">Webhooks & Meta Ads</a></li>
-          <li><a href="#features">IA Google Gemini</a></li>
-          <li><a href="#pricing">Planos & Preços</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Governança &amp; Compliance</h4>
-        <ul>
-          <li><a href="index.html#security">Tríade CID &amp; Auditoria</a></li>
-          <li><a href="/termos">Termos de Uso (SLA 99.9%)</a></li>
-          <li><a href="/privacidade">Privacidade &amp; LGPD</a></li>
-          <li><a href="mailto:dpo@nexuscrm.com.br">Canal do DPO</a></li>
-        </ul>
-      </div>
-
-      <div class="footer-col">
-        <h4>Acesso Rápido</h4>
-        <ul>
-          <li><a href="index.html">Entrar no Painel</a></li>
-          <li><a href="index.html#register">Criar Nova Conta</a></li>
-          <li><a href="/landing#pricing">Tabela de Planos</a></li>
-          <li><a href="https://firebase.google.com" target="_blank" rel="noopener">Google Cloud</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="footer-bottom">
-      <div>&copy; 2026 Nexus CRM Enterprise. Todos os direitos reservados.</div>
-      <div style="display: flex; gap: 1.2rem; flex-wrap: wrap;">
-        <span>🔒 AES-256-GCM + Scrypt</span>
-        <span>🛡️ Multitenant RLS</span>
-        <span>⚖️ Conforme LGPD &amp; GDPR</span>
-        <span>⚡ PWA Offline-First</span>
+  <footer>
+    <div class="wrap">
+      <div>Nexus CRM</div>
+      <div>
+        <a href="/termos">Termos de uso</a>
+        <a href="/privacidade">Privacidade</a>
+        <a href="index.html">Entrar</a>
       </div>
     </div>
   </footer>
 
-  <!-- Pricing Switch Script -->
-  <script>
-    const toggle = document.getElementById('pricing-toggle');
-    const labelMonthly = document.getElementById('label-monthly');
-    const labelAnnual = document.getElementById('label-annual');
-
-    const priceStarter = document.getElementById('price-starter');
-    const periodStarter = document.getElementById('period-starter');
-
-    const pricePro = document.getElementById('price-pro');
-    const periodPro = document.getElementById('period-pro');
-
-    const priceEnterprise = document.getElementById('price-enterprise');
-    const periodEnterprise = document.getElementById('period-enterprise');
-
-    toggle.addEventListener('change', () => {
-      const isAnnual = toggle.checked;
-      labelMonthly.classList.toggle('active', !isAnnual);
-      labelAnnual.classList.toggle('active', isAnnual);
-
-      if (isAnnual) {
-        // 20% discount applied to monthly equivalent
-        priceStarter.textContent = '77';
-        periodStarter.textContent = '/mês (anual)';
-
-        pricePro.textContent = '157';
-        periodPro.textContent = '/mês (anual)';
-
-        priceEnterprise.textContent = '397';
-        periodEnterprise.textContent = '/mês (anual)';
-      } else {
-        priceStarter.textContent = '97';
-        periodStarter.textContent = '/mês';
-
-        pricePro.textContent = '197';
-        periodPro.textContent = '/mês';
-
-        priceEnterprise.textContent = '497';
-        periodEnterprise.textContent = '/mês';
-      }
-    });
-  </script>
-
-  <!-- Floating WhatsApp Direct Conversion Button -->
-  <a href="https://wa.me/5511999998888?text=Ol%C3%A1!%20Gostaria%20de%20tirar%20d%C3%BAvidas%20sobre%20o%20Nexus%20CRM%20Enterprise" target="_blank" rel="noopener" class="whatsapp-float-btn" title="Falar com consultor via WhatsApp">
-    <div class="whatsapp-float-pulse"></div>
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.187 8.187 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24h-.18zm4.51 11.59c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.12-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.12.17 1.78 2.72 4.31 3.81.6.26 1.07.41 1.44.53.61.19 1.16.17 1.6.1.49-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.18-.48-.3z"/></svg>
-  </a>
 </body>
 </html>
