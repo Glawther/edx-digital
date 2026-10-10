@@ -51,8 +51,7 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 200, { status: 'healthy' });
   }
 
-  // Nothing else answers under /api. The older /api/v1 (server/routes/api-v1.js) is not mounted:
-  // the app never used it and its token route handed out sessions without checking who asked.
+  // Nothing else answers under /api (the older /api/v1 was removed: the app never used it)
   if (parsedUrl.startsWith('/api/')) {
     return sendJson(res, 404, { error: 'not_found' });
   }
