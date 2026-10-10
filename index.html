@@ -21,11 +21,11 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.5.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.5.0">
-  <link rel="stylesheet" href="css/components.css?v=3.5.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.5.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.5.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.6.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.6.0">
+  <link rel="stylesheet" href="css/components.css?v=3.6.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.6.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.6.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -693,7 +693,7 @@
 
           <div class="form-group">
             <label for="input-deal-value">Valor (R$)</label>
-            <input type="number" id="input-deal-value" class="form-input" placeholder="0,00" min="0" step="0.01" inputmode="decimal" required>
+            <input type="text" id="input-deal-value" class="form-input" placeholder="0,00" inputmode="decimal" autocomplete="off" required>
           </div>
 
           <div class="form-group">
@@ -1529,64 +1529,35 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ======================================================================
        DIALOG: ASSISTENTE DE VENDAS & ABORDAGEM WHATSAPP (COM IA GEMINI)
        ====================================================================== -->
-  <dialog id="whatsapp-dialog" class="crm-dialog" style="max-width: 620px; width: 95%;">
+  <dialog id="whatsapp-dialog" class="crm-dialog" style="max-width: 600px; width: 95%;">
     <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div>
-          <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
-            Mensagem pelo WhatsApp
-          </h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Escolha um modelo ou escreva a sua mensagem.</span>
-        </div>
+      <div>
+        <h2 class="dialog-title">Mensagem para <span id="wa-lead-name"></span></h2>
+        <div class="dialog-subtitle"><span id="wa-lead-phone"></span><span id="wa-lead-meta"></span></div>
       </div>
       <button type="button" class="dialog-close" id="btn-close-whatsapp-dialog" aria-label="Fechar">&times;</button>
     </div>
 
-    <div class="dialog-body" style="padding: 1.25rem;">
-      <!-- Lead Header Info -->
-      <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Destinatário</div>
-          <div id="wa-lead-name" style="font-weight: 700; font-size: 1rem; color: var(--text-primary);">—</div>
-          <div id="wa-lead-meta" style="font-size: 0.75rem; color: var(--text-secondary);">—</div>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Número</div>
-          <div id="wa-lead-phone" style="font-weight: 700; font-size: 0.95rem; color: #25d366;">—</div>
-        </div>
+    <div class="dialog-body">
+      <div class="wa-templates-head">
+        <span class="filter-label" id="wa-templates-label">Começar de um modelo</span>
+        <button type="button" id="btn-wa-generate-ai" class="link-btn">Sugerir com IA</button>
       </div>
+      <div id="wa-templates-container" class="wa-templates" role="group" aria-labelledby="wa-templates-label"></div>
 
-      <!-- Quick Templates / AI Buttons -->
-      <div style="margin-bottom: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-          <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);">Modelos</span>
-          <button type="button" id="btn-wa-generate-ai" class="btn btn-sm btn-outline" style="font-size: 0.72rem; gap: 0.35rem; color: var(--accent); border-color: var(--accent-line);">
-            Gerar com IA
-          </button>
-        </div>
-        <div id="wa-templates-container" style="display: flex; flex-direction: column; gap: 0.45rem;">
-          <!-- Populated dynamically -->
-        </div>
-      </div>
-
-      <!-- Editable Message Area -->
-      <div class="form-group" style="margin-bottom: 1.25rem;">
-        <label for="wa-message-preview" style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.35rem;">
-          <span style="font-weight: 600;">Mensagem</span>
-          <span id="wa-char-count" style="color: var(--text-muted); font-size: 0.72rem;">0 caracteres</span>
+      <div class="form-group" style="margin: 1rem 0 0;">
+        <label for="wa-message-preview" class="wa-message-label">
+          <span>Mensagem</span>
+          <span id="wa-char-count" class="muted">0 caracteres</span>
         </label>
-        <textarea id="wa-message-preview" class="form-input" rows="4" style="resize: vertical; font-size: 0.85rem; line-height: 1.4; width: 100%; box-sizing: border-box;"></textarea>
+        <textarea id="wa-message-preview" class="form-textarea" rows="7"></textarea>
+        <span class="field-hint">Você pode editar à vontade. O envio é feito por você, no seu WhatsApp.</span>
       </div>
+    </div>
 
-      <!-- Quick Action Buttons -->
-      <div style="display: flex; gap: 0.75rem;">
-        <button type="button" class="btn btn-secondary" id="btn-wa-copy" style="flex: 1; justify-content: center; font-size: 0.85rem;">
-          Copiar
-        </button>
-        <button type="button" class="btn btn-primary" id="btn-wa-send-direct" style="flex: 1.5; justify-content: center; font-size: 0.88rem; background: #25d366; color: #000; border-color: #25d366; font-weight: 700;">
-          Abrir no WhatsApp
-        </button>
-      </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-outline" id="btn-wa-copy">Copiar</button>
+      <button type="button" class="btn btn-primary" id="btn-wa-send-direct">Abrir no WhatsApp</button>
     </div>
   </dialog>
 
@@ -1755,7 +1726,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.5.0"></script>
+  <script type="module" src="js/app.js?v=3.6.0"></script>
 
 </body>
 </html>
