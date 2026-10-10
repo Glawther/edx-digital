@@ -98,11 +98,8 @@ export async function logAudit(action, details = {}, severity = AUDIT_SEVERITY.I
     userRole: user?.role || 'unknown',
     orgId: org?.id || 'org_nexus_default',
     orgName: org?.name || 'Nexus CRM',
-    details: {
-      ...details,
-      userAgent: navigator.userAgent?.substring(0, 120) || '',
-      screenSize: `${window.innerWidth}x${window.innerHeight}`
-    }
+    // Only what describes the action: no device fingerprinting data
+    details: { ...details }
   };
 
   // 1. Always save locally first (immediate persistence)

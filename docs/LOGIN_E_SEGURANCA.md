@@ -66,8 +66,17 @@ npm run test:rules
 
 ### O que depende de você, fora do sistema
 
-- **Preencher os dados do responsável** em `termos.html` e `privacidade.html` (procure por `PREENCHER`). Não publique com esses campos em aberto.
-- **Contas de login de colaboradores de uma empresa excluída**: o sistema não consegue apagá-las. A política promete removê-las em até 30 dias: faça isso no console do Firebase (Authentication > Usuários).
-- **Contas inativas ou sem pagamento**: os prazos dos termos (aviso de 30 dias, exclusão depois) são cumpridos à mão, por enquanto.
-- **Reembolso em 7 dias e conferência do PIX em até 2 dias úteis**: são compromissos assumidos nos termos.
-- **Revisão por advogado**: os textos foram escritos para descrever o que o sistema faz de verdade, mas não substituem a revisão de um advogado, principalmente nos pontos de limitação de responsabilidade, foro e registros de acesso do Marco Civil.
+Os termos assumem estes compromissos, e o sistema não os cumpre sozinho:
+
+- **CPF nos termos**: o Decreto 7.962/2013 pede nome, CPF ou CNPJ e endereço do fornecedor em local visível. Hoje os termos trazem nome, cidade e e-mail, e dizem que o CPF é informado a pedido. Para ficar completo, inclua o CPF (ou, melhor, um CNPJ) e um endereço.
+- **Arrependimento**: devolver por PIX, em até 10 dias, o valor de quem desistir em até 7 dias de cada contratação.
+- **Conferência do PIX**: liberar o plano em até 2 dias úteis (hoje, alterando `plan` e `planStatus` da empresa no console do Firebase).
+- **Abatimento**: devolver o proporcional quando o serviço parar por falha nossa.
+- **Resposta a pedidos de titulares**: em até 15 dias. Reclamações em geral: em até 5 dias úteis.
+- **Contas de login de colaboradores de uma empresa excluída**: apagar em até 30 dias, no console do Firebase (Authentication > Usuários). O sistema não consegue fazer isso.
+- **Contas inativas**: avisar por e-mail 30 dias antes de excluir.
+- **Incidente de segurança**: avisar o cliente em até 2 dias úteis; avaliar comunicação à ANPD e aos titulares.
+- **Registro das operações de tratamento** (LGPD, art. 37): mantenha um registro simples (uma planilha serve para agente de pequeno porte) com quais dados trata, para quê, onde ficam e por quanto tempo. A Política de Privacidade já traz esse conteúdo e pode servir de base.
+- **Mudou termos ou política?** Atualize a data nas páginas e `LEGAL_VERSION`, e avise os clientes com 15 dias de antecedência.
+
+Os textos descrevem o que o sistema faz de verdade e foram revisados com atenção ao CDC, à LGPD e ao Decreto 7.962/2013, mas não substituem a orientação de um advogado inscrito na OAB.
