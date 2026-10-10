@@ -7,6 +7,7 @@
  * Tests: tests/unit/normalize.test.mjs
  */
 
+import { cleanItems } from './proposal-items.js';
 import { isSafeId } from './html.js';
 
 const STAGE_IDS = ['lead', 'contact', 'proposal', 'negotiation', 'won', 'lost'];
@@ -80,6 +81,7 @@ export function normalizeCustomer(raw) {
     stage: STAGE_IDS.includes(stage) ? stage : 'lead',
     priority: PRIORITIES.includes(data.priority) ? data.priority : 'medium',
     recurring: data.recurring === true,
+    items: cleanItems(data.items),
     expectedCloseDate: typeof data.expectedCloseDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(data.expectedCloseDate) ? data.expectedCloseDate : '',
     tags: list(data.tags).filter(tag => typeof tag === 'string' && tag.trim()).map(tag => tag.slice(0, 60)).slice(0, 30),
     tasks: list(data.tasks).map(normalizeTask).filter(Boolean),

@@ -503,3 +503,30 @@ test('agenda da semana: tarefas no dia certo, link para o Google Agenda, troca d
   assert.equal((await download).suggestedFilename(), 'edx-digital-agenda.ics');
   assert.deepEqual(problems, []);
 });
+
+test('proposta com itens: a tabela aparece na folha e o total vira o valor da oportunidade', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.click('#lead-details-actions [data-click="handleOpenProposalModal"]');
+  await page.locator('#proposal-dialog').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#prop-items-block').isVisible(), false, 'sem itens, a proposta mostra só o valor');
+
+  await page.locator('#proposal-items-editor summary').click();
+  for (const [description, quantity, price] of [['Instalação', '2', '1.500,00'], ['Treinamento da equipe', '', '800']]) {
+    await page.click('#btn-add-proposal-item');
+    const row = page.locator('.proposal-item-row').last();
+    await row.locator('[data-part="description"]').fill(description);
+    await row.locator('[data-part="quantity"]').fill(quantity);
+    await row.locator('[data-part="unitPrice"]').fill(price);
+  }
+  await page.click('#btn-save-proposal-items');
+  await page.locator('#prop-items-body tr').nth(1).waitFor();
+  assert.deepEqual((await page.locator('#prop-items-body tr').first().locator('td').allTextContents()).map(text => text.replace(/\s/g, ' ')), ['Instalação', '2', 'R$ 1.500', 'R$ 3.000']);
+  assert.match((await page.textContent('#prop-price-display')).replace(/\s/g, ' '), /R\$ 3\.800/);
+  assert.equal(await page.locator('#prop-items-mismatch').count(), 0);
+  await page.click('#btn-close-proposal-footer');
+  assert.match((await page.locator('#lead-details-summary').textContent()).replace(/\s/g, ' '), /R\$ 3\.800/);
+  assert.deepEqual(problems, []);
+});

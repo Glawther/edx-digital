@@ -1600,3 +1600,19 @@ a.dropdown-item { text-decoration: none; box-sizing: border-box; }
   .week-grid { grid-template-columns: 1fr; }
   .week-day { min-height: 0; }
 }
+
+/* Proposal: the items, typed above the sheet and printed inside it */
+.proposal-items-editor { margin: 0 0 1.25rem; border-top: 0; padding-top: 0; }
+.proposal-item-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 120px auto; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.proposal-items-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.proposal-items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.proposal-items-table th { text-align: left; font-weight: 500; font-size: 0.8rem; color: #6f7a8a; padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid #d5dae1; }
+.proposal-items-table td { padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid #e4e7ec; vertical-align: top; overflow-wrap: anywhere; }
+.proposal-items-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; padding-right: 0; }
+@media (max-width: 640px) {
+  .proposal-item-row { grid-template-columns: 1fr 1fr; }
+  .proposal-item-row input[data-part="description"] { grid-column: 1 / -1; }
+}
+@media print {
+  .proposal-items-editor, #prop-items-mismatch { display: none !important; }
+}

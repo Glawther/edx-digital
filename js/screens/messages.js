@@ -2,11 +2,12 @@
  * EDX Digital - What is sent to the customer: WhatsApp messages, proposals, and the AI analysis
  */
 
+import { cleanItems, itemsTotal, lineTotal, formatQuantity, MAX_ITEMS, MAX_ITEM_TEXT } from '../core/proposal-items.js';
 import { messagesFor } from '../core/message-templates.js';
 import { getStageName } from '../core/crm-store.js';
 import { getSavedOrganization } from '../core/config.js';
 import { storage } from '../core/storage-manager.js';
-import { getCurrentUser } from '../services/auth-service.js';
+import { getCurrentUser, isReadOnly } from '../services/auth-service.js';
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from '../services/gemini-service.js';
 import {
   buildWhatsAppLink,
@@ -275,6 +276,9 @@ window.handleAnalyzeWithAI = async function(customerId) {
 // ==========================================================================
 // Proposal Modal Events (One-Click Proposal & PDF Print)
 // ==========================================================================
+// The items being edited in the proposal window, as typed
+let editingItems = [];
+
 export function setupProposalModalEvents() {
   const dialog = document.getElementById('proposal-dialog');
   const btnClose = document.getElementById('btn-close-proposal-dialog');
@@ -311,7 +315,14 @@ export function setupProposalModalEvents() {
     set('prop-client-contact', [customer.email, customer.phone].filter(Boolean).join(', '));
     set('prop-scope-text', customer.notes || 'Nada escrito ainda. Edite a oportunidade e descreva em Anotações o que está sendo proposto: o texto aparece aqui. Este aviso não sai na impressão.');
     document.getElementById('prop-scope-text')?.classList.toggle('is-placeholder', !customer.notes);
-    set('prop-price-display', formatBRL(customer.dealValue));
+    editingItems = cleanItems(customer.items).map(item => ({ ...item }));
+    renderItemRows();
+    renderProposalItems(customer);
+    const editor = document.getElementById('proposal-items-editor');
+    if (editor) {
+      editor.open = false;
+      editor.hidden = isReadOnly();
+    }
     set('prop-assigned-name', (customer.assignedTo?.name || user?.name || '').replace(/\s*\(.*\)$/, ''));
     set('prop-assigned-email', customer.assignedTo?.email || user?.email || '');
     set('prop-sign-client', customer.company || customer.name || 'Cliente');
@@ -319,6 +330,86 @@ export function setupProposalModalEvents() {
 
     if (dialog) dialog.showModal();
   };
+
+  // ---- items: what is being sold, line by line
+  const rowsBox = document.getElementById('proposal-items-rows');
+  const money = (amount) => (amount ? amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+
+  function renderItemRows() {
+    if (!rowsBox) return;
+    rowsBox.innerHTML = editingItems.length === 0
+      ? '<p class="empty-note" style="margin: 0 0 0.6rem;">Nenhum item ainda.</p>'
+      : editingItems.map((item, index) => `
+        <div class="proposal-item-row">
+          <input type="text" class="form-input" value="${escapeHtml(item.description)}" maxlength="${MAX_ITEM_TEXT}" placeholder="Descrição" data-index="${index}" data-part="description" aria-label="Descrição do item ${index + 1}">
+          <input type="text" class="form-input" value="${escapeHtml(item.quantity ? formatQuantity(item.quantity) : '')}" inputmode="decimal" placeholder="Qtd." data-index="${index}" data-part="quantity" aria-label="Quantidade do item ${index + 1}">
+          <input type="text" class="form-input" value="${escapeHtml(money(item.unitPrice))}" inputmode="decimal" placeholder="Preço" data-index="${index}" data-part="unitPrice" aria-label="Preço unitário do item ${index + 1}">
+          <button type="button" class="link-btn danger" data-index="${index}" data-part="remove">Remover</button>
+        </div>`).join('');
+    const add = document.getElementById('btn-add-proposal-item');
+    if (add) add.disabled = editingItems.length >= MAX_ITEMS;
+  }
+
+  // The printed sheet: a table when there are items, otherwise just the value
+  function renderProposalItems(customer) {
+    const items = cleanItems(customer.items);
+    const block = document.getElementById('prop-items-block');
+    if (block) block.hidden = items.length === 0;
+    const body = document.getElementById('prop-items-body');
+    if (body) {
+      body.innerHTML = items.map(item => `
+        <tr><td>${escapeHtml(item.description)}</td><td class="num">${formatQuantity(item.quantity)}</td><td class="num">${formatBRL(item.unitPrice)}</td><td class="num">${formatBRL(lineTotal(item))}</td></tr>`).join('');
+    }
+    const title = document.getElementById('prop-price-title');
+    if (title) title.textContent = items.length > 0 ? 'Valor total' : 'Valor';
+    const price = document.getElementById('prop-price-display');
+    if (price) price.textContent = formatBRL(customer.dealValue) + (customer.recurring ? ' por mês' : '');
+    // the items and the opportunity's value are two numbers: say so when they differ
+    const total = itemsTotal(items);
+    const note = document.getElementById('prop-items-mismatch');
+    if (note) note.remove();
+    if (items.length > 0 && Math.abs(total - (Number(customer.dealValue) || 0)) > 0.005 && block) {
+      block.insertAdjacentHTML('beforeend', `<p class="empty-note is-placeholder" id="prop-items-mismatch">A soma dos itens é ${formatBRL(total)} e o valor da oportunidade é ${formatBRL(customer.dealValue)}. Este aviso não sai na impressão.</p>`);
+    }
+  }
+
+  rowsBox?.addEventListener('input', (event) => {
+    const { index, part } = event.target.dataset;
+    if (part && part !== 'remove') editingItems[Number(index)][part] = event.target.value;
+  });
+  rowsBox?.addEventListener('click', (event) => {
+    const { index, part } = event.target.dataset;
+    if (part !== 'remove') return;
+    editingItems.splice(Number(index), 1);
+    renderItemRows();
+  });
+  document.getElementById('btn-add-proposal-item')?.addEventListener('click', () => {
+    if (editingItems.length >= MAX_ITEMS) return;
+    editingItems.push({ description: '', quantity: '', unitPrice: '' });
+    renderItemRows();
+    const inputs = rowsBox.querySelectorAll('input[data-part="description"]');
+    inputs[inputs.length - 1]?.focus();
+  });
+  document.getElementById('btn-save-proposal-items')?.addEventListener('click', async () => {
+    const customer = storage.getCustomer(activeProposalCustomerId);
+    if (!customer) return;
+    const items = cleanItems(editingItems);
+    const typed = editingItems.filter(item => String(item.description || '').trim() || String(item.unitPrice || '').trim()).length;
+    if (items.length < typed) {
+      showToast('Todo item precisa de uma descrição.', 'error');
+      return;
+    }
+    const useTotal = document.getElementById('proposal-items-set-value')?.checked && items.length > 0;
+    try {
+      const saved = await storage.saveCustomer({ id: customer.id, items, ...(useTotal ? { dealValue: itemsTotal(items) } : {}) });
+      editingItems = cleanItems(saved.items).map(item => ({ ...item }));
+      renderItemRows();
+      renderProposalItems(saved);
+      showToast(items.length === 0 ? 'Itens removidos.' : `Itens salvos. Total: ${formatBRL(itemsTotal(items))}.`, 'success');
+    } catch (err) {
+      showToast(`Não foi possível salvar os itens: ${err.message}`, 'error');
+    }
+  });
 
   if (btnPrint) {
     btnPrint.addEventListener('click', () => {

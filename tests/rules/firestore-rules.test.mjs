@@ -613,3 +613,10 @@ test('exigências por etapa e metas por vendedor: o administrador grava, com o t
   assert.equal(await patch(world.a.owner, org, { sellerGoals: 'muito' }), DENIED);
   assert.equal(await patch(world.ana, org, { sellerGoals: { [world.ana.uid]: 1 } }), DENIED);
 });
+
+test('itens da proposta: lista de até 30 linhas na oportunidade', async () => {
+  const item = { description: 'Instalação', quantity: 1, unitPrice: 1500 };
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: [item, item] }), OK);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: Array.from({ length: 31 }, () => item) }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: 'texto' }), DENIED);
+});

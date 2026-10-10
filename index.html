@@ -1058,6 +1058,20 @@
     </div>
 
     <div class="dialog-body" style="padding: 1.5rem;">
+      <details class="form-more proposal-items-editor" id="proposal-items-editor">
+        <summary>Itens da proposta (opcional)</summary>
+        <p class="empty-note" style="margin: 0.6rem 0;">Liste o que está sendo vendido. A proposta passa a mostrar a tabela com quantidade, preço e total. Sem itens, ela mostra só o valor da oportunidade.</p>
+        <div id="proposal-items-rows"></div>
+        <div class="proposal-items-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-add-proposal-item">Adicionar item</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-proposal-items">Salvar itens</button>
+          <label class="consent-line" style="margin: 0;">
+            <input type="checkbox" id="proposal-items-set-value" checked>
+            <span>Usar o total como valor da oportunidade</span>
+          </label>
+        </div>
+      </details>
+
       <div class="proposal-sheet" id="proposal-print-area">
         <div class="proposal-letterhead">
           <div>
@@ -1081,7 +1095,15 @@
         <div class="proposal-section-title">O que está sendo proposto</div>
         <div class="proposal-block" id="prop-scope-text"></div>
 
-        <div class="proposal-section-title">Valor</div>
+        <div id="prop-items-block" hidden>
+          <div class="proposal-section-title">Itens</div>
+          <table class="proposal-items-table">
+            <thead><tr><th>Descrição</th><th class="num">Qtd.</th><th class="num">Preço unitário</th><th class="num">Total</th></tr></thead>
+            <tbody id="prop-items-body"></tbody>
+          </table>
+        </div>
+
+        <div class="proposal-section-title" id="prop-price-title">Valor</div>
         <div class="proposal-price-box">
           <div class="proposal-price-val" id="prop-price-display"></div>
         </div>
