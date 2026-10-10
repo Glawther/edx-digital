@@ -2,6 +2,7 @@
  * EDX Digital - What surrounds every screen: navigation, tools menu, search and shortcuts, notifications, installing the app
  */
 
+import { todayPanel } from '../core/today.js';
 import { crmStore } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
 import { toggleTheme } from '../core/theme-manager.js';
@@ -136,7 +137,7 @@ export function setupNavigation() {
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '').split('?')[0];
     if (hash && !hash.startsWith('checkout') && !hash.startsWith('register')) {
-      const validViews = ['pipeline', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security'];
+      const validViews = ['today', 'pipeline', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security'];
       if (validViews.includes(hash)) {
         window.navigateToView(hash);
       }
@@ -145,7 +146,7 @@ export function setupNavigation() {
 
   // Initialize view from URL hash if present
   const initialHash = window.location.hash.replace('#', '').split('?')[0];
-  const validInitialViews = ['pipeline', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security'];
+  const validInitialViews = ['today', 'pipeline', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security'];
   if (initialHash && validInitialViews.includes(initialHash)) {
     window.navigateToView(initialHash);
   }
@@ -156,6 +157,13 @@ export function updateNavCounters(state) {
   const customersCount = document.getElementById('nav-count-customers');
   const tasksCount = document.getElementById('nav-count-tasks');
 
+  const todayCount = document.getElementById('nav-count-today');
+  if (todayCount) {
+    // tasks that are late or due today: what cannot wait
+    const urgent = todayPanel(state.visibleCustomers || []).urgent;
+    todayCount.textContent = urgent;
+    todayCount.hidden = urgent === 0;
+  }
   if (pipelineCount) pipelineCount.textContent = state.allCustomers.length;
   if (customersCount) customersCount.textContent = state.allCustomers.length;
   if (tasksCount) {
@@ -258,6 +266,7 @@ export function setupCommandPalette() {
       { id: 'action-toggle-theme', title: 'Trocar entre tema claro e escuro', hint: '', category: 'Ações', run: () => { window.closeCommandPalette(); toggleTheme(); } },
       { id: 'action-toggle-role', title: 'Ver a demonstração com o outro perfil', hint: '', demoOnly: true, category: 'Ações', run: () => { window.closeCommandPalette(); window.handleToggleRole(); } },
       { id: 'action-shortcuts', title: 'Atalhos de teclado', hint: '?', category: 'Ações', run: () => { window.closeCommandPalette(); document.getElementById('shortcuts-dialog')?.showModal(); } },
+      { id: 'nav-today', title: 'Hoje', hint: 'H', category: 'Ir para', run: go('today') },
       { id: 'nav-pipeline', title: 'Funil de vendas', hint: '1', category: 'Ir para', run: go('pipeline') },
       { id: 'nav-customers', title: 'Clientes', hint: '2', category: 'Ir para', run: go('customers') },
       { id: 'nav-tasks', title: 'Tarefas', hint: '3', category: 'Ir para', run: go('tasks') },
@@ -407,6 +416,9 @@ export function setupKeyboardShortcuts() {
     if (e.key === '?') {
       e.preventDefault();
       if (shortcutsDialog) shortcutsDialog.showModal();
+    } else if (key === 'h') {
+      e.preventDefault();
+      window.navigateToView('today');
     } else if (key === 'n') {
       // the same path as the button: plan limit, read-only mode and a clean form
       e.preventDefault();

@@ -4,7 +4,9 @@
  */
 
 import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
-import { REPORT_PERIODS, periodReport } from '../core/report.js';
+import { REPORT_PERIODS, periodReport, sellerReportRows } from '../core/report.js';
+import { todayPanel, daysLabel, CLOSING_WINDOW_DAYS } from '../core/today.js';
+import { downloadCsv } from '../services/export-service.js';
 import { localDateString } from '../services/reminder-service.js';
 import { customFacts } from './customize-dialog.js';
 import { escapeHtml, safeImageUrl } from '../core/html.js';
@@ -452,7 +454,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
   }
 
   const periodId = getReportPeriod();
-  const report = periodReport(customers, periodId);
+  const report = periodReport(customers, periodId, new Date(), reportMembers(permissions));
   const { totals } = report;
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
@@ -483,27 +485,49 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     ? '<p class="empty-note">Nenhuma oportunidade perdida neste período.</p>'
     : reasons.map(r => barRow(escapeHtml(r.label), `${r.count} de ${totals.lostCount}<strong>${formatBRL(r.value)}</strong>`, Math.round((r.count / totals.lostCount) * 100), 'lost')).join('');
 
+  const rate = (row) => row.conversionRate === null ? '<span class="is-quiet">sem dados</span>' : `${row.conversionRate}%`;
+  const ticket = (row) => row.avgTicket === null ? '<span class="is-quiet">sem dados</span>' : formatBRL(row.avgTicket);
+  const flag = (n) => n > 0 ? `<span class="is-warning">${n}</span>` : '0';
   const peopleHtml = permissions.isAdmin && report.people.length > 0 ? `
-    <section class="settings-section">
+    <section class="settings-section" id="seller-report">
       <div class="settings-section-head">
         <div>
           <h2>Por vendedor</h2>
-          <p>Vendas, perdas e novas oportunidades no período escolhido; a carteira em aberto é a de agora.</p>
+          <p>O que cada pessoa fez no período escolhido. Conversas são as ligações, mensagens, e-mails e reuniões registrados nas oportunidades.</p>
         </div>
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleExportSellerReport">Exportar</button>
       </div>
       <div class="table-scroll">
         <table class="plain-table">
-          <thead><tr><th>Vendedor</th><th class="num">Vendas</th><th class="num">Valor vendido</th><th class="num">Perdidas</th><th class="num">Novas</th><th class="num">Em aberto</th><th class="num">Valor em aberto</th></tr></thead>
+          <thead><tr><th>Vendedor</th><th class="num">Vendas</th><th class="num">Valor vendido</th><th class="num">Ticket médio</th><th class="num">Conversão</th><th class="num">Perdidas</th><th class="num">Novas</th><th class="num">Conversas</th></tr></thead>
           <tbody>
             ${report.people.map(row => `
               <tr>
                 <td>${escapeHtml(row.name)}</td>
                 <td class="num">${row.wonCount}</td>
                 <td class="num">${formatBRL(row.wonValue)}</td>
+                <td class="num">${ticket(row)}</td>
+                <td class="num">${rate(row)}</td>
                 <td class="num">${row.lostCount}</td>
                 <td class="num">${row.created}</td>
+                <td class="num">${row.contacts}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <h3 class="section-title" style="margin: 1.25rem 0 0;">Carteira de cada um, agora</h3>
+      <div class="table-scroll">
+        <table class="plain-table">
+          <thead><tr><th>Vendedor</th><th class="num">Em aberto</th><th class="num">Valor em aberto</th><th class="num">Paradas há 3 dias ou mais</th><th class="num">Com tarefa atrasada</th></tr></thead>
+          <tbody>
+            ${report.people.map(row => `
+              <tr>
+                <td>${escapeHtml(row.name)}</td>
                 <td class="num">${row.openCount}</td>
                 <td class="num">${formatBRL(row.openValue)}</td>
+                <td class="num">${flag(row.stalled)}</td>
+                <td class="num">${flag(row.lateTasks)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -550,6 +574,11 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
         <div class="figure-value">${report.avgTicket === null ? 'sem dados' : formatBRL(report.avgTicket)}</div>
         <div class="figure-note">Por venda fechada no período.</div>
       </div>
+      <div class="figure-box">
+        <div class="figure-label">Conversas registradas</div>
+        <div class="figure-value">${totals.contacts}</div>
+        <div class="figure-note">Ligações, mensagens, e-mails e reuniões.</div>
+      </div>
     </div>
 
     ${peopleHtml}
@@ -582,6 +611,118 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
       <div class="settings-section-head"><div><h2>Valor em aberto por etapa</h2><p>Quanto há em cada etapa do funil neste momento.</p></div></div>
       <div class="bar-list">${funnelHtml}</div>
     </section>
+  `;
+}
+
+// In a real account everyone on the team gets a row, even with no opportunity yet.
+// The demonstration's sample people do not share ids with its sample opportunities.
+function reportMembers(permissions) {
+  if (!permissions.isAdmin || !isCloudSession()) return [];
+  const me = getCurrentUser();
+  return [...(me ? [{ id: me.uid, name: me.name }] : []), ...getEmployees().filter(person => person.status !== 'blocked')];
+}
+
+export function exportSellerReport(customers) {
+  const periodId = getReportPeriod();
+  const report = periodReport(customers, periodId, new Date(), reportMembers({ isAdmin: isAdmin() }));
+  if (report.people.length === 0) throw new Error('Não há dados para exportar.');
+  downloadCsv(sellerReportRows(report), `edx-digital-vendedores-${periodId}.csv`);
+}
+
+/**
+ * The "Hoje" screen: what needs the person now, in the order to work through it
+ */
+export function renderToday(customers = [], permissions = {}) {
+  const container = document.getElementById('today-content');
+  if (!container) return;
+
+  const now = new Date();
+  const dateText = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const heading = `<p class="today-date">${dateText.charAt(0).toUpperCase()}${dateText.slice(1)}</p>`;
+
+  if (customers.length === 0) {
+    container.innerHTML = `
+      ${heading}
+      <section class="settings-section">
+        <div class="settings-section-head"><div><h2>Nada por aqui ainda</h2><p>Esta tela mostra o que fazer hoje: tarefas do dia, oportunidades paradas e as que estão perto de fechar. Ela se preenche assim que houver oportunidades.</p></div></div>
+        <div class="today-empty-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-click="openNewOpportunity">Cadastrar a primeira oportunidade</button>
+          ${permissions.isAdmin ? '<button type="button" class="btn btn-outline btn-sm" data-click="openImport">Importar de uma planilha</button>' : ''}
+        </div>
+      </section>`;
+    return;
+  }
+
+  const panel = todayPanel(customers, now);
+  const LIMIT = 6;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  // an administrator sees everyone's work, so each line says whose it is
+  const owner = (customer) => {
+    if (!permissions.isAdmin || !customer.assignedTo) return '';
+    const name = (customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '');
+    return name ? `<span class="today-owner">${escapeHtml(name.split(/[\s@]/)[0])}</span>` : '';
+  };
+  const company = (customer) => customer.company ? `, ${escapeHtml(customer.company)}` : '';
+
+  const taskRow = ({ customer, task, daysLate }) => `
+    <div class="today-row">
+      <input type="checkbox" class="task-checkbox" aria-label="Concluir: ${escapeHtml(task.title)}"
+             data-change="handleToggleTask" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(task.id)}">
+      <div class="today-main">
+        <span class="today-title">${escapeHtml(task.title)}</span>
+        <span class="today-sub"><button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(customer.id)}">${escapeHtml(customer.name)}</button>${company(customer)}</span>
+      </div>
+      ${owner(customer)}
+      <span class="today-when ${daysLate ? 'is-warning' : ''}">${daysLate ? `Atrasada ${daysLabel(-daysLate)}` : (task.dueTime ? `Hoje às ${escapeHtml(task.dueTime)}` : 'Hoje')}</span>
+    </div>`;
+
+  const dealRow = (customer, note, warn = false) => `
+    <button type="button" class="today-row is-link" data-click="handleOpenLeadDetails" data-a="${escapeHtml(customer.id)}">
+      <span class="today-main">
+        <span class="today-title">${escapeHtml(customer.name)}${customer.company ? `<span class="today-company">${company(customer)}</span>` : ''}</span>
+        <span class="today-sub ${warn ? 'is-warning' : ''}">${note}</span>
+      </span>
+      ${owner(customer)}
+      <span class="today-when">${formatBRL(customer.dealValue)}</span>
+    </button>`;
+
+  const section = (id, title, hint, rows, total, more) => total === 0 ? '' : `
+    <section class="settings-section today-section" id="today-${id}">
+      <div class="settings-section-head"><div><h2>${title} <span class="today-count">${total}</span></h2><p>${hint}</p></div></div>
+      <div class="today-list">${rows.join('')}</div>
+      ${total > rows.length ? `<button type="button" class="link-btn today-more" data-click="${more.action}" data-a="${more.arg}">Ver ${more.label}</button>` : ''}
+    </section>`;
+
+  const tasks = [...panel.lateTasks, ...panel.todayTasks];
+  const summary = [
+    panel.lateTasks.length ? plural(panel.lateTasks.length, 'tarefa atrasada', 'tarefas atrasadas') : '',
+    panel.todayTasks.length ? plural(panel.todayTasks.length, 'tarefa para hoje', 'tarefas para hoje') : '',
+    panel.closing.length ? plural(panel.closing.length, 'oportunidade perto de fechar', 'oportunidades perto de fechar') : '',
+    panel.stalled.length ? plural(panel.stalled.length, 'parada', 'paradas') : '',
+    panel.noTask.length ? `${panel.noTask.length} sem próxima tarefa` : ''
+  ].filter(Boolean).join(', ');
+
+  if (panel.nothing) {
+    container.innerHTML = `
+      ${heading}
+      <section class="settings-section">
+        <div class="settings-section-head"><div><h2>Nada pendente</h2><p>Nenhuma tarefa para hoje nem atrasada, e todas as oportunidades em aberto têm próximo passo e foram atualizadas nos últimos dias.</p></div></div>
+      </section>`;
+    return;
+  }
+
+  const closeNote = ({ customer, inDays }) => inDays < 0
+    ? `A previsão de fechamento passou ${daysLabel(inDays)}`
+    : `Previsão de fechamento: ${daysLabel(inDays)}`;
+  const stalledNote = ({ days, lastContact }) => `Sem atualização há ${days} dias${lastContact ? `. Último contato: ${escapeHtml(lastContact.title.toLowerCase())}` : '. Nenhuma conversa registrada'}`;
+
+  container.innerHTML = `
+    ${heading}
+    <p class="today-summary">${summary}.</p>
+    ${section('tasks', 'Tarefas', 'As atrasadas primeiro, depois as de hoje. Marque para concluir.', tasks.slice(0, LIMIT).map(taskRow), tasks.length, { action: 'openView', arg: 'tasks', label: `as ${tasks.length} em Tarefas` })}
+    ${section('closing', 'Perto de fechar', `Oportunidades com fechamento previsto para os próximos ${CLOSING_WINDOW_DAYS} dias, ou com a data já vencida.`, panel.closing.slice(0, LIMIT).map(item => dealRow(item.customer, closeNote(item), item.inDays < 0)), panel.closing.length, { action: 'openView', arg: 'pipeline', label: `as ${panel.closing.length} no funil` })}
+    ${section('stalled', 'Paradas', 'Em aberto e sem nenhuma atualização há 3 dias ou mais. As mais antigas primeiro.', panel.stalled.slice(0, LIMIT).map(item => dealRow(item.customer, stalledNote(item))), panel.stalled.length, { action: 'openFunnelFocus', arg: 'stalled', label: `as ${panel.stalled.length} no funil` })}
+    ${section('notask', 'Sem próxima tarefa', 'Em aberto e sem nada agendado: são as que acabam esquecidas. Abra e agende o próximo passo.', panel.noTask.slice(0, LIMIT).map(customer => dealRow(customer, 'Nenhuma tarefa agendada')), panel.noTask.length, { action: 'openFunnelFocus', arg: 'noTask', label: `as ${panel.noTask.length} no funil` })}
   `;
 }
 

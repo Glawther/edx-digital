@@ -69,7 +69,7 @@ after(async () => {
  * A fresh browser profile signed in to the demonstration as administrator or as salesperson.
  * Everything the page complains about (errors, anything the security policy refused) is collected.
  */
-async function openDemo(t, role = 'admin', viewport = { width: 1300, height: 800 }) {
+async function openDemo(t, role = 'admin', viewport = { width: 1300, height: 800 }, start = 'pipeline') {
   if (!browser) {
     t.skip('Edge ou Chrome não encontrado nesta máquina');
     return null;
@@ -91,7 +91,12 @@ async function openDemo(t, role = 'admin', viewport = { width: 1300, height: 800
   page.on('dialog', dialog => dialog.accept());
   await page.goto(base + '/');
   await page.click(role === 'admin' ? '#btn-quick-login-admin' : '#btn-quick-login-employee');
-  await page.waitForSelector('.lead-card');
+  // the session opens on "Hoje"; most tests work on the funnel
+  await page.waitForSelector('#today-content > *');
+  if (start !== 'today') {
+    await page.click('.nav-item[data-view="pipeline"]');
+    await page.waitForSelector('.lead-card');
+  }
   t.after(() => context.close());
   return { page, problems };
 }
@@ -113,7 +118,7 @@ test('administrador: o funil abre com as oportunidades e sem nenhum erro', async
   const { page, problems } = demo;
   assert.ok(await page.locator('.lead-card').count() >= 5);
   assert.ok(await page.locator('.pipeline-column').count() >= 5);
-  for (const view of ['customers', 'tasks', 'metrics', 'team', 'audit', 'security', 'pipeline']) {
+  for (const view of ['today', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security', 'pipeline']) {
     await page.click(`.nav-item[data-view="${view}"]`);
     await page.waitForFunction(name => document.body.dataset.view === name, view);
   }
@@ -272,4 +277,71 @@ test('botões e campos usam a fonte do aplicativo', async (t) => {
       .map(el => el.id || el.className);
   });
   assert.deepEqual(odd, []);
+});
+
+test('Hoje é a primeira tela: lista o que fazer, abre a oportunidade e conclui tarefa dali', async (t) => {
+  const demo = await openDemo(t, 'admin', { width: 1300, height: 800 }, 'today');
+  if (!demo) return;
+  const { page, problems } = demo;
+  assert.equal(await page.evaluate(() => document.body.dataset.view), 'today');
+  assert.equal(await page.locator('.nav-item[data-view="today"]').getAttribute('class'), 'nav-item active');
+  assert.ok(await page.locator('.today-section').count() >= 1, 'a demonstração tem pendências para mostrar');
+  assert.match(await page.textContent('.today-summary'), /tarefa|parada|fechar/);
+
+  // uma linha de oportunidade abre a janela dela
+  await page.locator('button.today-row').first().click();
+  await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+  await page.click('#btn-close-lead-details');
+
+  // concluir uma tarefa pela lista tira a linha dali
+  const tasks = page.locator('#today-tasks .today-row');
+  const before = await tasks.count();
+  if (before > 0) {
+    // click, not check(): the list is redrawn and the row it would verify is gone
+    await tasks.first().locator('.task-checkbox').click();
+    await page.waitForFunction(count => document.querySelectorAll('#today-tasks .today-row').length < count, before);
+  }
+  assert.deepEqual(problems, []);
+});
+
+test('Hoje para o vendedor: só a própria carteira, sem o nome do responsável em cada linha', async (t) => {
+  const admin = await openDemo(t, 'admin', { width: 1300, height: 800 }, 'today');
+  if (!admin) return;
+  const seller = await openDemo(t, 'employee', { width: 1300, height: 800 }, 'today');
+  const rows = (page) => page.locator('.today-row').count();
+  assert.ok(await rows(seller.page) <= await rows(admin.page));
+  assert.ok(await admin.page.locator('.today-owner').count() > 0);
+  assert.equal(await seller.page.locator('.today-owner').count(), 0);
+  assert.deepEqual(seller.problems, []);
+});
+
+test('Hoje numa janela de celular: cabe na tela, sem rolagem lateral', async (t) => {
+  const demo = await openDemo(t, 'admin', { width: 375, height: 800 }, 'today');
+  if (!demo) return;
+  assert.equal(await demo.page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+  assert.deepEqual(demo.problems, []);
+});
+
+test('relatório por vendedor: o administrador vê as duas tabelas e exporta; o vendedor não vê', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.click('.nav-item[data-view="metrics"]');
+  await page.click('[data-click="handleReportPeriod"][data-a="all"]');
+  const tables = page.locator('#seller-report table');
+  assert.equal(await tables.count(), 2);
+  assert.deepEqual(await tables.nth(0).locator('th').allTextContents(), ['Vendedor', 'Vendas', 'Valor vendido', 'Ticket médio', 'Conversão', 'Perdidas', 'Novas', 'Conversas']);
+  assert.ok(await tables.nth(0).locator('tbody tr').count() >= 2);
+  assert.equal(await tables.nth(0).locator('tbody tr').count(), await tables.nth(1).locator('tbody tr').count());
+
+  const download = page.waitForEvent('download');
+  await page.click('[data-click="handleExportSellerReport"]');
+  assert.equal((await download).suggestedFilename(), 'edx-digital-vendedores-all.csv');
+  assert.deepEqual(problems, []);
+
+  const seller = await openDemo(t, 'employee');
+  await seller.page.click('.nav-item[data-view="metrics"]');
+  await seller.page.waitForSelector('.figure-row');
+  assert.equal(await seller.page.locator('#seller-report').count(), 0);
+  assert.match(await seller.page.textContent('.figure-row'), /Conversas registradas/);
 });
