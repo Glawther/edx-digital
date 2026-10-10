@@ -1,9 +1,9 @@
 /**
- * Nexus CRM - Service Worker
+ * EDX Digital - Service Worker
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'nexus-crm-v3.8.0';
+const CACHE_NAME = 'edx-digital-v3.9.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then(async (cache) => {
       await Promise.allSettled(
         STATIC_ASSETS.map((url) => cache.add(url).catch((err) => {
-          console.warn(`[Nexus PWA] Cache skip for ${url}:`, err.message);
+          console.warn(`[EDX Digital PWA] Cache skip for ${url}:`, err.message);
         }))
       );
     }).then(() => self.skipWaiting())
@@ -60,7 +60,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log(`[Nexus PWA] Removendo cache legado: ${key}`);
+            console.log(`[EDX Digital PWA] Removendo cache legado: ${key}`);
             return caches.delete(key);
           }
         })
@@ -123,7 +123,7 @@ self.addEventListener('fetch', (event) => {
           return cachedFallback;
         }
 
-        return new Response('Offline - Nexus CRM', {
+        return new Response('Offline - EDX Digital', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });

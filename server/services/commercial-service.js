@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - SaaS Commercialization & Subscription Service
+ * EDX Digital - SaaS Commercialization & Subscription Service
  * Standards: Multi-Tenant Self-Service Onboarding, Plan Quotas, Automated Billing Webhooks
  * Security: Scrypt Password Hashing, Idempotent Processing, HMAC Verification
  */
@@ -15,7 +15,7 @@ const { defaultBillingAdapter } = require('./billing-gateway-adapter');
 const COMMERCIAL_PLANS = {
   starter: {
     id: 'starter',
-    name: 'Nexus Starter',
+    name: 'EDX Digital Starter',
     priceMonthly: 97.00,
     priceAnnual: 77.00,
     trialDays: 7,
@@ -26,7 +26,7 @@ const COMMERCIAL_PLANS = {
   },
   pro: {
     id: 'pro',
-    name: 'Nexus Professional',
+    name: 'EDX Digital Professional',
     priceMonthly: 197.00,
     priceAnnual: 157.00,
     trialDays: 7,
@@ -37,7 +37,7 @@ const COMMERCIAL_PLANS = {
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Nexus Enterprise',
+    name: 'EDX Digital Enterprise',
     priceMonthly: 497.00,
     priceAnnual: 397.00,
     trialDays: 7,

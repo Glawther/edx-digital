@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Shared Firebase app
+ * EDX Digital - Shared Firebase app
  * One app instance for Authentication and Firestore, so the database always
  * knows who is signed in. (Before, each service created its own app and the
  * database was reached anonymously.)

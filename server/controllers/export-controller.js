@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Bulk Export Controller
+ * EDX Digital - Bulk Export Controller
  * Security Standard: DLP (Data Loss Prevention), ISO 27001, Anti-Exfiltration
  * Safeguard: Trava de Segurança para Exportação em Massa (> 100 contatos)
  */

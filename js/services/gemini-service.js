@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Google Gemini AI Service
+ * EDX Digital - Google Gemini AI Service
  * Generates deal insights, win probability, sales strategies and proposal drafts.
  */
 
@@ -165,7 +165,7 @@ function generateHeuristicAnalysis(customer) {
       : stage === 'proposal'
       ? 'Fazer follow-up com o decisor em até 48 horas oferecendo tirar dúvidas sobre o escopo.'
       : 'Apresentar demonstração prática e casos de sucesso similares para avançar para a fase de proposta.',
-    proposalEmail: `Assunto: Proposta Estratégica Nexus para a ${company}\n\nOlá, ${firstName}!\n\nFoi um prazer conversar com você sobre as metas e desafios da ${company}. Conforme alinhamos, elaborei nossa proposta personalizada com foco em acelerar a sua operação com a máxima confiabilidade e segurança em nuvem do Google.\n\nFico à total disposição para alinharmos os detalhes e tirarmos qualquer dúvida.\n\nVocê tem 15 minutos amanhã às 14h para conversarmos rapidamente?\n\nUm abraço,\nEquipe Comercial Nexus CRM`
+    proposalEmail: `Assunto: Proposta Estratégica EDX Digital para a ${company}\n\nOlá, ${firstName}!\n\nFoi um prazer conversar com você sobre as metas e desafios da ${company}. Conforme alinhamos, elaborei nossa proposta personalizada com foco em acelerar a sua operação com a máxima confiabilidade e segurança em nuvem do Google.\n\nFico à total disposição para alinharmos os detalhes e tirarmos qualquer dúvida.\n\nVocê tem 15 minutos amanhã às 14h para conversarmos rapidamente?\n\nUm abraço,\nEquipe Comercial EDX Digital`
   };
 }
 

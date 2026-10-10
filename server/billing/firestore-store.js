@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - The few Firestore reads and writes the billing server needs, over REST.
+ * EDX Digital - The few Firestore reads and writes the billing server needs, over REST.
  * It acts as the project (service account), so the security rules do not apply here:
  * this is the only place allowed to change a company's plan.
  */

@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Cryptographic Suite
+ * EDX Digital - Cryptographic Suite
  * Standards: NIST SP 800-38D, RFC 7914, OWASP Cryptographic Storage Cheat Sheet
  * Algorithms: AES-256-GCM (Authenticated Encryption), Scrypt/Argon2id (Password Hash), HMAC-SHA256
  */

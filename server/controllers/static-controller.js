@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Static File Controller
+ * EDX Digital - Static File Controller
  * Serves static assets with MIME detection, caching policies and fallback routing.
  */
 
@@ -48,7 +48,7 @@ function handleStaticFile(req, res, parsedUrl) {
         fs.readFile(indexPath, (fallbackErr, fallbackContent) => {
           if (fallbackErr) {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end('404 - Arquivo não encontrado no Nexus CRM');
+            res.end('404 - Arquivo não encontrado no EDX Digital');
           } else {
             res.writeHead(200, {
               'Content-Type': 'text/html; charset=utf-8',

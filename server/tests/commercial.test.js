@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Automated Commercial & Monetization Tests
+ * EDX Digital - Automated Commercial & Monetization Tests
  * Tests: Plans Catalog, Self-Service Onboarding, Plan Quotas, HMAC Billing Webhooks & Idempotency
  * Framework: Node.js Native Test Runner (node:test & node:assert)
  */

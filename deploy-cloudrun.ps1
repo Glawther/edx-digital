@@ -1,5 +1,5 @@
 # ==============================================================================
-# Nexus CRM Enterprise - Script de Deploy Automatizado no Google Cloud Run
+# EDX Digital - Script de Deploy Automatizado no Google Cloud Run
 # Pré-requisito: Google Cloud CLI instalada (gcloud auth login)
 # ==============================================================================
 
@@ -10,7 +10,7 @@ param(
 )
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "🚀 Iniciando Deploy do Nexus CRM no Google Cloud Run..." -ForegroundColor Yellow
+Write-Host "🚀 Iniciando Deploy do EDX Digital no Google Cloud Run..." -ForegroundColor Yellow
 Write-Host "📡 Projeto: $ProjectId | Região: $Region" -ForegroundColor White
 Write-Host "==========================================================" -ForegroundColor Cyan
 

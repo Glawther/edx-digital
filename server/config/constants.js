@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Server Constants & Configurations
+ * EDX Digital - Server Constants & Configurations
  * Standard MIME Types and Security Headers
  */
 

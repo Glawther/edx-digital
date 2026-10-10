@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Employee & Credential Management Service
+ * EDX Digital - Employee & Credential Management Service
  * Governança, RBAC e Tríade CID (Confidencialidade, Integridade, Disponibilidade)
  */
 
@@ -90,7 +90,7 @@ const DEMO_EMPLOYEES = [
     id: 'employee-user-02',
     name: 'Lucas Mendes',
     cpf: '123.456.789-01',
-    email: 'lucas.vendas@nexuscrm.com',
+    email: 'lucas.vendas@example.com',
     phone: '(11) 98765-4321',
     role: USER_ROLES.EMPLOYEE,
     jobTitle: 'Consultor comercial',
@@ -103,7 +103,7 @@ const DEMO_EMPLOYEES = [
     id: 'employee-user-03',
     name: 'Mariana Costa',
     cpf: '987.654.321-09',
-    email: 'mariana.vendas@nexuscrm.com',
+    email: 'mariana.vendas@example.com',
     phone: '(21) 99887-1122',
     role: USER_ROLES.EMPLOYEE,
     jobTitle: 'Gerente de contas',

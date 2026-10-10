@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Subscription billing by PIX.
+ * EDX Digital - Subscription billing by PIX.
  *
  * The rule that matters: a plan is only ever released from what the payment provider itself
  * reports about a charge this server created. Nothing sent by a browser or in a webhook body
@@ -69,7 +69,7 @@ function createBillingService({ store, gateway, now = () => Date.now(), notifica
 
     const charge = await gateway.createPixPayment({
       amount,
-      description: `Nexus CRM, plano ${PLAN_NAMES[plan]}, ${PERIOD_DAYS} dias`,
+      description: `EDX Digital, plano ${PLAN_NAMES[plan]}, ${PERIOD_DAYS} dias`,
       payerEmail: user.email || profile.email,
       payerName: profile.name || user.name,
       externalReference: `${profile.orgId}|${plan}|${reference}`,

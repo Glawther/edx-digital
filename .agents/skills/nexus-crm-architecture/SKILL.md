@@ -1,9 +1,9 @@
 ---
 name: nexus-crm-architecture
-description: Directives, architectural patterns, and quality standards for Nexus CRM development (Vanilla JS, PWA Offline-First, Firestore Sync, Gemini AI, and Ergonomics).
+description: Directives, architectural patterns, and quality standards for EDX Digital development (Vanilla JS, PWA Offline-First, Firestore Sync, Gemini AI, and Ergonomics).
 ---
 
-# Nexus CRM Architectural Standards
+# EDX Digital Architectural Standards
 
 ## 1. Core Principles
 - **Zero Heavy Frameworks**: Pure Vanilla JavaScript (ES Modules), HTML5 and CSS3.

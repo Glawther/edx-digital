@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Lead Controller
+ * EDX Digital - Lead Controller
  * Zero Trust Architecture: Dual-layer RBAC, BOLA Defense, Immutable Audit Logging
  */
 

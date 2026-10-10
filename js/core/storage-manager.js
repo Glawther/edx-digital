@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Hybrid Storage Manager
+ * EDX Digital - Hybrid Storage Manager
  * Seamlessly manages Google Cloud Firestore with zero-friction local fallback.
  * Rich Activity Timeline, Tasks & Loss Reasons Support.
  */
@@ -75,7 +75,7 @@ const INITIAL_DEMO_LEADS = [
     priority: 'high',
     tags: ['Fintech', 'Inbound'],
     notes: 'Interesse em integração de API para pagamento em lote.',
-    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
     expectedCloseDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
     createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
@@ -119,7 +119,7 @@ const INITIAL_DEMO_LEADS = [
     priority: 'high',
     tags: ['Logística', 'SLA Alto'],
     notes: 'Primeira reunião agendada para alinhamento de requisitos técnicos.',
-    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
     expectedCloseDate: new Date(Date.now() + 20 * 86400000).toISOString().split('T')[0],
     createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
     // 4 days idle to demonstrate Deal Rotting alert
@@ -156,7 +156,7 @@ const INITIAL_DEMO_LEADS = [
     priority: 'medium',
     tags: ['Saúde', 'Segurança LGPD'],
     notes: 'Proposta comercial de 12 meses enviada. Em análise pelo comitê executivo.',
-    assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@example.com' },
     expectedCloseDate: new Date(Date.now() + 8 * 86400000).toISOString().split('T')[0],
     createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
@@ -200,7 +200,7 @@ const INITIAL_DEMO_LEADS = [
     priority: 'high',
     tags: ['Agro', 'Cloud', 'Piloto'],
     notes: 'Negociando cláusulas de suporte 24/7 e SLA de 99.9%. Decisão nesta semana.',
-    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
     expectedCloseDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
     createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
@@ -236,7 +236,7 @@ const INITIAL_DEMO_LEADS = [
     priority: 'medium',
     tags: ['Energia', 'Contrato Assinado'],
     notes: 'Contrato anual assinado! Onboarding agendado para a próxima segunda-feira.',
-    assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@example.com' },
     expectedCloseDate: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
@@ -267,7 +267,7 @@ const INITIAL_DEMO_LEADS = [
     lossDetails: 'Optaram por adiar o projeto para o próximo ano devido ao corte de CAPEX no varejo.',
     lostAt: new Date(Date.now() - 5 * 86400000).toISOString(),
     notes: 'Optaram por adiar o projeto para o próximo trimestre por restrição orçamentária.',
-    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com' },
+    assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
     createdAt: new Date(Date.now() - 25 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 86400000).toISOString(),
     activities: [
@@ -421,7 +421,7 @@ class StorageManager {
    */
   async saveCustomer(customerData) {
     assertCanWrite();
-    const user = getCurrentUser() || { name: 'Operador', email: 'user@nexuscrm.com', role: 'admin' };
+    const user = getCurrentUser() || { name: 'Operador', email: 'user@example.com', role: 'admin' };
     const defaultAssignedTo = customerData.assignedTo || {
       id: user.uid || 'employee-user-02',
       name: user.name,
@@ -803,7 +803,7 @@ class StorageManager {
     }
     const user = getCurrentUser();
     const snapshot = {
-      system: 'Nexus CRM',
+      system: 'EDX Digital',
       version: '2.0.0',
       exportedAt: new Date().toISOString(),
       exportedBy: user ? user.name : 'Administrador',

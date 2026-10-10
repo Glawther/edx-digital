@@ -1,7 +1,7 @@
-# 📜 Histórico de Desenvolvimento e Evolução do Projeto - Nexus CRM
+# 📜 Histórico de Desenvolvimento e Evolução do Projeto - EDX Digital
 
 > **Documento Oficial de Registro Cronológico**  
-> **Projeto:** Nexus CRM — Plataforma Corporativa de Vendas com Google Cloud Firestore & Gemini AI  
+> **Projeto:** EDX Digital — Plataforma Corporativa de Vendas com Google Cloud Firestore & Gemini AI  
 > **Repositório:** [github.com/Glawther/nexus-crm](https://github.com/Glawther/nexus-crm.git)  
 > **Ambiente de Produção:** [nexuscrm-d8e13.web.app](https://nexuscrm-d8e13.web.app)  
 > **Data de Compilação:** Outubro de 2026  
@@ -10,7 +10,7 @@
 
 ## 🧭 1. Visão Geral da Jornada do Projeto
 
-O **Nexus CRM** nasceu da iniciativa de criar um CRM corporativo moderno, robusto e escalável que combinasse a agilidade de um frontend leve em **Vanilla JavaScript + CSS3 Puro** com o poder de sincronização em tempo real do **Google Cloud Firestore**, inteligência artificial analítica via **Google Gemini API**, e uma sólida camada de segurança estruturada na **Tríade CID (Confidencialidade, Integridade e Disponibilidade)** e controle de acesso baseado em papéis (**RBAC**).
+O **EDX Digital** nasceu da iniciativa de criar um CRM corporativo moderno, robusto e escalável que combinasse a agilidade de um frontend leve em **Vanilla JavaScript + CSS3 Puro** com o poder de sincronização em tempo real do **Google Cloud Firestore**, inteligência artificial analítica via **Google Gemini API**, e uma sólida camada de segurança estruturada na **Tríade CID (Confidencialidade, Integridade e Disponibilidade)** e controle de acesso baseado em papéis (**RBAC**).
 
 Ao longo do desenvolvimento, o projeto evoluiu de um protótipo inicial até um produto comercial pronto para vendas corporativas, com suporte a múltiplos colaboradores, geração de propostas em PDF, gestão de senhas temporárias com validação oficial de CPF e capacidade offline via PWA.
 
@@ -209,7 +209,7 @@ git push origin main
 
 ## 🎯 6. Conclusão e Estado do Projeto
 
-O **Nexus CRM** encontra-se em estado **estável, funcional e visualmente refinado**:
+O **EDX Digital** encontra-se em estado **estável, funcional e visualmente refinado**:
 1. Todos os cards do Kanban acomodam perfeitamente seus botões de ação sem qualquer transbordamento.
 2. A sincronização com o Firestore opera de forma resiliente via `setDoc` com merge, eliminando erros de documento não encontrado.
 3. A criação de funcionários por CPF e senhas temporárias com fluxo de primeiro acesso está 100% operacional.

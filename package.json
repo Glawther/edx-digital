@@ -1,7 +1,7 @@
 {
   "name": "nexus-crm",
   "version": "2.0.0",
-  "description": "Nexus CRM - Sistema Comercial Enterprise com IA Gemini, Tríade CID (RBAC) e Google Cloud Firestore",
+  "description": "EDX Digital - Sistema Comercial Enterprise com IA Gemini, Tríade CID (RBAC) e Google Cloud Firestore",
   "main": "server.js",
   "scripts": {
     "dev": "node server.js || python -m http.server 3000",
@@ -22,6 +22,6 @@
     "kanban",
     "business"
   ],
-  "author": "Nexus CRM Team",
+  "author": "EDX Digital Team",
   "license": "MIT"
 }

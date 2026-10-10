@@ -1,6 +1,6 @@
-# ⚡ Nexus CRM Enterprise - Plataforma de Vendas Inteligente
+# ⚡ EDX Digital - Plataforma de Vendas Inteligente
 
-O **Nexus CRM Enterprise** é uma plataforma de gestão de relacionamento com clientes, automação comercial e inteligência de vendas, desenvolvida sob arquitetura modular limpa (Clean Architecture), padrões éticos rigorosos de engenharia de software e segurança cibernética (Tríade CID: Confidencialidade, Integridade e Disponibilidade).
+O **EDX Digital** é uma plataforma de gestão de relacionamento com clientes, automação comercial e inteligência de vendas, desenvolvida sob arquitetura modular limpa (Clean Architecture), padrões éticos rigorosos de engenharia de software e segurança cibernética (Tríade CID: Confidencialidade, Integridade e Disponibilidade).
 
 ---
 
@@ -59,7 +59,7 @@ app/
 │   ├── icon-192.png                # Ícone PWA standard
 │   └── icon-512.png                # Ícone PWA splash screen
 │
-├── 📄 index.html                   # Painel Operacional Nexus CRM Enterprise
+├── 📄 index.html                   # Painel Operacional EDX Digital
 ├── 📄 landing.html                 # Página Comercial de Alta Conversão
 ├── 📄 server.js                    # Bootstrap do servidor local (apenas 60 linhas)
 ├── 📄 sw.js                        # Service Worker PWA Offline-First (Cache v2.0.0)
@@ -71,7 +71,7 @@ app/
 
 ## 🛡️ Ética de Código & Segurança Cibernética
 
-O desenvolvimento do Nexus CRM segue normas de segurança e boas práticas alinhadas às diretrizes **OWASP Top 10** e à legislação de proteção de dados (**LGPD / GDPR**):
+O desenvolvimento do EDX Digital segue normas de segurança e boas práticas alinhadas às diretrizes **OWASP Top 10** e à legislação de proteção de dados (**LGPD / GDPR**):
 
 1. **Defesa em Profundidade contra Path Traversal**:
    - Todo acesso ao sistema de arquivos no backend passa por `sanitizePath()`, que resolve caminhos canônicos e impede vetores como `../` ou acessos fora da raiz permitida.

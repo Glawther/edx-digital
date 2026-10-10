@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Request Body Parser with Payload Size Limit
+ * EDX Digital - Request Body Parser with Payload Size Limit
  * Defense: Buffer Overflow, Memory Exhaustion & Slowloris Payloads
  */
 

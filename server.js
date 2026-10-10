@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Enterprise Server Entrypoint
+ * EDX Digital - Enterprise Server Entrypoint
  * Architecture: Clean Modular Server with CID Triad Security & OWASP Guards
  */
 
@@ -65,7 +65,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 Nexus CRM Enterprise Server Online!`);
+  console.log(`🚀 EDX Digital Server Online!`);
   console.log(`📡 URL Local: http://localhost:${PORT}`);
   console.log(`⚡ Endpoint Webhook: http://localhost:${PORT}/api/webhook/leads`);
   console.log(`🌐 Landing Page: http://localhost:${PORT}/landing`);

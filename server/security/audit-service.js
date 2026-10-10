@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Immutable Audit Logger & Forensic Compliance
+ * EDX Digital - Immutable Audit Logger & Forensic Compliance
  * Standard: ISO 27001, SOC 2 Type II, HIPAA, LGPD
  * Guarantee: Non-blocking asynchronous writes, tamper-evident hash chaining, automatic PII redaction
  */

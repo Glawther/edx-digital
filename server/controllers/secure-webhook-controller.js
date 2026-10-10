@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Secure Webhook Controller
+ * EDX Digital - Secure Webhook Controller
  * Standard: HMAC-SHA256 Cryptographic Authenticity & Integrity
  * Prevents: Spoofing, Replay Attacks, Unauthorized Ingestion
  */

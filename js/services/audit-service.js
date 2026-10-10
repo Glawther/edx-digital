@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Audit Trail Service (Tríade CID: Integridade)
+ * EDX Digital - Audit Trail Service (Tríade CID: Integridade)
  * Logs all sensitive operations to Firestore's immutable audit_logs collection.
  * Local fallback with localStorage when Firestore is unavailable.
  */
@@ -97,7 +97,7 @@ export async function logAudit(action, details = {}, severity = AUDIT_SEVERITY.I
     userEmail: user?.email || '',
     userRole: user?.role || 'unknown',
     orgId: org?.id || 'org_nexus_default',
-    orgName: org?.name || 'Nexus CRM',
+    orgName: org?.name || 'EDX Digital',
     // Only what describes the action: no device fingerprinting data
     details: { ...details }
   };

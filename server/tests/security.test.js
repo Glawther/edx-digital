@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Automated Security Unit Tests
+ * EDX Digital - Automated Security Unit Tests
  * Standards: OWASP Top 10 API, ISO 27001, BOLA, IDOR, Zero Trust
  * Test Framework: Node.js Native Test Runner (node:test & node:assert)
  */

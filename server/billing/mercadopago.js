@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Mercado Pago client (PIX charges), without dependencies.
+ * EDX Digital - Mercado Pago client (PIX charges), without dependencies.
  * Docs: https://www.mercadopago.com.br/developers/pt/reference/payments/_payments/post
  */
 

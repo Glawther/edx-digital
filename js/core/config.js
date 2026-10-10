@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Configuration & Firebase Credentials Storage
+ * EDX Digital - Configuration & Firebase Credentials Storage
  */
 
 const STORAGE_KEYS = {
@@ -41,7 +41,7 @@ export const defaultOrganization = {
   logoUrl: '', // Base64 or image URL
   brandColor: '#3b82f6', // Hex color
   plan: 'pro', // 'starter' | 'pro' | 'enterprise'
-  planName: 'Nexus Pro',
+  planName: 'EDX Digital Pro',
   planStatus: 'trial', // 'active' | 'trial' | 'past_due'
   trialDaysLeft: 14,
   maxLeads: 5000,
@@ -138,11 +138,11 @@ export function applyWhitelabelStyles(org = null) {
   // 2. Apply company name to sidebar brand and document title
   const brandNameEls = document.querySelectorAll('.brand-name');
   brandNameEls.forEach(el => {
-    el.textContent = currentOrg.name || 'Nexus CRM';
+    el.textContent = currentOrg.name || 'EDX Digital';
   });
 
   if (currentOrg.name) {
-    document.title = `${currentOrg.name} | Nexus CRM`;
+    document.title = `${currentOrg.name} | EDX Digital`;
   }
 
   // 3. Apply custom logo if set

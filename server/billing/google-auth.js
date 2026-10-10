@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Google identity for the billing server, without dependencies.
+ * EDX Digital - Google identity for the billing server, without dependencies.
  *
  * Two jobs:
  *  - prove who is calling: verify the Firebase ID token the browser sends;

@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - HTTP side of PIX billing
+ * EDX Digital - HTTP side of PIX billing
  *
  *   POST /api/billing/pix                     create (or reuse) the charge for a plan   [signed-in admin]
  *   GET  /api/billing/pix/:paymentId          has it been paid?                         [signed-in admin]

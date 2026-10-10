@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Theme Manager
+ * EDX Digital - Theme Manager
  * Inspired by Doctor+ Modern Dashboard (Dark Matte with Neon Lime & Crisp Clean Light)
  */
 

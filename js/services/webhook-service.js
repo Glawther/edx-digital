@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Webhook Integration Service
+ * EDX Digital - Webhook Integration Service
  * Manages webhook endpoints, API tokens, and automatic lead ingestion.
  */
 

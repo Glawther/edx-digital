@@ -1,10 +1,10 @@
 /**
- * Nexus CRM - CSV / Excel Export Service
+ * EDX Digital - CSV / Excel Export Service
  */
 
 import { STAGES } from '../core/crm-store.js';
 
-export function exportCustomersToCSV(customers, filename = 'nexus-crm-oportunidades.csv') {
+export function exportCustomersToCSV(customers, filename = 'edx-digital-oportunidades.csv') {
   if (!customers || customers.length === 0) {
     throw new Error("Nenhum cliente disponível para exportação.");
   }
@@ -54,7 +54,7 @@ export function exportCustomersToCSV(customers, filename = 'nexus-crm-oportunida
   URL.revokeObjectURL(url);
 }
 
-export function exportAuditLogsToCSV(logs, filename = 'nexus-crm-audit-logs.csv') {
+export function exportAuditLogsToCSV(logs, filename = 'edx-digital-audit-logs.csv') {
   if (!logs || logs.length === 0) {
     throw new Error("Nenhum log de auditoria para exportação.");
   }
