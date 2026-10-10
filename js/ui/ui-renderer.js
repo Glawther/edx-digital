@@ -7,7 +7,7 @@ import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId }
 import { REPORT_PERIODS, periodReport } from '../core/report.js';
 import { localDateString } from '../services/reminder-service.js';
 import { customFacts } from './customize-dialog.js';
-import { escapeHtml, jsArg, safeImageUrl } from '../core/html.js';
+import { escapeHtml, safeImageUrl } from '../core/html.js';
 import { FOCUS_OPTIONS } from '../core/attention.js';
 import { getSavedOrganization } from '../core/config.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
@@ -25,7 +25,7 @@ export function formatBRL(amount) {
   }).format(value);
 }
 
-export { escapeHtml, jsArg };
+export { escapeHtml };
 
 /**
  * Updates Top KPI Summary Cards
@@ -121,11 +121,11 @@ export function renderKanban(customers, metrics, permissions = {}, totalCount = 
   container.innerHTML = STAGES.map(stage => {
     const stageCustomers = customers.filter(c => (c.stage || 'lead') === stage.id);
     const stageSum = metrics.stageSums[stage.id] || 0;
-    const dropAttrs = `data-stage="${stage.id}" ondragover="event.preventDefault(); this.classList.add('is-drop-target')" ondragleave="if (!this.contains(event.relatedTarget)) this.classList.remove('is-drop-target')" ondrop="this.classList.remove('is-drop-target'); window.handleDropCard(event, '${stage.id}')"`;
+    const dropAttrs = `data-stage="${stage.id}" data-drop="${stage.id}"`;
 
     if (stage.id === 'lost' && !showLost) {
       return `
-        <button type="button" class="pipeline-column is-folded" ${dropAttrs} onclick="window.handleToggleLostColumn()"
+        <button type="button" class="pipeline-column is-folded" ${dropAttrs} data-click="handleToggleLostColumn"
                 title="Mostrar as oportunidades perdidas" aria-label="Mostrar as ${stageCustomers.length} oportunidades perdidas">
           <span class="column-indicator" style="background-color: ${stage.color};"></span>
           <span class="folded-count">${stageCustomers.length}</span>
@@ -143,7 +143,7 @@ export function renderKanban(customers, metrics, permissions = {}, totalCount = 
             <span class="column-count">${stageCustomers.length}</span>
           </div>
           ${stage.id === 'lost'
-            ? `<button type="button" class="link-btn" onclick="window.handleToggleLostColumn()">Recolher</button>`
+            ? `<button type="button" class="link-btn" data-click="handleToggleLostColumn">Recolher</button>`
             : `<span class="column-amount">${formatBRL(stageSum)}</span>`}
         </div>
 
@@ -166,7 +166,7 @@ export function renderFocusPills(focus, counts = {}) {
   container.innerHTML = FOCUS_OPTIONS.map(option => {
     const count = option.id === 'all' ? '' : ` <span class="pill-count">${counts[option.id] || 0}</span>`;
     return `<button type="button" class="filter-pill ${focus === option.id ? 'active' : ''}" aria-pressed="${focus === option.id}"
-              onclick="window.handleFocus('${option.id}')">${option.label}${count}</button>`;
+              data-click="handleFocus" data-a="${option.id}">${option.label}${count}</button>`;
   }).join('');
 }
 
@@ -217,15 +217,13 @@ function renderLeadCard(customer, permissions = {}) {
     meta.push(`<span class="is-warning" title="Sem nenhuma atualização nesse período">Parado há ${daysIdle} dias</span>`);
   }
 
-  const open = `window.handleOpenLeadDetails(${jsArg(customer.id)})`;
 
   return `
     <div class="lead-card ${isRotting ? 'is-rotting' : ''}"
          draggable="true" tabindex="0" role="button"
          aria-label="${escapeHtml(customer.name)}, ${formatBRL(customer.dealValue)}. Abrir a oportunidade."
-         ondragstart="window.handleDragStartCard(event, ${jsArg(customer.id)})"
-         onclick="if (!event.target.closest('select, button, a')) ${open}"
-         onkeydown="if (event.key === 'Enter' && event.target === this) ${open}"
+         data-click="handleOpenLeadDetails" data-enter data-a="${escapeHtml(customer.id)}"
+         data-drag="${escapeHtml(customer.id)}"
          data-id="${escapeHtml(customer.id)}">
       <div class="lead-card-header">
         <div class="lead-name">${escapeHtml(customer.name)}</div>
@@ -243,11 +241,11 @@ function renderLeadCard(customer, permissions = {}) {
       ` : ''}
 
       <div class="card-footer">
-        <select class="move-stage-select" onchange="window.handleMoveStage(${jsArg(customer.id)}, this.value)" aria-label="Mover ${escapeHtml(customer.name)} para outra etapa">
+        <select class="move-stage-select" data-change="handleMoveStage" data-a="${escapeHtml(customer.id)}" data-value aria-label="Mover ${escapeHtml(customer.name)} para outra etapa">
           ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
         </select>
         ${customer.phone ? `
-          <button type="button" class="card-icon-btn wa" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})" title="Mensagem pelo WhatsApp" aria-label="Mensagem pelo WhatsApp para ${escapeHtml(customer.name)}">
+          <button type="button" class="card-icon-btn wa" data-click="handleOpenWhatsAppModal" data-a="${escapeHtml(customer.id)}" title="Mensagem pelo WhatsApp" aria-label="Mensagem pelo WhatsApp para ${escapeHtml(customer.name)}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
           </button>
         ` : ''}
@@ -319,14 +317,14 @@ export function renderTable(allCustomers, permissions = {}) {
     return `
       <tr>
         <td>
-          <button type="button" class="cell-title" onclick="window.handleOpenLeadDetails(${jsArg(customer.id)})">${escapeHtml(customer.name)}</button>
+          <button type="button" class="cell-title" data-click="handleOpenLeadDetails" data-a="${escapeHtml(customer.id)}">${escapeHtml(customer.name)}</button>
           <div class="cell-sub">${escapeHtml(customer.company || 'Sem empresa')}</div>
         </td>
         <td>
           <div>${escapeHtml(customer.email || 'Sem e-mail')}</div>
           <div class="cell-sub">
             ${escapeHtml(customer.phone || 'Sem telefone')}
-            ${customer.phone ? `<button type="button" class="link-btn" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})">WhatsApp</button>` : ''}
+            ${customer.phone ? `<button type="button" class="link-btn" data-click="handleOpenWhatsAppModal" data-a="${escapeHtml(customer.id)}">WhatsApp</button>` : ''}
           </div>
         </td>
         <td>${customer.assignedTo ? escapeHtml((customer.assignedTo.name || customer.assignedTo.email || '').replace(/\s*\(.*\)$/, '')) : '<span class="muted">Ninguém</span>'}</td>
@@ -340,11 +338,11 @@ export function renderTable(allCustomers, permissions = {}) {
         </td>
         <td>
           <div class="row-actions">
-            <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails(${jsArg(customer.id)})">Histórico</button>
-            <button type="button" class="link-btn" onclick="window.handleOpenProposalModal(${jsArg(customer.id)})">Proposta</button>
-            <button type="button" class="link-btn" onclick="window.handleAnalyzeWithAI(${jsArg(customer.id)})" title="Análise da oportunidade com IA">Analisar</button>
-            <button type="button" class="link-btn" onclick="window.handleOpenEditCustomer(${jsArg(customer.id)})">Editar</button>
-            ${permissions && permissions.canDelete === false ? '' : `<button type="button" class="link-btn danger" onclick="window.handleDeleteCustomer(${jsArg(customer.id)})">Excluir</button>`}
+            <button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(customer.id)}">Histórico</button>
+            <button type="button" class="link-btn" data-click="handleOpenProposalModal" data-a="${escapeHtml(customer.id)}">Proposta</button>
+            <button type="button" class="link-btn" data-click="handleAnalyzeWithAI" data-a="${escapeHtml(customer.id)}" title="Análise da oportunidade com IA">Analisar</button>
+            <button type="button" class="link-btn" data-click="handleOpenEditCustomer" data-a="${escapeHtml(customer.id)}">Editar</button>
+            ${permissions && permissions.canDelete === false ? '' : `<button type="button" class="link-btn danger" data-click="handleDeleteCustomer" data-a="${escapeHtml(customer.id)}">Excluir</button>`}
           </div>
         </td>
       </tr>
@@ -398,18 +396,18 @@ export function renderTasksView(tasks, filter, customers) {
       <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${escapeHtml(task.id)}" data-customer-id="${escapeHtml(task.customerId)}">
         <div class="task-left">
           <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
-                 onchange="window.handleToggleTask(${jsArg(task.customerId)}, ${jsArg(task.id)})">
+                 data-change="handleToggleTask" data-a="${escapeHtml(task.customerId)}" data-b="${escapeHtml(task.id)}">
           <div>
             <div class="task-title">${escapeHtml(task.title)}</div>
             <div class="task-customer-link">
               ${typeObj.label} com
-              <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails(${jsArg(task.customerId)})">${escapeHtml(task.customerName)}</button>${task.customerCompany ? `, ${escapeHtml(task.customerCompany)}` : ''}
+              <button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(task.customerId)}">${escapeHtml(task.customerName)}</button>${task.customerCompany ? `, ${escapeHtml(task.customerCompany)}` : ''}
             </div>
           </div>
         </div>
         <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}">
           ${isOverdue ? `Atrasada desde ${dateText}` : isToday ? `Hoje${timeText}` : `${dateText}${timeText}`}
-          <button type="button" class="link-btn danger task-delete" onclick="window.handleDeleteTask(${jsArg(task.customerId)}, ${jsArg(task.id)})" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
+          <button type="button" class="link-btn danger task-delete" data-click="handleDeleteTask" data-a="${escapeHtml(task.customerId)}" data-b="${escapeHtml(task.id)}" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
         </span>
       </div>
     `;
@@ -459,7 +457,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
 
   const periodPills = REPORT_PERIODS.map(period => `
     <button type="button" class="filter-pill ${period.id === periodId ? 'active' : ''}" aria-pressed="${period.id === periodId}"
-            onclick="window.handleReportPeriod('${period.id}')">${period.label}</button>
+            data-click="handleReportPeriod" data-a="${period.id}">${period.label}</button>
   `).join('');
 
   // Value per stage as it stands now, bars relative to the largest stage
@@ -611,7 +609,7 @@ export function renderLeadTimeline(customer) {
         <div class="fact">
           <dt><label for="lead-details-stage">Etapa</label></dt>
           <dd>
-            <select id="lead-details-stage" class="form-select form-select-sm" onchange="window.handleMoveStage(${jsArg(customer.id)}, this.value)">
+            <select id="lead-details-stage" class="form-select form-select-sm" data-change="handleMoveStage" data-a="${escapeHtml(customer.id)}" data-value>
               ${STAGES.map(s => `<option value="${s.id}" ${customer.stage === s.id ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
             </select>
           </dd>
@@ -632,11 +630,11 @@ export function renderLeadTimeline(customer) {
   const actionsEl = document.getElementById('lead-details-actions');
   if (actionsEl) {
     actionsEl.innerHTML = `
-      <button type="button" class="btn btn-primary btn-sm" onclick="window.handleOpenEditCustomer(${jsArg(customer.id)})">Editar</button>
-      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenWhatsAppModal(${jsArg(customer.id)})">WhatsApp</button>` : ''}
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal(${jsArg(customer.id)})">Proposta</button>
-      <button type="button" class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI(${jsArg(customer.id)})">Analisar com IA</button>
-      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" onclick="window.handleDeleteCustomer(${jsArg(customer.id)})">Excluir</button>` : ''}
+      <button type="button" class="btn btn-primary btn-sm" data-click="handleOpenEditCustomer" data-a="${escapeHtml(customer.id)}">Editar</button>
+      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" data-click="handleOpenWhatsAppModal" data-a="${escapeHtml(customer.id)}">WhatsApp</button>` : ''}
+      <button type="button" class="btn btn-outline btn-sm" data-click="handleOpenProposalModal" data-a="${escapeHtml(customer.id)}">Proposta</button>
+      <button type="button" class="btn btn-outline btn-sm" data-click="handleAnalyzeWithAI" data-a="${escapeHtml(customer.id)}">Analisar com IA</button>
+      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" data-click="handleDeleteCustomer" data-a="${escapeHtml(customer.id)}">Excluir</button>` : ''}
     `;
   }
 
@@ -656,10 +654,10 @@ export function renderLeadTimeline(customer) {
           return `
             <div class="lead-task ${task.completed ? 'completed' : ''}">
               <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
-                     onchange="window.handleToggleTask(${jsArg(customer.id)}, ${jsArg(task.id)})">
+                     data-change="handleToggleTask" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(task.id)}">
               <span class="lead-task-title">${escapeHtml(task.title)}</span>
               <span class="task-due-date ${late ? 'is-overdue' : ''}">${late ? `Atrasada desde ${when}` : when}</span>
-              <button type="button" class="link-btn danger task-delete" onclick="window.handleDeleteTask(${jsArg(customer.id)}, ${jsArg(task.id)})" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
+              <button type="button" class="link-btn danger task-delete" data-click="handleDeleteTask" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(task.id)}" aria-label="Excluir a tarefa ${escapeHtml(task.title)}">Excluir</button>
             </div>
           `;
         }).join('');
@@ -816,11 +814,11 @@ export function renderSecurityView(state) {
         <td>
           ${emp.cpf ? `
             <span class="cpf-text" id="cpf-text-${escapeHtml(emp.id)}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
-            <button type="button" class="link-btn" onclick="window.handleToggleCPFVisibility(${jsArg(emp.id)})">mostrar</button>
+            <button type="button" class="link-btn" data-click="handleToggleCPFVisibility" data-a="${escapeHtml(emp.id)}">mostrar</button>
           ` : '<span class="muted">não informado</span>'}
         </td>
         <td>${emp.role === 'admin' ? 'Administrador' : 'Vendedor'}</td>
-        <td class="num">${open}${open > 0 ? ` <button type="button" class="link-btn" onclick="window.handleReassignLeads(${jsArg(emp.id)})">transferir</button>` : ''}</td>
+        <td class="num">${open}${open > 0 ? ` <button type="button" class="link-btn" data-click="handleReassignLeads" data-a="${escapeHtml(emp.id)}">transferir</button>` : ''}</td>
         <td>
           ${isBlocked
             ? '<span class="status-text blocked">Bloqueado</span>'
@@ -830,10 +828,10 @@ export function renderSecurityView(state) {
         </td>
         <td>
           <div class="row-actions">
-            <button type="button" class="link-btn" onclick="window.handleEditEmployee(${jsArg(emp.id)})">Editar</button>
-            ${demo ? '' : `<button type="button" class="link-btn" onclick="window.handleResetEmployeePassword(${jsArg(emp.id)})" title="Envia um e-mail para a pessoa criar uma nova senha">Nova senha</button>`}
-            <button type="button" class="link-btn" onclick="window.handleToggleEmployeeStatus(${jsArg(emp.id)})">${isBlocked ? 'Liberar' : 'Bloquear'}</button>
-            <button type="button" class="link-btn danger" onclick="window.handleDeleteEmployee(${jsArg(emp.id)})">Excluir</button>
+            <button type="button" class="link-btn" data-click="handleEditEmployee" data-a="${escapeHtml(emp.id)}">Editar</button>
+            ${demo ? '' : `<button type="button" class="link-btn" data-click="handleResetEmployeePassword" data-a="${escapeHtml(emp.id)}" title="Envia um e-mail para a pessoa criar uma nova senha">Nova senha</button>`}
+            <button type="button" class="link-btn" data-click="handleToggleEmployeeStatus" data-a="${escapeHtml(emp.id)}">${isBlocked ? 'Liberar' : 'Bloquear'}</button>
+            <button type="button" class="link-btn danger" data-click="handleDeleteEmployee" data-a="${escapeHtml(emp.id)}">Excluir</button>
           </div>
         </td>
       </tr>
@@ -880,7 +878,7 @@ export function renderSecurityView(state) {
     ${demo ? `
       <div class="notice-bar">
         <span>Você está na demonstração, como ${isAdm ? 'administrador' : 'vendedor'}. Os dados são de exemplo e ficam só neste navegador.</span>
-        <button type="button" class="btn btn-outline btn-sm" onclick="window.handleToggleRole()">
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleToggleRole">
           Ver como ${isAdm ? 'vendedor' : 'administrador'}
         </button>
       </div>
@@ -909,8 +907,8 @@ export function renderSecurityView(state) {
             <p>Baixa um arquivo com todos os clientes e oportunidades. Restaurar grava os registros do arquivo de volta na empresa.</p>
           </div>
           <div class="row-actions">
-            <button type="button" class="btn btn-outline btn-sm" onclick="window.handleDownloadBackup()">Baixar cópia</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="window.handleTriggerRestoreBackup()">Restaurar de um arquivo</button>
+            <button type="button" class="btn btn-outline btn-sm" data-click="handleDownloadBackup">Baixar cópia</button>
+            <button type="button" class="btn btn-outline btn-sm" data-click="handleTriggerRestoreBackup">Restaurar de um arquivo</button>
           </div>
         </div>
       </section>

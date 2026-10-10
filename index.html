@@ -26,13 +26,8 @@
   <link rel="stylesheet" href="css/components.css?v=3.13.3">
   <link rel="stylesheet" href="css/animations.css?v=3.13.3">
   <link rel="stylesheet" href="css/identity.css?v=3.13.3">
-  <!-- Pre-render Theme Application -->
-  <script>
-    (function() {
-      const savedTheme = localStorage.getItem('edx_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    })();
-  </script>
+  <!-- Applies the saved theme before the first paint -->
+  <script src="js/theme-boot.js?v=3.13.3"></script>
 </head>
 <body class="auth-pending">
 
@@ -420,7 +415,7 @@
           </div>
 
           <!-- Indicador de Assinatura / Teste Grátis de 7 Dias -->
-          <button type="button" class="connection-pill" id="trial-header-pill" onclick="window.openCheckoutModal()" title="Gerenciar assinatura e limites do CRM">
+          <button type="button" class="connection-pill" id="trial-header-pill" data-click="openCheckoutModal" title="Gerenciar assinatura e limites do CRM">
             <span id="trial-pill-text">Teste: 7 dias</span>
           </button>
 
@@ -458,7 +453,7 @@
       <!-- Aviso de plano: perto do fim, vencido ou em modo de leitura -->
       <div class="plan-banner" id="plan-banner" role="status" hidden>
         <span id="plan-banner-text"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="plan-banner-action" onclick="window.openCheckoutModal()"></button>
+        <button type="button" class="btn btn-primary btn-sm" id="plan-banner-action" data-click="openCheckoutModal"></button>
       </div>
 
       <!-- Top Dynamic KPIs Cards -->
@@ -487,9 +482,9 @@
           <h2>Seu funil está vazio</h2>
           <p>Comece cadastrando uma oportunidade, ou traga os contatos que você já tem em uma planilha.</p>
           <div class="first-run-actions">
-            <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-new-lead').click()">Cadastrar a primeira oportunidade</button>
-            <button type="button" class="btn btn-outline" onclick="document.getElementById('btn-menu-import').click()">Importar de uma planilha</button>
-            <button type="button" class="btn btn-outline" id="first-run-team" onclick="window.navigateToView('team')">Convidar a equipe</button>
+            <button type="button" class="btn btn-primary" data-click="openNewOpportunity">Cadastrar a primeira oportunidade</button>
+            <button type="button" class="btn btn-outline" data-click="openImport">Importar de uma planilha</button>
+            <button type="button" class="btn btn-outline" id="first-run-team" data-click="navigateToView" data-a="team">Convidar a equipe</button>
           </div>
         </div>
 
@@ -505,10 +500,10 @@
             <h2 id="customers-count-label">Clientes</h2>
             <div class="table-tools">
               <label class="inline-field" for="customers-stage-filter">Etapa
-                <select id="customers-stage-filter" class="form-select form-select-sm" onchange="window.handleCustomersView({ stage: this.value })"></select>
+                <select id="customers-stage-filter" class="form-select form-select-sm" data-change="handleCustomersStage" data-value></select>
               </label>
               <label class="inline-field" for="customers-sort">Ordenar por
-                <select id="customers-sort" class="form-select form-select-sm" onchange="window.handleCustomersView({ sort: this.value })">
+                <select id="customers-sort" class="form-select form-select-sm" data-change="handleCustomersSort" data-value>
                   <option value="recent">Alteração mais recente</option>
                   <option value="name">Nome</option>
                   <option value="value">Maior valor</option>
@@ -640,7 +635,7 @@
               <p>Você informa os dados e uma senha temporária; a pessoa troca a senha no primeiro acesso.</p>
             </div>
             <div class="team-invite-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.openEmployeeModal()">Cadastrar colaborador</button>
+              <button type="button" class="btn btn-outline btn-sm" data-click="openEmployeeModal">Cadastrar colaborador</button>
             </div>
           </div>
 
@@ -935,7 +930,7 @@
 
       <div id="gemini-unavailable" style="display: none; padding: 1.5rem 0.25rem;">
         <p id="gemini-unavailable-text" style="font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; margin: 0 0 1rem;"></p>
-        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('gemini-dialog').close(); document.getElementById('sidebar-gemini-btn').click();">Informar a chave do Gemini</button>
+        <button type="button" class="btn btn-primary btn-sm" data-click="openGeminiKey">Informar a chave do Gemini</button>
       </div>
 
       <div id="gemini-results" style="display: none;">
@@ -1756,17 +1751,17 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Escolha o plano</h3>
       <div class="plan-grid">
-        <button type="button" class="plan-option checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')">
+        <button type="button" class="plan-option checkout-plan-card" data-plan="starter" data-click="selectCheckoutPlan" data-a="starter">
           <span class="plan-option-name">Starter</span>
           <span class="plan-option-price">R$ 97<span>/mês</span></span>
           <span class="plan-option-note">2 pessoas, 500 oportunidades</span>
         </button>
-        <button type="button" class="plan-option checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')">
+        <button type="button" class="plan-option checkout-plan-card active" data-plan="pro" data-click="selectCheckoutPlan" data-a="pro">
           <span class="plan-option-name">Professional</span>
           <span class="plan-option-price">R$ 197<span>/mês</span></span>
           <span class="plan-option-note">10 pessoas, 5.000 oportunidades</span>
         </button>
-        <button type="button" class="plan-option checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')">
+        <button type="button" class="plan-option checkout-plan-card" data-plan="enterprise" data-click="selectCheckoutPlan" data-a="enterprise">
           <span class="plan-option-name">Enterprise</span>
           <span class="plan-option-price">R$ 497<span>/mês</span></span>
           <span class="plan-option-note">Sem limites, com a sua marca</span>

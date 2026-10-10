@@ -23,7 +23,8 @@ import {
   formatBRL,
   escapeHtml
 } from './ui/ui-renderer.js';
-import { jsArg, safeImageUrl } from './core/html.js';
+import { safeImageUrl } from './core/html.js';
+import { setupActions, registerActions } from './ui/actions.js';
 import { passwordProblem } from './core/attention.js';
 import { 
   getSavedOrganization, 
@@ -161,6 +162,17 @@ let activeProposalCustomerId = null;
 async function initApp() {
   try {
     initTheme();
+    setupActions();
+    registerActions({
+      openNewOpportunity: () => document.getElementById('btn-new-lead')?.click(),
+      openImport: () => document.getElementById('btn-menu-import')?.click(),
+      openGeminiKey: () => {
+        document.getElementById('gemini-dialog')?.close();
+        document.getElementById('sidebar-gemini-btn')?.click();
+      },
+      handleCustomersStage: (stage) => window.handleCustomersView({ stage }),
+      handleCustomersSort: (sort) => window.handleCustomersView({ sort })
+    });
     setupNavigation();
     setupFilterEvents();
     setupDialogEvents();
@@ -774,7 +786,7 @@ function setupFilterEvents() {
 window.handleDragStartCard = function(event, customerId) {
   draggedCustomerId = customerId;
   event.dataTransfer.setData('text/plain', customerId);
-  event.currentTarget.classList.add('dragging');
+  event.target.closest('.lead-card')?.classList.add('dragging');
 };
 
 // A copy of the opportunity taken before a change, so the change can be undone
@@ -3352,7 +3364,7 @@ function setupNotificationCenter() {
         : minutes < 60 ? `há ${minutes} min`
         : minutes < 1440 ? `há ${Math.floor(minutes / 60)} h`
         : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      return `<button type="button" class="notification-item ${n.read ? '' : 'unread'}" onclick="window.handleNotificationClick(${jsArg(n.id)})">
+      return `<button type="button" class="notification-item ${n.read ? '' : 'unread'}" data-click="handleNotificationClick" data-a="${escapeHtml(n.id)}">
         <span class="notification-item-title">${escapeHtml(n.title)}</span>
         <span class="notification-item-body">${escapeHtml(n.body)}</span>
         <span class="notification-item-time">${when}</span>
