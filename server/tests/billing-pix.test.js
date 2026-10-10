@@ -51,7 +51,7 @@ function setup({ orgExtra = {} } = {}) {
       return { ...remote[id] };
     }
   };
-  const service = createBillingService({ store, gateway, now: () => clock.now, notificationUrl: 'https://api.test/hook' });
+  const service = createBillingService({ store, gateway, now: () => clock.now });
   const pay = (id, extra = {}) => Object.assign(remote[id], { status: 'approved', approvedAt: new Date(clock.now).toISOString() }, extra);
   return { db, remote, gateway, service, clock, pay };
 }
@@ -67,8 +67,8 @@ test('o administrador gera a cobrança do plano, com o preço da tabela', async 
   assert.equal(charge.status, 'pending');
   assert.ok(charge.copyPaste);
   assert.equal(gateway.created[0].amount, 97);
-  assert.match(gateway.created[0].externalReference, /^org_a\|starter\|[0-9a-f]{16}$/);
-  assert.equal(gateway.created[0].notificationUrl, 'https://api.test/hook');
+  assert.match(gateway.created[0].externalReference, /^org_a-starter-[0-9a-f]{16}$/);
+  assert.equal(gateway.created[0].idempotencyKey, gateway.created[0].externalReference);
   assert.equal(db.organizations.org_a.pendingPaymentId, charge.paymentId);
   assert.equal(db.organizations.org_a.planStatus, 'trial', 'gerar a cobrança não libera nada');
 });

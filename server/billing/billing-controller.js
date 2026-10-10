@@ -13,10 +13,6 @@ const { firestoreStore } = require('./firestore-store');
 const mercadopago = require('./mercadopago');
 const { createBillingService, BillingError } = require('./billing-service');
 
-function publicBaseUrl() {
-  return (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
-}
-
 function isBillingConfigured() {
   return mercadopago.isConfigured() && isServiceAccountConfigured();
 }
@@ -24,12 +20,7 @@ function isBillingConfigured() {
 let service = null;
 function billingService() {
   if (!service) {
-    const base = publicBaseUrl();
-    service = createBillingService({
-      store: firestoreStore,
-      gateway: mercadopago,
-      notificationUrl: base ? `${base}/api/billing/webhook/mercadopago` : ''
-    });
+    service = createBillingService({ store: firestoreStore, gateway: mercadopago });
   }
   return service;
 }
@@ -99,8 +90,8 @@ async function handleBilling(req, res, pathname) {
 }
 
 /**
- * Mercado Pago calls this when a payment changes. The body is only a pointer: the payment is
- * always read back from Mercado Pago before anything is released.
+ * Mercado Pago calls this when a charge changes (event "Order" in its panel). The body is only
+ * a pointer: the charge is always read back from Mercado Pago before anything is released.
  */
 async function handleWebhook(req, res) {
   if (!isBillingConfigured()) return send(res, 503, { error: 'billing_not_configured' });
@@ -115,7 +106,8 @@ async function handleWebhook(req, res) {
 
   const topic = body.type || query.get('type') || query.get('topic') || '';
   const dataId = query.get('data.id') || (body.data && body.data.id) || query.get('id') || '';
-  if (topic && topic !== 'payment') return send(res, 200, { ignored: true });
+  // "payment" is what charges made through the older Payments API are announced as
+  if (topic && topic !== 'order' && topic !== 'payment') return send(res, 200, { ignored: true });
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(dataId))) return send(res, 200, { ignored: true });
 
   const secret = mercadopago.webhookSecret();
