@@ -8,3 +8,6 @@ data/
 *.db
 .DS_Store
 Thumbs.db
+
+# O arquivo real de produção nunca é versionado; use .env.production.example como modelo
+.env.production
