@@ -4,7 +4,8 @@
  */
 
 import { crmStore } from '../core/crm-store.js';
-import { getCurrentUser, getCurrentRole, USER_ROLES } from './auth-service.js';
+import { getCurrentUser, getCurrentRole, isCloudSession, USER_ROLES } from './auth-service.js';
+import { getFirebase, createAccountForSomeoneElse, describeAuthError } from './firebase-app.js';
 
 const EMPLOYEES_STORAGE_KEY = 'nexus_crm_employees_db';
 
@@ -72,83 +73,149 @@ export function maskCPF(cpf) {
 }
 
 /**
- * Gera senha temporária de alta entropia e padrão corporativo
- * Exemplo: Nexus#8392! ou Vendas@2026#
+ * Gera uma senha temporária aleatória de 12 caracteres (sem letras e números que se confundem)
  */
 export function generateTemporaryPassword() {
-  const prefixes = ['Nexus', 'Vendas', 'Gestao', 'Foco', 'Agil', 'Prime', 'Inova'];
-  const symbols = ['#', '@', '$', '!', '&', '%'];
-  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const randomSymbol1 = symbols[Math.floor(Math.random() * symbols.length)];
-  const randomSymbol2 = symbols[Math.floor(Math.random() * symbols.length)];
-  const randomNumber = Math.floor(1000 + Math.random() * 9000);
-  return `${randomPrefix}${randomSymbol1}${randomNumber}${randomSymbol2}`;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => alphabet[b % alphabet.length]).join('');
 }
 
 /**
- * Seed inicial de colaboradores para demonstração corporativa
+ * Colaboradores de exemplo (só aparecem na demonstração)
  */
-const DEFAULT_EMPLOYEES = [
+const DEMO_EMPLOYEES = [
   {
-    id: 'emp-lucas-01',
+    id: 'employee-user-02',
     name: 'Lucas Mendes',
     cpf: '123.456.789-01',
     email: 'lucas.vendas@nexuscrm.com',
     phone: '(11) 98765-4321',
     role: USER_ROLES.EMPLOYEE,
-    jobTitle: 'Consultor Comercial Sênior',
+    jobTitle: 'Consultor comercial',
     department: 'Comercial B2B',
-    tempPassword: 'Nexus#2026!',
     requirePasswordChange: false,
     status: 'active',
-    createdAt: '2026-01-15T09:00:00.000Z',
-    lastLoginAt: '2026-09-24T14:30:00.000Z'
+    createdAt: '2026-01-15T09:00:00.000Z'
   },
   {
-    id: 'emp-mariana-02',
-    name: 'Mariana Albuquerque',
+    id: 'employee-user-03',
+    name: 'Mariana Costa',
     cpf: '987.654.321-09',
-    email: 'mariana.contas@nexuscrm.com',
+    email: 'mariana.vendas@nexuscrm.com',
     phone: '(21) 99887-1122',
     role: USER_ROLES.EMPLOYEE,
-    jobTitle: 'Gerente de Contas Corporativas',
-    department: 'Expansão & Key Accounts',
-    tempPassword: 'Vendas@8491#',
+    jobTitle: 'Gerente de contas',
+    department: 'Key Accounts (Grandes Contas)',
     requirePasswordChange: true,
     status: 'active',
-    createdAt: '2026-02-10T11:20:00.000Z',
-    lastLoginAt: null
+    createdAt: '2026-02-10T11:20:00.000Z'
   }
 ];
 
-// In-memory cache
+// In-memory list. In a real account it mirrors the company's people in the cloud;
+// in the demo it mirrors localStorage.
 let employeesCache = [];
+let cacheSource = null; // 'cloud' | 'demo' | null
+let cloudProfiles = [];
+let cloudPrivate = {};
+let unsubscribeProfiles = null;
+let unsubscribePrivate = null;
 
 /**
- * Carrega a lista de colaboradores (Cache Local + Firestore Sync)
+ * Starts (or restarts) the team list for the current session
+ */
+export async function startEmployeeSync() {
+  stopEmployeeSync();
+
+  if (!isCloudSession()) {
+    cacheSource = null;
+    employeesCache = [];
+    notifyEmployeeListeners();
+    return;
+  }
+
+  const user = getCurrentUser();
+  const { db, fsMod } = await getFirebase();
+  cacheSource = 'cloud';
+  cloudProfiles = [];
+  cloudPrivate = {};
+
+  const rebuild = () => {
+    employeesCache = cloudProfiles
+      .filter(p => p.id !== user.uid)
+      .map(p => ({
+        ...p,
+        cpf: cloudPrivate[p.id]?.cpf || '',
+        phone: cloudPrivate[p.id]?.phone || '',
+        requirePasswordChange: !!p.mustChangePassword
+      }))
+      .sort((x, y) => (x.name || '').localeCompare(y.name || ''));
+    notifyEmployeeListeners();
+  };
+
+  unsubscribeProfiles = fsMod.onSnapshot(
+    fsMod.query(fsMod.collection(db, 'users'), fsMod.where('orgId', '==', user.orgId)),
+    (snap) => {
+      cloudProfiles = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      rebuild();
+    },
+    (err) => console.warn('Team list error:', err)
+  );
+
+  // CPF and phone are kept apart from the profile and only administrators can read them
+  if (getCurrentRole() === USER_ROLES.ADMIN) {
+    unsubscribePrivate = fsMod.onSnapshot(
+      fsMod.query(fsMod.collection(db, 'user_private'), fsMod.where('orgId', '==', user.orgId)),
+      (snap) => {
+        cloudPrivate = {};
+        snap.docs.forEach(d => { cloudPrivate[d.id] = d.data(); });
+        rebuild();
+      },
+      (err) => console.warn('Team private data error:', err)
+    );
+  }
+}
+
+export function stopEmployeeSync() {
+  if (unsubscribeProfiles) unsubscribeProfiles();
+  if (unsubscribePrivate) unsubscribePrivate();
+  unsubscribeProfiles = null;
+  unsubscribePrivate = null;
+  cloudProfiles = [];
+  cloudPrivate = {};
+  if (cacheSource === 'cloud') {
+    employeesCache = [];
+    cacheSource = null;
+  }
+}
+
+/**
+ * Lista de colaboradores da sessão atual
  */
 export function getEmployees() {
-  if (employeesCache.length === 0) {
+  if (isCloudSession()) {
+    return [...employeesCache];
+  }
+  if (cacheSource !== 'demo') {
+    cacheSource = 'demo';
     try {
       const saved = localStorage.getItem(EMPLOYEES_STORAGE_KEY);
-      if (saved) {
-        employeesCache = JSON.parse(saved);
-      } else {
-        employeesCache = [...DEFAULT_EMPLOYEES];
-        saveEmployeesToLocal();
-      }
+      employeesCache = saved ? JSON.parse(saved) : [...DEMO_EMPLOYEES];
     } catch (e) {
       console.warn("Erro ao carregar colaboradores do storage:", e);
-      employeesCache = [...DEFAULT_EMPLOYEES];
+      employeesCache = [...DEMO_EMPLOYEES];
     }
+    // Senhas nunca ficam guardadas no navegador (versões antigas guardavam)
+    employeesCache.forEach(e => { delete e.tempPassword; delete e.permanentPassword; });
+    saveEmployeesToLocal();
   }
   return [...employeesCache];
 }
 
-/**
- * Salva colaboradores no localStorage
- */
 function saveEmployeesToLocal() {
+  if (cacheSource !== 'demo') return;
   try {
     localStorage.setItem(EMPLOYEES_STORAGE_KEY, JSON.stringify(employeesCache));
   } catch (e) {
@@ -156,279 +223,252 @@ function saveEmployeesToLocal() {
   }
 }
 
-/**
- * Cadastra um novo colaborador ou atualiza existente
- * @param {Object} data 
- * @returns {Object} { success: boolean, employee?: Object, error?: string }
- */
-export function saveEmployee(data) {
-  const isAdm = getCurrentRole() === USER_ROLES.ADMIN;
-  if (!isAdm) {
-    return { success: false, error: 'Apenas Administradores têm permissão para criar ou editar colaboradores (Tríade CID).' };
+function requireAdmin(action) {
+  if (getCurrentRole() !== USER_ROLES.ADMIN) {
+    return { success: false, error: `Apenas administradores podem ${action}.` };
   }
+  return null;
+}
 
-  // Validação básica
+/**
+ * Cadastra um novo colaborador ou atualiza um existente.
+ * Numa conta real, o cadastro cria o login da pessoa com a senha temporária informada.
+ * @returns {Promise<Object>} { success, employee?, tempPassword?, error? }
+ */
+export async function saveEmployee(data) {
+  const denied = requireAdmin('criar ou editar colaboradores');
+  if (denied) return denied;
+
   const name = (data.name || '').trim();
   const rawCpf = (data.cpf || '').trim();
   const email = (data.email || '').trim().toLowerCase();
-  const role = data.role || USER_ROLES.EMPLOYEE;
-  const jobTitle = (data.jobTitle || 'Consultor de Vendas').trim();
+  const role = data.role === USER_ROLES.ADMIN ? USER_ROLES.ADMIN : USER_ROLES.EMPLOYEE;
+  const jobTitle = (data.jobTitle || 'Consultor de vendas').trim();
   const department = (data.department || 'Comercial').trim();
   const phone = (data.phone || '').trim();
+  const existingId = data.id || null;
 
   if (!name || name.length < 3) {
-    return { success: false, error: 'Nome completo deve ter no mínimo 3 caracteres.' };
+    return { success: false, error: 'O nome completo deve ter no mínimo 3 caracteres.' };
   }
 
+  // O CPF é opcional; quando informado, precisa ser válido
   const cleanCpf = rawCpf.replace(/\D/g, '');
-  if (!validateCPF(cleanCpf)) {
+  if (cleanCpf && !validateCPF(cleanCpf)) {
     return { success: false, error: 'O CPF informado é inválido. Verifique os dígitos.' };
   }
-
-  const formattedCpf = formatCPF(cleanCpf);
+  const formattedCpf = cleanCpf ? formatCPF(cleanCpf) : '';
 
   if (!email || !email.includes('@') || !email.includes('.')) {
-    return { success: false, error: 'E-mail corporativo inválido.' };
+    return { success: false, error: 'E-mail inválido.' };
   }
 
   const employees = getEmployees();
-  const existingId = data.id || null;
-
-  // Checagem de unicidade de CPF
-  const cpfConflict = employees.find(e => e.id !== existingId && e.cpf.replace(/\D/g, '') === cleanCpf);
+  const cpfConflict = cleanCpf && employees.find(e => e.id !== existingId && (e.cpf || '').replace(/\D/g, '') === cleanCpf);
   if (cpfConflict) {
-    return { success: false, error: `Já existe um colaborador cadastrado com o CPF ${formattedCpf} (${cpfConflict.name}).` };
+    return { success: false, error: `Já existe um colaborador com o CPF ${formattedCpf} (${cpfConflict.name}).` };
   }
-
-  // Checagem de unicidade de E-mail
-  const emailConflict = employees.find(e => e.id !== existingId && e.email.toLowerCase() === email);
+  const emailConflict = employees.find(e => e.id !== existingId && (e.email || '').toLowerCase() === email);
   if (emailConflict) {
-    return { success: false, error: `Já existe um colaborador cadastrado com o e-mail ${email} (${emailConflict.name}).` };
+    return { success: false, error: `Já existe um colaborador com o e-mail ${email} (${emailConflict.name}).` };
   }
 
-  let employee;
-  const tempPassword = data.tempPassword || generateTemporaryPassword();
   const requirePasswordChange = data.requirePasswordChange !== undefined ? !!data.requirePasswordChange : true;
+  const now = new Date().toISOString();
 
+  if (isCloudSession()) {
+    return saveEmployeeToCloud({
+      existingId, name, formattedCpf, email, phone, role, jobTitle, department,
+      tempPassword: (data.tempPassword || '').trim(), requirePasswordChange, now
+    });
+  }
+
+  // Demonstração: a lista fica só neste navegador e nenhum login é criado
+  let employee;
   if (existingId) {
-    // Atualização
     const index = employees.findIndex(e => e.id === existingId);
     if (index === -1) return { success: false, error: 'Colaborador não encontrado.' };
-
-    employee = {
-      ...employees[index],
-      name,
-      cpf: formattedCpf,
-      email,
-      phone,
-      role,
-      jobTitle,
-      department,
-      updatedAt: new Date().toISOString()
-    };
-
-    if (data.tempPassword) {
-      employee.tempPassword = data.tempPassword;
-      employee.requirePasswordChange = requirePasswordChange;
-    }
-
+    employee = { ...employees[index], name, cpf: formattedCpf, email, phone, role, jobTitle, department, updatedAt: now };
     employees[index] = employee;
-    crmStore.addAuditLog('Colaborador Atualizado', `Dados de "${name}" (${formattedCpf}) atualizados pelo Administrador.`);
+    crmStore.addAuditLog('Colaborador atualizado', `Dados de "${name}" atualizados.`);
   } else {
-    // Novo Cadastro
     employee = {
       id: 'emp-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 4),
-      name,
-      cpf: formattedCpf,
-      email,
-      phone,
-      role,
-      jobTitle,
-      department,
-      tempPassword,
-      requirePasswordChange,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      lastLoginAt: null
+      name, cpf: formattedCpf, email, phone, role, jobTitle, department,
+      requirePasswordChange, status: 'active', createdAt: now
     };
-
     employees.unshift(employee);
-    crmStore.addAuditLog('Novo Colaborador Cadastrado', `Colaborador "${name}" (CPF: ${maskCPF(formattedCpf)}) cadastrado com senha temporária.`);
+    crmStore.addAuditLog('Colaborador cadastrado', `Colaborador "${name}" (CPF ${maskCPF(formattedCpf)}) cadastrado.`);
   }
 
   employeesCache = employees;
   saveEmployeesToLocal();
   notifyEmployeeListeners();
+  return { success: true, employee, demo: true };
+}
 
-  return { success: true, employee };
+async function saveEmployeeToCloud(input) {
+  const { existingId, name, formattedCpf, email, phone, role, jobTitle, department, tempPassword, requirePasswordChange, now } = input;
+  const admin = getCurrentUser();
+
+  try {
+    const { db, fsMod } = await getFirebase();
+
+    if (existingId) {
+      const current = employeesCache.find(e => e.id === existingId);
+      if (!current) return { success: false, error: 'Colaborador não encontrado.' };
+      if ((current.email || '').toLowerCase() !== email) {
+        return { success: false, error: 'O e-mail é o login da pessoa e não pode ser trocado aqui. Exclua o cadastro e crie outro.' };
+      }
+      await fsMod.updateDoc(fsMod.doc(db, 'users', existingId), { name, role, jobTitle, department, updatedAt: now });
+      await fsMod.setDoc(fsMod.doc(db, 'user_private', existingId), { orgId: admin.orgId, cpf: formattedCpf, phone, updatedAt: now });
+      crmStore.addAuditLog('Colaborador atualizado', `Dados de "${name}" atualizados.`);
+      return { success: true, employee: { ...current, name, role, jobTitle, department, cpf: formattedCpf, phone } };
+    }
+
+    if (!tempPassword || tempPassword.length < 8) {
+      return { success: false, error: 'A senha temporária precisa ter pelo menos 8 caracteres.' };
+    }
+
+    const uid = await createAccountForSomeoneElse(email, tempPassword);
+    const profile = {
+      orgId: admin.orgId,
+      role,
+      name,
+      email,
+      jobTitle,
+      department,
+      status: 'active',
+      mustChangePassword: requirePasswordChange,
+      createdBy: admin.uid,
+      createdAt: now
+    };
+    await fsMod.setDoc(fsMod.doc(db, 'users', uid), profile);
+    await fsMod.setDoc(fsMod.doc(db, 'user_private', uid), { orgId: admin.orgId, cpf: formattedCpf, phone, updatedAt: now });
+
+    crmStore.addAuditLog('Colaborador cadastrado', `Colaborador "${name}" (CPF ${maskCPF(formattedCpf)}) cadastrado com senha temporária.`);
+    return {
+      success: true,
+      tempPassword,
+      employee: { ...profile, id: uid, cpf: formattedCpf, phone, requirePasswordChange }
+    };
+  } catch (err) {
+    return { success: false, error: describeAuthError(err) };
+  }
 }
 
 /**
- * Reseta a senha de um colaborador, gerando uma nova senha temporária
+ * Redefinição de senha: numa conta real, a pessoa recebe um e-mail para escolher a nova senha.
+ * Quem administra nunca vê nem define a senha de outra pessoa depois do cadastro.
  */
-export function resetEmployeePassword(employeeId) {
-  const isAdm = getCurrentRole() === USER_ROLES.ADMIN;
-  if (!isAdm) return { success: false, error: 'Apenas Administradores podem redefinir senhas.' };
+export async function resetEmployeePassword(employeeId) {
+  const denied = requireAdmin('redefinir senhas');
+  if (denied) return denied;
+
+  const emp = getEmployees().find(e => e.id === employeeId);
+  if (!emp) return { success: false, error: 'Colaborador não encontrado.' };
+
+  if (!isCloudSession()) {
+    return { success: false, error: 'Na demonstração não há logins reais para redefinir.' };
+  }
+
+  try {
+    const { auth, authMod } = await getFirebase();
+    await authMod.sendPasswordResetEmail(auth, emp.email);
+    crmStore.addAuditLog('Redefinição de senha enviada', `E-mail de nova senha enviado para "${emp.name}".`);
+    return { success: true, employee: emp };
+  } catch (err) {
+    return { success: false, error: describeAuthError(err) };
+  }
+}
+
+/**
+ * Bloqueia ou libera o acesso de um colaborador
+ */
+export async function toggleEmployeeStatus(employeeId) {
+  const denied = requireAdmin('bloquear ou liberar colaboradores');
+  if (denied) return denied;
 
   const employees = getEmployees();
   const emp = employees.find(e => e.id === employeeId);
   if (!emp) return { success: false, error: 'Colaborador não encontrado.' };
 
-  const newTempPassword = generateTemporaryPassword();
-  emp.tempPassword = newTempPassword;
-  emp.requirePasswordChange = true;
-  emp.updatedAt = new Date().toISOString();
+  const status = emp.status === 'blocked' ? 'active' : 'blocked';
+  const now = new Date().toISOString();
 
-  saveEmployeesToLocal();
-  crmStore.addAuditLog('Senha Redefinida', `Nova senha temporária emitida para o colaborador "${emp.name}" (CPF: ${maskCPF(emp.cpf)}).`);
-  notifyEmployeeListeners();
+  if (isCloudSession()) {
+    try {
+      const { db, fsMod } = await getFirebase();
+      await fsMod.updateDoc(fsMod.doc(db, 'users', employeeId), { status, updatedAt: now });
+    } catch (err) {
+      return { success: false, error: describeAuthError(err) };
+    }
+  } else {
+    emp.status = status;
+    emp.updatedAt = now;
+    employeesCache = employees;
+    saveEmployeesToLocal();
+    notifyEmployeeListeners();
+  }
 
-  return { success: true, tempPassword: newTempPassword, employee: emp };
+  crmStore.addAuditLog(status === 'active' ? 'Acesso liberado' : 'Acesso bloqueado', `Acesso de "${emp.name}": ${status === 'active' ? 'liberado' : 'bloqueado'}.`);
+  return { success: true, status, employee: { ...emp, status } };
 }
 
 /**
- * Alterna status do colaborador entre Ativo e Bloqueado (Revogação de Acesso)
+ * Remove um colaborador da empresa. A pessoa perde o acesso aos dados na hora.
  */
-export function toggleEmployeeStatus(employeeId) {
-  const isAdm = getCurrentRole() === USER_ROLES.ADMIN;
-  if (!isAdm) return { success: false, error: 'Apenas Administradores podem bloquear/desbloquear colaboradores.' };
+export async function deleteEmployee(employeeId) {
+  const denied = requireAdmin('excluir colaboradores');
+  if (denied) return denied;
 
   const employees = getEmployees();
   const emp = employees.find(e => e.id === employeeId);
   if (!emp) return { success: false, error: 'Colaborador não encontrado.' };
 
-  emp.status = emp.status === 'active' ? 'blocked' : 'active';
-  emp.updatedAt = new Date().toISOString();
+  if (isCloudSession()) {
+    try {
+      const { db, fsMod } = await getFirebase();
+      await fsMod.deleteDoc(fsMod.doc(db, 'user_private', employeeId)).catch(() => {});
+      await fsMod.deleteDoc(fsMod.doc(db, 'users', employeeId));
+    } catch (err) {
+      return { success: false, error: describeAuthError(err) };
+    }
+  } else {
+    employeesCache = employees.filter(e => e.id !== employeeId);
+    saveEmployeesToLocal();
+    notifyEmployeeListeners();
+  }
 
-  saveEmployeesToLocal();
-  const actionLabel = emp.status === 'active' ? 'Acesso Reativado' : 'Acesso Bloqueado';
-  crmStore.addAuditLog(actionLabel, `O status do colaborador "${emp.name}" foi alterado para: ${emp.status.toUpperCase()}.`);
-  notifyEmployeeListeners();
-
-  return { success: true, status: emp.status, employee: emp };
-}
-
-/**
- * Remove um colaborador da base
- */
-export function deleteEmployee(employeeId) {
-  const isAdm = getCurrentRole() === USER_ROLES.ADMIN;
-  if (!isAdm) return { success: false, error: 'Apenas Administradores podem excluir colaboradores.' };
-
-  const employees = getEmployees();
-  const emp = employees.find(e => e.id === employeeId);
-  if (!emp) return { success: false, error: 'Colaborador não encontrado.' };
-
-  employeesCache = employees.filter(e => e.id !== employeeId);
-  saveEmployeesToLocal();
-  crmStore.addAuditLog('Colaborador Removido', `O registro do colaborador "${emp.name}" (${maskCPF(emp.cpf)}) foi excluído da base.`);
-  notifyEmployeeListeners();
-
+  crmStore.addAuditLog('Colaborador removido', `O cadastro de "${emp.name}" foi excluído.`);
   return { success: true };
 }
 
 /**
- * Busca colaborador por E-mail OU CPF
- * @param {string} loginInput 
- * @returns {Object|null}
+ * Mensagem com os dados de acesso, para enviar ao colaborador.
+ * A senha temporária só existe no momento do cadastro; depois disso não é guardada em lugar nenhum.
+ * @param {Object} employee
+ * @param {string} [tempPassword]
  */
-export function findEmployeeByLogin(loginInput) {
-  if (!loginInput) return null;
-  const input = loginInput.trim().toLowerCase();
-  const cleanInput = input.replace(/\D/g, '');
-
-  const employees = getEmployees();
-  return employees.find(e => {
-    const emailMatch = e.email.toLowerCase() === input;
-    const cpfMatch = cleanInput.length === 11 && e.cpf.replace(/\D/g, '') === cleanInput;
-    return emailMatch || cpfMatch;
-  }) || null;
-}
-
-/**
- * Valida credenciais do colaborador (suporta senha temporária ou definitiva)
- * @param {string} loginInput - E-mail ou CPF
- * @param {string} password 
- * @returns {Object} { success: boolean, employee?: Object, error?: string, requirePasswordChange?: boolean }
- */
-export function verifyEmployeeLogin(loginInput, password) {
-  const emp = findEmployeeByLogin(loginInput);
-  if (!emp) {
-    return { success: false, error: 'Nenhum colaborador encontrado com este CPF ou e-mail corporativo.' };
-  }
-
-  if (emp.status === 'blocked') {
-    return { 
-      success: false, 
-      error: 'Acesso temporariamente bloqueado pela Governança. Contate o Administrador do sistema.' 
-    };
-  }
-
-  // Verifica senha (seja temporária ou senha permanente)
-  const isTempValid = emp.tempPassword && emp.tempPassword === password;
-  const isPermValid = emp.permanentPassword && emp.permanentPassword === password;
-
-  // Aceita senha mestra para demonstração se necessário
-  const isDemoMaster = password === '123456' || password === 'admin123' || password === 'nexus2026';
-
-  if (!isTempValid && !isPermValid && !isDemoMaster) {
-    return { success: false, error: 'Senha incorreta. Verifique se digitou a senha temporária corretamente.' };
-  }
-
-  // Atualiza último login
-  emp.lastLoginAt = new Date().toISOString();
-  saveEmployeesToLocal();
-
-  return {
-    success: true,
-    employee: emp,
-    requirePasswordChange: !!emp.requirePasswordChange
-  };
-}
-
-/**
- * Atualiza a senha definitiva do colaborador (Primeiro Acesso)
- */
-export function setEmployeePermanentPassword(employeeId, newPassword) {
-  if (!newPassword || newPassword.length < 6) {
-    return { success: false, error: 'A nova senha deve ter no mínimo 6 caracteres.' };
-  }
-
-  const employees = getEmployees();
-  const emp = employees.find(e => e.id === employeeId);
-  if (!emp) return { success: false, error: 'Colaborador não encontrado.' };
-
-  emp.permanentPassword = newPassword;
-  emp.requirePasswordChange = false;
-  emp.updatedAt = new Date().toISOString();
-
-  saveEmployeesToLocal();
-  crmStore.addAuditLog('Senha Pessoal Criada', `O colaborador "${emp.name}" definiu sua senha definitiva no primeiro acesso.`);
-  notifyEmployeeListeners();
-
-  return { success: true, employee: emp };
-}
-
-/**
- * Gera mensagem formatada para WhatsApp ou E-mail corporativo
- * @param {Object} employee 
- * @returns {string}
- */
-export function generateCredentialsShareText(employee) {
+export function generateCredentialsShareText(employee, tempPassword = '') {
   const url = window.location.origin + window.location.pathname;
-  return `*Acesso ao Nexus CRM Criado com Sucesso!*
-
-Olá, *${employee.name}*!
-Seu acesso à plataforma Nexus CRM foi configurado com perfil: *${employee.jobTitle}*.
-
-*Suas Credenciais de Acesso:*
-• *Login:* ${employee.email}
-• *Ou pelo CPF:* ${employee.cpf}
-• *Senha Temporária:* \`${employee.tempPassword || 'Definida'}\`
-• *Endereço da Plataforma:* ${url}
-
-*Atenção:* No seu primeiro login, o sistema solicitará a criação da sua senha definitiva pessoal.
-Qualquer dúvida, contate o Administrador do Sistema.`;
+  const lines = [
+    `Olá, ${employee.name}!`,
+    '',
+    'Seu acesso ao CRM da empresa foi criado.',
+    '',
+    `Endereço: ${url}`,
+    `Login: ${employee.email}`
+  ];
+  if (tempPassword) {
+    lines.push(`Senha temporária: ${tempPassword}`);
+    lines.push('');
+    lines.push('No primeiro acesso o sistema pede para você criar a sua senha pessoal.');
+  } else {
+    lines.push('');
+    lines.push('Se não lembrar a senha, use "Esqueci minha senha" na tela de entrada.');
+  }
+  return lines.join('\n');
 }
 
 /**

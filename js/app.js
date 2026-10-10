@@ -22,7 +22,6 @@ import {
   escapeHtml
 } from './ui/ui-renderer.js';
 import { 
-  getSavedFirebaseConfig, 
   getSavedOrganization, 
   saveOrganization, 
   applyWhitelabelStyles, 
@@ -31,8 +30,6 @@ import {
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from './services/gemini-service.js';
 import { 
   initAuth, 
-  signInWithGoogle, 
-  signOutUser, 
   onAuthChange,
   setUserRole,
   getCurrentRole,
@@ -41,12 +38,17 @@ import {
   USER_ROLES,
   getCurrentUser,
   isSessionActive,
-  setSessionActive,
+  isCloudSession,
+  isDemoSession,
   loginAsDemoRole,
-  loginWithEmail,
-  registerUser,
+  signIn,
+  registerCompany,
+  joinCompany,
+  sendPasswordReset,
+  changeOwnPassword,
   logoutToPortal
 } from './services/auth-service.js';
+import { describeAuthError } from './services/firebase-app.js';
 import { 
   exportCustomersToCSV, 
   exportAuditLogsToCSV, 
@@ -62,10 +64,10 @@ import {
   resetEmployeePassword, 
   toggleEmployeeStatus, 
   deleteEmployee, 
-  verifyEmployeeLogin, 
-  setEmployeePermanentPassword, 
   generateCredentialsShareText, 
-  onEmployeesChange 
+  onEmployeesChange,
+  startEmployeeSync,
+  stopEmployeeSync
 } from './services/employee-service.js';
 import { 
   initTheme, 
@@ -87,15 +89,9 @@ import {
 } from './services/audit-service.js';
 import { getFirestoreDb } from './services/firebase-service.js';
 import {
-  createInvite,
-  getInvites,
-  getInviteStats,
-  revokeInvite,
-  resendInvite,
   generateInviteShareText,
   getCompanyTeamInviteCode,
-  joinTeamWithInviteCode,
-  INVITE_STATUS
+  replaceCompanyTeamInviteCode
 } from './services/team-invite-service.js';
 import {
   requestNotificationPermission,
@@ -194,22 +190,13 @@ async function initApp() {
 
     // Periodic poll for Webhook incoming leads (every 15s)
     setInterval(async () => {
+      if (!isSessionActive() || !isAdmin()) return;
       const res = await pollWebhookInbox();
       if (res && res.count > 0) {
         if (crmStore) crmStore.emitChange();
         showToast(`${res.count} novo(s) lead(s) capturado(s) via Webhook!`, 'success');
       }
     }, 15000);
-
-    // Log initial login audit event
-    logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'session_resume' });
-
-    // Setup Auth state
-    onAuthChange((user) => {
-      renderAuthBadge(user);
-      if (crmStore) crmStore.emitChange();
-    });
-    initAuth();
 
     // Subscribe state store changes to DOM rendering
     crmStore.subscribe((state) => {
@@ -237,21 +224,83 @@ async function initApp() {
       crmStore.setCustomers(customers, mode);
     });
 
-    // Initialize storage (Firestore or Local)
-    const initResult = await storage.init();
-    if (initResult.mode === 'firestore') {
-      const db = getFirestoreDb();
-      if (db) initAuditFirestore(db);
-      showToast("Conectado em tempo real ao Google Cloud Firestore!", "success");
-    } else {
-      showToast("Nexus CRM iniciado em modo local de demonstração.", "info");
-    }
+    onAuthChange((user) => {
+      renderAuthBadge(user);
+      if (crmStore) crmStore.emitChange();
+    });
+
+    // Restore the session first (signed-in account, demo, or none): which data is loaded depends on it
+    await initAuth();
+    await enterSession({ resumed: true });
   } catch (err) {
     console.error("Erro crítico na inicialização do Nexus CRM:", err);
     // Assegurar que o container do aplicativo permaneça visível
     const appContainer = document.getElementById('app-container');
     if (appContainer) appContainer.style.display = '';
   }
+}
+
+/**
+ * Loads everything that belongs to the current session, or shows the sign-in screen when there is none.
+ * Called on page load and after every sign-in.
+ */
+async function enterSession({ resumed = false } = {}) {
+  document.body.classList.remove('auth-pending');
+
+  if (!isSessionActive()) {
+    stopEmployeeSync();
+    storage.reset();
+    initAuditFirestore(null);
+    window.showAuthPortal();
+    if (typeof window.handleAuthHashRouting === 'function') window.handleAuthHashRouting();
+    return;
+  }
+
+  window.hideAuthPortal();
+  const result = await storage.init();
+  await startEmployeeSync().catch((err) => console.warn('Team list could not start:', err));
+  initAuditFirestore(isCloudSession() ? getFirestoreDb() : null);
+
+  if (typeof window.refreshTeamInviteCard === 'function') window.refreshTeamInviteCard();
+  if (typeof window.navigateToView === 'function') window.navigateToView('pipeline');
+  crmStore.emitChange();
+
+  if (isCloudSession() && !result.success) {
+    showToast("Não foi possível carregar os dados da empresa. Verifique a conexão e recarregue a página.", "error");
+  }
+
+  logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: resumed ? 'session_resume' : (isCloudSession() ? 'email_password' : 'demo') });
+
+  const user = getCurrentUser();
+  if (user && user.mustChangePassword) {
+    const firstAccessDialog = document.getElementById('first-access-password-dialog');
+    const spanName = document.getElementById('first-access-employee-name');
+    if (spanName) spanName.textContent = user.name;
+    if (firstAccessDialog && !firstAccessDialog.open) firstAccessDialog.showModal();
+  }
+}
+
+/**
+ * People a lead can be assigned to in the current session
+ */
+function getAssignableMembers() {
+  const active = getEmployees().filter(e => e.status !== 'blocked');
+  if (isCloudSession()) {
+    const me = getCurrentUser();
+    const self = { id: me.uid, name: me.name, email: me.email, jobTitle: isAdmin() ? 'Administrador' : 'Vendedor' };
+    return isAdmin() ? [self, ...active] : [self];
+  }
+  const demoAdmin = SALES_TEAM.find(m => m.role === 'admin');
+  return [...active, { ...demoAdmin, jobTitle: 'Administrador' }];
+}
+
+function fillAssigneeSelect(select, selectedEmail) {
+  const members = getAssignableMembers();
+  select.innerHTML = members.map(m => `
+    <option value="${escapeHtml(m.email)}">${escapeHtml(m.name)} (${escapeHtml(m.jobTitle || 'Vendedor')})</option>
+  `).join('');
+  const wanted = members.find(m => m.email === selectedEmail);
+  select.value = wanted ? wanted.email : (members[0] ? members[0].email : '');
 }
 
 // Inicialização imediata se o DOM já estiver pronto, ou no evento DOMContentLoaded
@@ -324,11 +373,11 @@ function applyRoleUIRestrictions(permissions) {
     // Restrito para Funcionários pela Confidencialidade (Tríade CID)
     if (geminiBtn) {
       geminiBtn.style.opacity = '0.4';
-      geminiBtn.title = 'Acesso restrito ao Administrador (Confidencialidade CID)';
+      geminiBtn.title = 'Só administradores configuram a IA';
     }
     if (firebaseBtn) {
       firebaseBtn.style.opacity = '0.4';
-      firebaseBtn.title = 'Acesso restrito ao Administrador (Confidencialidade CID)';
+      firebaseBtn.title = 'Só administradores';
     }
   }
 
@@ -341,15 +390,17 @@ function applyRoleUIRestrictions(permissions) {
   }
 }
 
-// Global handler to switch between Admin and Employee roles for live RBAC demonstration
-window.handleToggleRole = function() {
+// Switches between the two sample profiles. Real accounts keep the role their company gave them.
+window.handleToggleRole = async function() {
+  if (!isDemoSession()) return;
   const role = getCurrentRole();
   const nextRole = role === USER_ROLES.ADMIN ? USER_ROLES.EMPLOYEE : USER_ROLES.ADMIN;
   setUserRole(nextRole);
+  await storage.init();
   logAudit(AUDIT_ACTIONS.ROLE_SWITCHED, { fromRole: role, toRole: nextRole });
-  showToast(nextRole === USER_ROLES.ADMIN 
-    ? "Modo Administrador Ativado (Visão 360°, Equipe, Auditoria e Governança)" 
-    : "Modo Funcionário Ativado (Abas administrativas ocultas conforme Confidencialidade CID)", "info");
+  showToast(nextRole === USER_ROLES.ADMIN
+    ? "Agora você vê a demonstração como administrador."
+    : "Agora você vê a demonstração como vendedor.", "info");
 };
 
 // ==========================================================================
@@ -365,7 +416,7 @@ function setupNavigation() {
     const isAdmin = !!state.permissions?.isAdmin;
 
     if (adminOnlyViews.includes(targetView) && !isAdmin) {
-      showToast('Acesso restrito: As abas Equipe, Auditoria e Tríade CID são exclusivas de Administradores.', 'warning');
+      showToast('Equipe, Auditoria e Segurança são só para administradores.', 'warning');
       targetView = 'pipeline';
     }
 
@@ -383,6 +434,7 @@ function setupNavigation() {
       pageTitle.textContent = item.dataset.title || 'Pipeline de Vendas';
     }
 
+    document.body.dataset.view = targetView;
     crmStore.setActiveView(targetView);
   };
 
@@ -1072,12 +1124,7 @@ function setupDialogEvents() {
     document.getElementById('input-deal-forecast').value = '';
     const assignedSelect = document.getElementById('input-customer-assigned');
     if (assignedSelect) {
-      const emps = getEmployees();
-      assignedSelect.innerHTML = emps.map(emp => `
-        <option value="${escapeHtml(emp.email)}">${escapeHtml(emp.name)} (${escapeHtml(emp.jobTitle || 'Consultor')})</option>
-      `).join('') + `<option value="admin@nexuscrm.com">Administrador do Sistema</option>`;
-      const currentUser = getCurrentUser();
-      assignedSelect.value = currentUser?.email || (emps[0]?.email || 'lucas.vendas@nexuscrm.com');
+      fillAssigneeSelect(assignedSelect, getCurrentUser()?.email);
     }
     customerDialog.showModal();
   };
@@ -1106,21 +1153,10 @@ function setupDialogEvents() {
       const tags = rawTags.split(',').map(t => sanitizeInput(t)).filter(Boolean);
       const notes = sanitizeInput(document.getElementById('input-customer-notes').value);
 
-      // Consultor atribuído (RBAC / CID)
+      // Responsável pelo lead
       const assignedSelect = document.getElementById('input-customer-assigned');
-      const assignedEmail = assignedSelect ? assignedSelect.value : 'lucas.vendas@nexuscrm.com';
-      const emps = getEmployees();
-      const allTeam = [...emps, ...SALES_TEAM];
-      const matched = allTeam.find(m => m.email === assignedEmail);
-      const assignedMember = matched ? {
-        id: matched.id || 'employee-user-02',
-        name: matched.name,
-        email: matched.email
-      } : {
-        id: 'employee-user-02',
-        name: 'Lucas Mendes (Consultor)',
-        email: assignedEmail
-      };
+      const members = getAssignableMembers();
+      const assignedMember = members.find(m => m.email === (assignedSelect ? assignedSelect.value : '')) || members[0];
 
       const customerPayload = {
         name,
@@ -1190,11 +1226,7 @@ window.handleOpenEditCustomer = function(customerId) {
 
   const assignedSelect = document.getElementById('input-customer-assigned');
   if (assignedSelect) {
-    const emps = getEmployees();
-    assignedSelect.innerHTML = emps.map(emp => `
-      <option value="${escapeHtml(emp.email)}">${escapeHtml(emp.name)} (${escapeHtml(emp.jobTitle || 'Consultor')})</option>
-    `).join('') + `<option value="admin@nexuscrm.com">Administrador do Sistema</option>`;
-    assignedSelect.value = customer.assignedTo?.email || 'lucas.vendas@nexuscrm.com';
+    fillAssigneeSelect(assignedSelect, customer.assignedTo?.email);
   }
 
   customerDialog.showModal();
@@ -1202,17 +1234,17 @@ window.handleOpenEditCustomer = function(customerId) {
 
 window.handleDeleteCustomer = async function(customerId) {
   if (!isAdmin()) {
-    showToast("Ação bloqueada pela Tríade CID: Apenas Administradores têm permissão para excluir oportunidades definitivamente.", "error");
+    showToast("Só administradores podem excluir oportunidades.", "error");
     logAudit(AUDIT_ACTIONS.PERMISSION_DENIED, { action: 'delete_customer', customerId }, AUDIT_SEVERITY.WARNING);
     return;
   }
 
-  if (!confirm("Deseja realmente excluir esta oportunidade? Esta ação será registrada na trilha de auditoria (Integridade).")) return;
+  if (!confirm("Excluir esta oportunidade? A exclusão fica registrada na auditoria e não pode ser desfeita.")) return;
   try {
     const cust = storage.getCustomer(customerId);
     await storage.deleteCustomer(customerId);
     logAudit(AUDIT_ACTIONS.LEAD_DELETED, { customerId, name: cust?.name, company: cust?.company }, AUDIT_SEVERITY.WARNING);
-    showToast("Oportunidade removida definitivamente do sistema.", "info");
+    showToast("Oportunidade excluída.", "info");
   } catch (err) {
     showToast("Erro ao excluir: " + err.message, "error");
   }
@@ -1222,96 +1254,11 @@ window.handleDeleteCustomer = async function(customerId) {
 // Firebase Configuration Dialog
 // ==========================================================================
 function setupFirebaseConfigModal() {
-  const firebaseDialog = document.getElementById('firebase-dialog');
-  const pillBtn = document.getElementById('connection-status-pill');
-  const btnClose = document.getElementById('btn-close-firebase-dialog');
-  const btnCancel = document.getElementById('btn-cancel-firebase-dialog');
-  const form = document.getElementById('firebase-config-form');
-  const btnDisconnect = document.getElementById('btn-disconnect-firebase');
-
-  const openModal = () => {
-    const existing = getSavedFirebaseConfig();
-    if (existing) {
-      document.getElementById('fb-input-apikey').value = existing.apiKey || '';
-      document.getElementById('fb-input-projectid').value = existing.projectId || '';
-      document.getElementById('fb-input-authdomain').value = existing.authDomain || '';
-      document.getElementById('fb-input-storagebucket').value = existing.storageBucket || '';
-      document.getElementById('fb-input-appid').value = existing.appId || '';
-      if (btnDisconnect) btnDisconnect.style.display = 'inline-flex';
-    } else {
-      if (btnDisconnect) btnDisconnect.style.display = 'none';
-    }
-    firebaseDialog.showModal();
-  };
-
-  if (pillBtn) pillBtn.addEventListener('click', openModal);
-
+  // The database connection is no longer configurable from the app: every account uses the
+  // product's own database, reached only after sign-in.
   const sidebarFirebaseBtn = document.getElementById('sidebar-firebase-btn');
-  if (sidebarFirebaseBtn) sidebarFirebaseBtn.addEventListener('click', openModal);
-
-  const closeModal = () => firebaseDialog && firebaseDialog.close();
-  if (btnClose) btnClose.addEventListener('click', closeModal);
-  if (btnCancel) btnCancel.addEventListener('click', closeModal);
-
-  if (form) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const apiKey = document.getElementById('fb-input-apikey').value.trim();
-      const projectId = document.getElementById('fb-input-projectid').value.trim();
-      const authDomain = document.getElementById('fb-input-authdomain').value.trim() || `${projectId}.firebaseapp.com`;
-      const storageBucket = document.getElementById('fb-input-storagebucket').value.trim() || `${projectId}.appspot.com`;
-      const appId = document.getElementById('fb-input-appid').value.trim() || `1:1234567890:web:abcdef`;
-
-      const submitBtn = document.getElementById('btn-save-firebase');
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Testando conexão...';
-      submitBtn.disabled = true;
-
-      try {
-        const config = { apiKey, projectId, authDomain, storageBucket, appId };
-        await storage.connectToFirebase(config);
-        firebaseDialog.close();
-        showToast("Sucesso! Conectado ao Google Cloud Firestore.", "success");
-      } catch (err) {
-        alert("Erro na conexão com o Firebase: " + err.message + "\n\nVerifique se o Firestore Database está ativo no seu console e se as regras de segurança permitem leitura/escrita.");
-      } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
-
-  if (btnDisconnect) {
-    btnDisconnect.addEventListener('click', () => {
-      if (confirm("Deseja desconectar do Firebase e retornar ao modo local?")) {
-        storage.disconnectFirebase();
-        firebaseDialog.close();
-        showToast("Desconectado do Firebase. Operando em modo local.", "info");
-      }
-    });
-  }
+  if (sidebarFirebaseBtn) sidebarFirebaseBtn.style.display = 'none';
 }
-
-// ==========================================================================
-// Google Authentication Handlers
-// ==========================================================================
-window.handleSignInWithGoogle = async function() {
-  try {
-    const user = await signInWithGoogle();
-    showToast(`Bem-vindo(a), ${user.displayName || 'Vendedor'}!`, "success");
-  } catch (err) {
-    showToast("Erro no login com Google: " + err.message, "error");
-  }
-};
-
-window.handleSignOut = async function() {
-  try {
-    await signOutUser();
-    showToast("Você saiu da sua conta Google.", "info");
-  } catch (err) {
-    showToast("Erro ao sair: " + err.message, "error");
-  }
-};
 
 // ==========================================================================
 // Gemini AI Modals & Handlers
@@ -1515,7 +1462,7 @@ function setupWhitelabelEvents() {
   if (btnReset) {
     btnReset.addEventListener('click', () => {
       const defaultOrg = {
-        name: 'Nexus CRM Enterprise',
+        name: 'Empresa Exemplo',
         legalName: 'Nexus Soluções Comerciais e Tecnologia Ltda',
         logoUrl: '',
         brandColor: '#3b82f6'
@@ -1594,7 +1541,7 @@ function setupBackupEvents() {
 
   window.handleTriggerRestoreBackup = function() {
     if (!isAdmin()) {
-      showToast("Acesso negado: Apenas Administradores podem restaurar snapshots de backup (Tríade CID: Disponibilidade).", "error");
+      showToast("Só administradores podem restaurar uma cópia de segurança.", "error");
       logAudit(AUDIT_ACTIONS.PERMISSION_DENIED, { action: 'restore_backup' }, AUDIT_SEVERITY.WARNING);
       return;
     }
@@ -1854,20 +1801,39 @@ function setupAuthPortalEvents() {
     if (appContainer) appContainer.style.display = '';
   };
 
-  window.handleLogoutToPortal = function() {
-    logAudit(AUDIT_ACTIONS.USER_LOGOUT, { reason: 'user_action' });
-    logoutToPortal();
-    window.showAuthPortal();
-    showToast("Sessão finalizada com sucesso. Tela bloqueada.", "info");
+  window.handleLogoutToPortal = async function() {
+    const wasCloud = isCloudSession();
+    await logAudit(AUDIT_ACTIONS.USER_LOGOUT, { reason: 'user_action' });
+    await logoutToPortal();
+    if (wasCloud) {
+      // Nothing from a real account stays behind in this browser
+      localStorage.removeItem('nexus_crm_audit_logs');
+    }
+    await enterSession();
+    showToast("Você saiu.", "info");
   };
 
-  // Check initial session state - default to authenticated demo if first visit, or active session
-  if (!isSessionActive()) {
-    // If not active, show the executive login portal
-    window.showAuthPortal();
-  } else {
-    window.hideAuthPortal();
-  }
+  // Shows a busy label on a submit button and gives back a function that restores it
+  const setBusy = (button, label) => {
+    if (!button) return () => {};
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.textContent = label;
+    return () => {
+      button.disabled = false;
+      button.innerHTML = original;
+    };
+  };
+
+  const clearRegisterHash = () => {
+    if (window.location.hash && (window.location.hash.includes('register') || window.location.hash.includes('checkout'))) {
+      try {
+        history.replaceState(null, '', window.location.pathname);
+      } catch {
+        window.location.hash = '#pipeline';
+      }
+    }
+  };
 
   // Tab switching
   if (tabLogin && tabRegister) {
@@ -1886,99 +1852,73 @@ function setupAuthPortalEvents() {
     });
   }
 
-  // Quick 1-click role logins
+  // Sample data: nothing typed here reaches the cloud
   if (btnQuickAdmin) {
-    btnQuickAdmin.addEventListener('click', () => {
+    btnQuickAdmin.addEventListener('click', async () => {
       loginAsDemoRole(USER_ROLES.ADMIN);
-      logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'quick_demo', role: 'admin' });
-      window.hideAuthPortal();
-      showToast("Conectado como Administrador do Sistema (Acesso Total 360°)", "success");
+      await enterSession();
+      showToast("Demonstração aberta como administrador. Os dados são de exemplo e ficam só neste navegador.", "info");
     });
   }
 
   if (btnQuickEmployee) {
-    btnQuickEmployee.addEventListener('click', () => {
+    btnQuickEmployee.addEventListener('click', async () => {
       loginAsDemoRole(USER_ROLES.EMPLOYEE);
-      logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'quick_demo', role: 'employee' });
-      window.hideAuthPortal();
-      showToast("Conectado como Lucas Mendes (Consultor Comercial)", "success");
+      await enterSession();
+      showToast("Demonstração aberta como vendedor. Os dados são de exemplo e ficam só neste navegador.", "info");
     });
   }
 
-  // Live CPF auto-mask on login input if typing numbers
-  const loginInput = document.getElementById('login-input-email');
-  if (loginInput) {
-    loginInput.addEventListener('input', () => {
-      const val = loginInput.value;
-      const digitsOnly = val.replace(/\D/g, '');
-      // If starts with numbers or looks like a CPF
-      if (digitsOnly.length > 2 && !val.includes('@')) {
-        loginInput.value = formatCPF(val);
-      }
-    });
-  }
-
-  // Form Login submit (Supports CPF or Email + Temporary Password detection)
+  // Sign in
   if (formLogin) {
-    formLogin.addEventListener('submit', (e) => {
+    formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const loginValue = document.getElementById('login-input-email').value.trim();
+      const email = document.getElementById('login-input-email').value.trim();
       const password = document.getElementById('login-input-password').value;
-      const role = document.getElementById('login-select-role').value;
 
-      if (!loginValue || !password) {
-        showToast("Preencha todos os campos para entrar.", "error");
+      if (!email || !password) {
+        showToast("Informe o e-mail e a senha.", "error");
         return;
       }
 
-      // Check if matches an employee by CPF or Email
-      const empAuth = verifyEmployeeLogin(loginValue, password);
-      if (empAuth.success) {
-        const emp = empAuth.employee;
-        if (empAuth.requirePasswordChange) {
-          // Open first-access modal to force permanent password definition
-          const firstAccessDialog = document.getElementById('first-access-password-dialog');
-          const inputEmpId = document.getElementById('first-access-employee-id');
-          const spanEmpName = document.getElementById('first-access-employee-name');
-          if (firstAccessDialog && inputEmpId && spanEmpName) {
-            inputEmpId.value = emp.id;
-            spanEmpName.textContent = emp.name;
-            firstAccessDialog.showModal();
-            showToast("Primeiro acesso detectado! Crie sua senha definitiva.", "info");
-            return;
-          }
-        }
-
-        // Login as employee
-        loginAsDemoRole(emp.role || USER_ROLES.EMPLOYEE);
-        const currentUserObj = getCurrentUser();
-        if (currentUserObj) {
-          currentUserObj.name = emp.name + (emp.role === 'admin' ? ' (Administrador)' : ' (Consultor)');
-          currentUserObj.email = emp.email;
-          currentUserObj.cpf = emp.cpf;
-        }
-        crmStore.addAuditLog('Login de Colaborador', `Colaborador "${emp.name}" autenticado com sucesso (CPF: ${maskCPF(emp.cpf)}).`);
-        logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'employee_credentials', employeeId: emp.id, name: emp.name, role: emp.role });
-        window.hideAuthPortal();
-        showToast(`Bem-vindo(a) ao Nexus CRM, ${emp.name}!`, "success");
-        return;
+      const restore = setBusy(formLogin.querySelector('button[type="submit"]'), 'Entrando...');
+      try {
+        const user = await signIn(email, password);
+        formLogin.reset();
+        await enterSession();
+        showToast(`Olá, ${user.name}.`, "success");
+      } catch (err) {
+        showToast(describeAuthError(err), "error");
+      } finally {
+        restore();
       }
-
-      if (empAuth.error && empAuth.error.includes('bloqueado')) {
-        showToast(empAuth.error, "error");
-        return;
-      }
-
-      // Fallback for demo logins / email logins
-      loginWithEmail(loginValue, password, role);
-      logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'email_password', email: loginValue, role });
-      window.hideAuthPortal();
-      const roleLabel = role === 'admin' ? 'Administrador ' : 'Funcionário ';
-      showToast(`Bem-vindo(a) ao Nexus CRM! Perfil ativo: ${roleLabel}`, "success");
     });
   }
 
-  // Sub-tabs de Registro: Dono de Empresa vs Colaborador com Convite
+  // Forgotten password: the person gets an e-mail to choose a new one
+  const btnForgot = document.getElementById('btn-forgot-password');
+  if (btnForgot) {
+    btnForgot.addEventListener('click', async () => {
+      const email = document.getElementById('login-input-email').value.trim();
+      if (!email || !email.includes('@')) {
+        showToast("Digite o seu e-mail no campo acima e clique de novo.", "info");
+        document.getElementById('login-input-email').focus();
+        return;
+      }
+      try {
+        await sendPasswordReset(email);
+      } catch (err) {
+        // Same answer whether or not the address has an account, so it cannot be used to probe for accounts
+        if (err.code === 'auth/network-request-failed' || err.code === 'auth/too-many-requests') {
+          showToast(describeAuthError(err), "error");
+          return;
+        }
+      }
+      showToast("Se houver uma conta com este e-mail, enviamos um link para criar uma nova senha.", "info");
+    });
+  }
+
+  // Registration: own company vs joining with an invite
   const tabRegOwner = document.getElementById('tab-reg-type-owner');
   const tabRegEmployee = document.getElementById('tab-reg-type-employee');
   const regContainerOwner = document.getElementById('reg-container-owner');
@@ -1987,281 +1927,117 @@ function setupAuthPortalEvents() {
   if (tabRegOwner && tabRegEmployee) {
     tabRegOwner.addEventListener('click', () => {
       tabRegOwner.classList.add('active');
-      tabRegOwner.style.borderColor = 'var(--accent-line)';
-      tabRegOwner.style.background = 'var(--accent-soft)';
-      tabRegOwner.style.color = 'var(--accent)';
-
       tabRegEmployee.classList.remove('active');
-      tabRegEmployee.style.borderColor = 'transparent';
-      tabRegEmployee.style.background = 'transparent';
-      tabRegEmployee.style.color = 'var(--text-secondary)';
-
       if (regContainerOwner) regContainerOwner.style.display = 'block';
       if (regContainerEmployee) regContainerEmployee.style.display = 'none';
     });
 
     tabRegEmployee.addEventListener('click', () => {
       tabRegEmployee.classList.add('active');
-      tabRegEmployee.style.borderColor = 'rgba(59, 130, 246, 0.4)';
-      tabRegEmployee.style.background = 'rgba(59, 130, 246, 0.12)';
-      tabRegEmployee.style.color = '#60a5fa';
-
       tabRegOwner.classList.remove('active');
-      tabRegOwner.style.borderColor = 'transparent';
-      tabRegOwner.style.background = 'transparent';
-      tabRegOwner.style.color = 'var(--text-secondary)';
-
       if (regContainerOwner) regContainerOwner.style.display = 'none';
       if (regContainerEmployee) regContainerEmployee.style.display = 'block';
     });
   }
 
-  // Form Register: Dono de Empresa (Criação de Tenant / Sempre Administrador)
+  // New company: whoever registers it is its first administrator
   if (formRegister) {
     formRegister.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const submitBtn = document.getElementById('btn-submit-register') || formRegister.querySelector('button[type="submit"]');
-      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Criar Empresa e Acessar CRM';
-
       const name = document.getElementById('reg-input-name').value.trim();
       const email = document.getElementById('reg-input-email').value.trim();
       const company = document.getElementById('reg-input-company').value.trim();
       const password = document.getElementById('reg-input-password').value;
       const plan = document.getElementById('reg-input-plan')?.value || 'pro';
-      const role = USER_ROLES.ADMIN; // O Dono é SEMPRE Administrador do Sistema
 
       if (!name || !email || !company || !password) {
-        showToast("Preencha todos os campos obrigatórios.", "error");
+        showToast("Preencha todos os campos.", "error");
+        return;
+      }
+      if (password.length < 8) {
+        showToast("A senha precisa ter pelo menos 8 caracteres.", "warning");
         return;
       }
 
-      if (password.length < 6) {
-        showToast("A senha deve ter no mínimo 6 caracteres.", "warning");
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-          <span style="display:inline-flex; align-items:center; gap:8px;">
-            <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-            </svg>
-            Criando sua empresa...
-          </span>
-        `;
-      }
-
-      let backendSuccess = false;
-      let backendError = null;
-
+      const restore = setBusy(document.getElementById('btn-submit-register'), 'Criando a empresa...');
       try {
-        const baseUrl = typeof window.getApiBaseUrl === 'function' ? window.getApiBaseUrl() : '';
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const res = await fetch(`${baseUrl}/api/v1/commercial/register-tenant`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            companyName: company,
-            adminName: name,
-            email,
-            password,
-            plan
-          }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-
-        const payload = await res.json().catch(() => ({}));
-        if (res.ok) {
-          backendSuccess = true;
-          if (payload.token) localStorage.setItem('nexus_jwt_token', payload.token);
-          if (payload.tenant?.id) localStorage.setItem('nexus_tenant_id', payload.tenant.id);
-          if (payload.tenant?.teamInviteCode) {
-            const org = getSavedOrganization();
-            org.teamInviteCode = payload.tenant.teamInviteCode;
-            saveOrganization(org);
-          }
-        } else {
-          backendError = payload.error || payload.message || 'Falha no cadastro com o servidor.';
-        }
+        await registerCompany({ name, email, company, password, plan });
+        formRegister.reset();
+        clearRegisterHash();
+        await enterSession();
+        logAudit(AUDIT_ACTIONS.USER_REGISTERED, { role: 'admin', company, plan });
+        showToast(`Empresa "${company}" criada. Você é o administrador.`, "success");
       } catch (err) {
-        console.warn('Backend indisponível ou timeout, registrando localmente:', err);
-      }
-
-      if (backendError && !backendSuccess) {
-        showToast(`Atenção: ${backendError}`, "error");
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalBtnHtml;
-        }
-        return;
-      }
-
-      // Registra sessão de administrador e organização
-      registerUser(name, email, password, USER_ROLES.ADMIN, company);
-      crmStore.addAuditLog('Empresa Cadastrada', `Organização "${company}" criada por "${name}" (${email}) no plano ${plan.toUpperCase()}.`);
-      logAudit(AUDIT_ACTIONS.USER_REGISTERED, { name, email, role: 'admin', company, plan });
-
-      window.hideAuthPortal();
-
-      if (window.location.hash && (window.location.hash.includes('register') || window.location.hash.includes('checkout'))) {
-        try {
-          history.replaceState(null, '', window.location.pathname);
-        } catch {
-          window.location.hash = '#pipeline';
-        }
-      }
-
-      if (typeof window.navigateToView === 'function') {
-        window.navigateToView('pipeline');
-      }
-
-      if (typeof crmStore.emitChange === 'function') {
-        crmStore.emitChange();
-      }
-
-      showToast(`Empresa "${company}" criada com sucesso! Bem-vindo(a) Administrador(a) ${name}!`, "success");
-
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnHtml;
+        showToast(describeAuthError(err), "error");
+      } finally {
+        restore();
       }
     });
   }
 
-  // Form Join Team: Colaborador / Funcionário (Acesso Estritamente Restrito a Convite)
+  // Joining a company with its invite code
   const formJoinTeam = document.getElementById('form-auth-join-team');
   if (formJoinTeam) {
     formJoinTeam.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const submitBtn = document.getElementById('btn-submit-join-team') || formJoinTeam.querySelector('button[type="submit"]');
-      const originalBtnHtml = submitBtn ? submitBtn.innerHTML : 'Validar Código e Entrar na Equipe ';
-
       const inviteCode = document.getElementById('join-input-code')?.value?.trim().toUpperCase();
       const name = document.getElementById('join-input-name')?.value?.trim();
       const email = document.getElementById('join-input-email')?.value?.trim();
       const password = document.getElementById('join-input-password')?.value;
 
       if (!inviteCode || !name || !email || !password) {
-        showToast("Preencha todos os campos obrigatórios.", "error");
+        showToast("Preencha todos os campos.", "error");
+        return;
+      }
+      if (password.length < 8) {
+        showToast("A senha precisa ter pelo menos 8 caracteres.", "warning");
         return;
       }
 
-      if (password.length < 6) {
-        showToast("A senha deve ter no mínimo 6 caracteres.", "warning");
-        return;
-      }
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-          <span style="display:inline-flex; align-items:center; gap:8px;">
-            <svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-            </svg>
-            Validando convite da empresa...
-          </span>
-        `;
-      }
-
-      const joinResult = await joinTeamWithInviteCode({ inviteCode, name, email, password });
-
-      if (!joinResult.success) {
-        showToast(`${joinResult.error}`, "error");
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalBtnHtml;
-        }
-        return;
-      }
-
-      // Autentica localmente como Colaborador (role: employee) vinculado à empresa do dono
-      setUserRole(USER_ROLES.EMPLOYEE);
-      loginWithEmail(email, password, USER_ROLES.EMPLOYEE);
-      const currentUserObj = getCurrentUser();
-      if (currentUserObj) {
-        currentUserObj.name = name + ' (Consultor)';
-        currentUserObj.email = email;
-        currentUserObj.company = joinResult.org?.name || 'Nexus CRM';
-      }
-
-      crmStore.addAuditLog('Acesso de Colaborador por Convite', `Colaborador "${name}" (${email}) ingressou na equipe via código "${inviteCode}".`);
-      logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'invite_code', inviteCode, name, email, role: 'employee' });
-
-      window.hideAuthPortal();
-
-      if (window.location.hash && (window.location.hash.includes('register') || window.location.hash.includes('checkout'))) {
-        try {
-          history.replaceState(null, '', window.location.pathname);
-        } catch {
-          window.location.hash = '#pipeline';
-        }
-      }
-
-      if (typeof window.navigateToView === 'function') {
-        window.navigateToView('pipeline');
-      }
-
-      if (typeof crmStore.emitChange === 'function') {
-        crmStore.emitChange();
-      }
-
-      showToast(`Bem-vindo(a) à equipe, ${name}! Seu perfil de Consultor está ativo.`, "success");
-
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalBtnHtml;
+      const restore = setBusy(document.getElementById('btn-submit-join-team'), 'Conferindo o convite...');
+      try {
+        await joinCompany({ inviteCode, name, email, password });
+        formJoinTeam.reset();
+        clearRegisterHash();
+        await enterSession();
+        logAudit(AUDIT_ACTIONS.USER_REGISTERED, { role: 'employee', method: 'invite_code' });
+        showToast(`Bem-vindo(a) à equipe, ${name}.`, "success");
+      } catch (err) {
+        showToast(describeAuthError(err), "error");
+      } finally {
+        restore();
       }
     });
   }
 
-  // Tratamento de Deep Linking de Registro e Planos Comerciais (#register?plan=...)
+  // Deep link from the plans page (#register?plan=...)
   const handleAuthHashRouting = () => {
     const rawHash = window.location.hash || '';
-    if (rawHash.includes('register') || rawHash.includes('checkout')) {
-      window.showAuthPortal();
-      if (tabRegister) tabRegister.click();
+    if (!(rawHash.includes('register') || rawHash.includes('checkout'))) return;
+    if (isSessionActive()) return;
 
-      const planMatch = rawHash.match(/plan=([a-zA-Z0-9_-]+)/);
-      const planBadge = document.getElementById('auth-selected-plan-badge');
-      const planLabel = document.getElementById('auth-plan-name-label');
-      const planInput = document.getElementById('reg-input-plan');
-      const roleSelect = document.getElementById('reg-select-role');
+    window.showAuthPortal();
+    if (tabRegister) tabRegister.click();
 
-      if (planMatch && planBadge && planLabel) {
-        const planKey = planMatch[1].toLowerCase();
-        const planNames = {
-          starter: 'Starter (R$ 97/mês)',
-          pro: 'Professional (R$ 197/mês)',
-          enterprise: 'Enterprise (R$ 497/mês)'
-        };
-        planLabel.textContent = planNames[planKey] || planKey.toUpperCase();
-        planBadge.style.display = 'block';
-        if (planInput) planInput.value = planKey;
-        if (roleSelect) roleSelect.value = 'admin';
-      }
+    const planMatch = rawHash.match(/plan=([a-zA-Z0-9_-]+)/);
+    const planBadge = document.getElementById('auth-selected-plan-badge');
+    const planLabel = document.getElementById('auth-plan-name-label');
+    const planInput = document.getElementById('reg-input-plan');
+
+    if (planMatch && planBadge && planLabel) {
+      const planKey = planMatch[1].toLowerCase();
+      const planNames = {
+        starter: 'Starter (R$ 97/mês)',
+        pro: 'Professional (R$ 197/mês)',
+        enterprise: 'Enterprise (R$ 497/mês)'
+      };
+      planLabel.textContent = planNames[planKey] || planKey.toUpperCase();
+      planBadge.style.display = 'block';
+      if (planInput) planInput.value = planKey;
     }
   };
-  handleAuthHashRouting();
+  window.handleAuthHashRouting = handleAuthHashRouting;
   window.addEventListener('hashchange', handleAuthHashRouting);
-
-  // Google sign in in portal
-  if (btnGooglePortal) {
-    btnGooglePortal.addEventListener('click', async () => {
-      try {
-        const user = await signInWithGoogle();
-        setSessionActive(true);
-        logAudit(AUDIT_ACTIONS.USER_LOGIN, { method: 'google_oauth', email: user.email });
-        window.hideAuthPortal();
-        showToast(`Bem-vindo(a), ${user.displayName || 'Usuário Google'}!`, "success");
-      } catch (err) {
-        showToast("Erro no login Google: " + err.message, "error");
-      }
-    });
-  }
 }
 
 // ==========================================================================
@@ -2383,7 +2159,7 @@ function setupCommandPalette() {
       {
         id: 'action-export-audit',
         icon: '',
-        title: 'Exportar Relatório de Auditoria (Tríade CID)',
+        title: 'Exportar relatório de auditoria',
         hint: 'Logs imutáveis',
         adminOnly: true,
         category: 'Ações Rápidas',
@@ -2401,7 +2177,7 @@ function setupCommandPalette() {
         id: 'action-toggle-role',
         icon: '',
         title: 'Alternar Papel (Administrador / Funcionário)',
-        hint: 'RBAC',
+        hint: 'Equipe',
         category: 'Ações Rápidas',
         run: () => {
           window.closeCommandPalette();
@@ -2479,7 +2255,7 @@ function setupCommandPalette() {
         id: 'nav-audit',
         icon: '',
         title: 'Ir para Trilha de Auditoria & Logs',
-        hint: 'ISO 27001',
+        hint: 'Auditoria',
         adminOnly: true,
         category: 'Navegação',
         run: () => {
@@ -2490,7 +2266,7 @@ function setupCommandPalette() {
       {
         id: 'nav-security',
         icon: '',
-        title: 'Ir para Tríade CID & Governança',
+        title: 'Ir para Segurança',
         hint: 'Atalho: 5',
         adminOnly: true,
         category: 'Navegação',
@@ -2669,7 +2445,7 @@ function setupKeyboardShortcuts() {
       if (crmStore.getState().permissions?.isAdmin) {
         window.navigateToView ? window.navigateToView('security') : (window.location.hash = 'security');
       } else {
-        showToast('Acesso restrito: Apenas administradores podem acessar a Tríade CID.', 'warning');
+        showToast('A tela de Segurança é só para administradores.', 'warning');
       }
     }
   });
@@ -2887,13 +2663,19 @@ function setupEmployeeManagementEvents() {
       inputJob.value = empToEdit.jobTitle || '';
       inputDept.value = empToEdit.department || 'Comercial B2B';
       selectRole.value = empToEdit.role || USER_ROLES.EMPLOYEE;
-      inputPassword.value = empToEdit.tempPassword || '';
+      inputPassword.value = '';
       checkRequire.checked = !!empToEdit.requirePasswordChange;
     } else {
       document.getElementById('employee-dialog-title').textContent = 'Cadastrar Novo Colaborador';
       inputPassword.value = generateTemporaryPassword();
       checkRequire.checked = true;
     }
+
+    // The temporary password only exists while a new account is being created
+    const passwordBox = document.getElementById('emp-password-box');
+    if (passwordBox) passwordBox.style.display = empToEdit ? 'none' : '';
+    inputPassword.required = !empToEdit;
+    inputEmail.readOnly = !!empToEdit && isCloudSession();
 
     dialog.showModal();
     setTimeout(() => inputName.focus(), 50);
@@ -2911,9 +2693,7 @@ function setupEmployeeManagementEvents() {
 
     if (btnGenerate) {
       btnGenerate.addEventListener('click', () => {
-        const newPass = generateTemporaryPassword();
-        inputPassword.value = newPass;
-        showToast(`Senha segura gerada: ${newPass}`, 'info');
+        inputPassword.value = generateTemporaryPassword();
       });
     }
 
@@ -2936,10 +2716,10 @@ function setupEmployeeManagementEvents() {
         if (clean.length === 11) {
           const isValid = validateCPF(clean);
           if (isValid) {
-            feedbackCpf.textContent = '✓ CPF Válido';
+            feedbackCpf.textContent = 'CPF válido';
             feedbackCpf.className = 'field-feedback-badge valid';
           } else {
-            feedbackCpf.textContent = '✗ CPF Inválido';
+            feedbackCpf.textContent = 'CPF inválido';
             feedbackCpf.className = 'field-feedback-badge invalid';
           }
         } else {
@@ -2950,8 +2730,9 @@ function setupEmployeeManagementEvents() {
     }
 
     // Submit form
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const isEdit = !!document.getElementById('employee-id').value;
       const empData = {
         id: document.getElementById('employee-id').value || null,
         name: inputName.value.trim(),
@@ -2965,7 +2746,20 @@ function setupEmployeeManagementEvents() {
         requirePasswordChange: checkRequire.checked
       };
 
-      const result = saveEmployee(empData);
+      const btnSave = document.getElementById('btn-save-employee');
+      const originalLabel = btnSave ? btnSave.textContent : '';
+      if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = 'Salvando...';
+      }
+
+      const result = await saveEmployee(empData);
+
+      if (btnSave) {
+        btnSave.disabled = false;
+        btnSave.textContent = originalLabel;
+      }
+
       if (!result.success) {
         showToast(result.error, 'error');
         return;
@@ -2978,61 +2772,91 @@ function setupEmployeeManagementEvents() {
         role: result.employee.role,
         cpf: maskCPF(result.employee.cpf)
       });
-      const shareText = generateCredentialsShareText(result.employee);
-      try {
-        navigator.clipboard.writeText(shareText);
-        showToast(`Colaborador ${result.employee.name} cadastrado! Credenciais copiadas para a área de transferência.`, 'success');
-      } catch {
-        showToast(`Colaborador ${result.employee.name} cadastrado com sucesso!`, 'success');
+
+      if (isEdit) {
+        showToast(`Dados de ${result.employee.name} atualizados.`, 'success');
+      } else if (result.demo) {
+        showToast(`${result.employee.name} entrou na lista. Na demonstração nenhum login é criado.`, 'info');
+      } else {
+        // The only moment the temporary password is available: hand it over now
+        showCredentialsDialog(result.employee, generateCredentialsShareText(result.employee, result.tempPassword));
       }
       renderSecurityView(crmStore.getState());
     });
   }
 
-  // First Access Password Form
+  // Shows the access details once, with a copy button
+  function showCredentialsDialog(employee, shareText) {
+    const credDialog = document.getElementById('credentials-dialog');
+    const credText = document.getElementById('credentials-text');
+    const credTitle = document.getElementById('credentials-title');
+    if (!credDialog || !credText) {
+      showToast(`Acesso de ${employee.name} criado.`, 'success');
+      return;
+    }
+    if (credTitle) credTitle.textContent = `Acesso de ${employee.name} criado`;
+    credText.value = shareText;
+    credDialog.showModal();
+  }
+
+  const btnCopyCredentials = document.getElementById('btn-copy-credentials');
+  if (btnCopyCredentials) {
+    btnCopyCredentials.addEventListener('click', async () => {
+      const credText = document.getElementById('credentials-text');
+      try {
+        await navigator.clipboard.writeText(credText.value);
+        showToast('Copiado. Envie para a pessoa.', 'success');
+      } catch {
+        credText.select();
+        showToast('Selecione o texto e copie com Ctrl+C.', 'info');
+      }
+    });
+  }
+  const btnCloseCredentials = document.getElementById('btn-close-credentials');
+  if (btnCloseCredentials) {
+    btnCloseCredentials.addEventListener('click', () => {
+      document.getElementById('credentials-text').value = '';
+      document.getElementById('credentials-dialog').close();
+    });
+  }
+
+  // First access: the person replaces the temporary password with their own
   if (formFirstAccess) {
-    formFirstAccess.addEventListener('submit', (e) => {
+    formFirstAccess.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const empId = inputFirstAccessEmpId.value;
       const newPass = inputFirstAccessNew.value;
       const confirmPass = inputFirstAccessConfirm.value;
 
-      if (!newPass || newPass.length < 6) {
-        showToast('A senha deve ter no mínimo 6 caracteres.', 'error');
+      if (!newPass || newPass.length < 8) {
+        showToast('A senha precisa ter pelo menos 8 caracteres.', 'error');
         return;
       }
-
       if (newPass !== confirmPass) {
-        showToast('As senhas não coincidem. Digite novamente.', 'error');
+        showToast('As duas senhas não são iguais.', 'error');
         return;
       }
 
-      const res = setEmployeePermanentPassword(empId, newPass);
-      if (!res.success) {
-        showToast(res.error, 'error');
-        return;
+      try {
+        await changeOwnPassword(newPass);
+        formFirstAccess.reset();
+        if (firstAccessDialog) firstAccessDialog.close();
+        showToast('Senha pessoal criada.', 'success');
+      } catch (err) {
+        showToast(describeAuthError(err), 'error');
       }
-
-      if (firstAccessDialog) firstAccessDialog.close();
-
-      // Complete login as this employee
-      const employee = res.employee;
-      loginAsDemoRole(employee.role || USER_ROLES.EMPLOYEE);
-      const currentUserObj = getCurrentUser();
-      if (currentUserObj) {
-        currentUserObj.name = employee.name + ' (Consultor)';
-        currentUserObj.email = employee.email;
-        currentUserObj.cpf = employee.cpf;
-      }
-      window.hideAuthPortal();
-      showToast(`Senha definitiva configurada! Bem-vindo(a) ao Nexus CRM, ${employee.name}!`, 'success');
     });
+
+    // The dialog cannot be dismissed with Esc: the temporary password must be replaced
+    if (firstAccessDialog) {
+      firstAccessDialog.addEventListener('cancel', (e) => e.preventDefault());
+    }
   }
 
   // Reactive updates on employee list
   onEmployeesChange(() => {
     if (crmStore) {
       renderSecurityView(crmStore.getState());
+      crmStore.emitChange();
     }
   });
 
@@ -3044,75 +2868,72 @@ function setupEmployeeManagementEvents() {
     textSpan.textContent = isMasked ? textSpan.dataset.raw : textSpan.dataset.masked;
   };
 
-  window.handleCopyEmployeeCredentials = function(empId) {
-    const employees = getEmployees();
-    const emp = employees.find(e => e.id === empId);
-    if (!emp) return;
-    const shareText = generateCredentialsShareText(emp);
-    navigator.clipboard.writeText(shareText);
-    showToast(`Credenciais de ${emp.name} copiadas! Envie no WhatsApp ou E-mail.`, 'success');
+  window.handleEditEmployee = function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
+    if (emp) window.openEmployeeModal(emp);
   };
 
-  window.handleResetEmployeePassword = function(empId) {
-    const employees = getEmployees();
-    const emp = employees.find(e => e.id === empId);
+  window.handleCopyEmployeeCredentials = function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
+    if (!emp) return;
+    navigator.clipboard.writeText(generateCredentialsShareText(emp));
+    showToast(`Endereço e login de ${emp.name} copiados.`, 'success');
+  };
+
+  window.handleResetEmployeePassword = async function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
     if (!emp) return;
 
-    if (!confirm(`Deseja gerar uma nova senha temporária para ${emp.name}? O colaborador deverá trocá-la no próximo acesso.`)) {
+    if (!confirm(`Enviar para ${emp.email} um e-mail para criar uma nova senha?`)) {
       return;
     }
 
-    const res = resetEmployeePassword(empId);
+    const res = await resetEmployeePassword(empId);
     if (!res.success) {
       showToast(res.error, 'error');
       return;
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_PASSWORD_RESET, { empId, name: emp.name }, AUDIT_SEVERITY.WARNING);
-    const shareText = generateCredentialsShareText(res.employee);
-    navigator.clipboard.writeText(shareText);
-    showToast(`Nova senha emitida: ${res.tempPassword}. Credenciais copiadas!`, 'success');
-    renderSecurityView(crmStore.getState());
+    showToast(`E-mail de nova senha enviado para ${emp.email}.`, 'success');
   };
 
-  window.handleToggleEmployeeStatus = function(empId) {
-    const employees = getEmployees();
-    const emp = employees.find(e => e.id === empId);
+  window.handleToggleEmployeeStatus = async function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
     if (!emp) return;
 
-    const action = emp.status === 'active' ? 'bloquear' : 'desbloquear';
-    if (!confirm(`Deseja realmente ${action} o acesso de ${emp.name}?`)) {
+    const action = emp.status === 'active' ? 'bloquear' : 'liberar';
+    if (!confirm(`Deseja ${action} o acesso de ${emp.name}?`)) {
       return;
     }
 
-    const res = toggleEmployeeStatus(empId);
+    const res = await toggleEmployeeStatus(empId);
     if (!res.success) {
       showToast(res.error, 'error');
       return;
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_STATUS_CHANGED, { empId, name: emp.name, status: res.status }, AUDIT_SEVERITY.WARNING);
-    showToast(`Status de ${emp.name}: ${res.status === 'active' ? 'ATIVO ' : 'BLOQUEADO '}`, 'info');
+    showToast(res.status === 'active' ? `Acesso de ${emp.name} liberado.` : `Acesso de ${emp.name} bloqueado.`, 'info');
     renderSecurityView(crmStore.getState());
   };
 
-  window.handleDeleteEmployee = function(empId) {
-    const employees = getEmployees();
-    const emp = employees.find(e => e.id === empId);
+  window.handleDeleteEmployee = async function(empId) {
+    const emp = getEmployees().find(e => e.id === empId);
     if (!emp) return;
 
-    if (!confirm(`ATENÇÃO: Deseja excluir definitivamente o cadastro de ${emp.name} (${emp.cpf})? Esta ação não pode ser desfeita.`)) {
+    if (!confirm(`Excluir o cadastro de ${emp.name}? A pessoa perde o acesso aos dados da empresa. Os leads dela continuam no sistema.`)) {
       return;
     }
 
-    const res = deleteEmployee(empId);
+    const res = await deleteEmployee(empId);
     if (!res.success) {
       showToast(res.error, 'error');
       return;
     }
 
     logAudit(AUDIT_ACTIONS.EMPLOYEE_DELETED, { empId, name: emp.name }, AUDIT_SEVERITY.CRITICAL);
-    showToast(`Colaborador ${emp.name} excluído da base.`, 'info');
+    showToast(`Cadastro de ${emp.name} excluído.`, 'info');
     renderSecurityView(crmStore.getState());
   };
 }
@@ -3524,153 +3345,57 @@ function setupLegacyCheckoutDialogEvents() {
 // Team Invite System Events
 // ==========================================================================
 function setupTeamInviteEvents() {
-  const form = document.getElementById('form-team-invite');
-
-  function renderInvitesList() {
-    const container = document.getElementById('invites-list-container');
-    if (!container) return;
-
-    const invites = getInvites();
-    const stats = getInviteStats();
-    const employees = getEmployees();
-
-    // Update stats
-    const statMembers = document.getElementById('stat-total-members');
-    const statPending = document.getElementById('stat-pending-invites');
-    const statAccepted = document.getElementById('stat-accepted-invites');
-    const statAdmin = document.getElementById('stat-admin-count');
-
-    if (statMembers) statMembers.textContent = employees.filter(e => e.status === 'active').length + 1;
-    if (statPending) statPending.textContent = stats.pending;
-    if (statAccepted) statAccepted.textContent = stats.accepted;
-    if (statAdmin) statAdmin.textContent = employees.filter(e => e.role === 'admin').length + 1;
-
-    if (invites.length === 0) {
-      container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">
-        Nenhum convite enviado ainda. Use o formulário ao lado para convidar membros.
-      </div>`;
-      return;
-    }
-
-    const roleLabels = {
-      admin: 'Admin', manager: 'Gerente', employee: 'Vendedor', viewer: 'Viewer'
-    };
-    const statusLabels = {
-      pending: 'Pendente', accepted: 'Aceito', expired: 'Expirado', revoked: 'Revogado'
-    };
-
-    container.innerHTML = invites.map(inv => {
-      const dateStr = new Date(inv.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
-      return `
-        <div class="invite-card">
-          <div class="invite-card-info">
-            <div class="invite-card-name">${escapeHtml(inv.name)}</div>
-            <div class="invite-card-email">${escapeHtml(inv.email)} • ${roleLabels[inv.role] || inv.role}</div>
-            <div class="invite-card-meta">Enviado em ${dateStr} por ${escapeHtml(inv.invitedBy?.name || 'Admin')}</div>
-          </div>
-          <span class="invite-status-badge ${inv.status}">${statusLabels[inv.status] || inv.status}</span>
-          <div class="invite-card-actions">
-            ${inv.status === 'pending' ? `
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleCopyInvite('${inv.id}')" title="Copiar credenciais"></button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleRevokeInvite('${inv.id}')" title="Revogar"></button>
-            ` : inv.status === 'expired' || inv.status === 'revoked' ? `
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.handleResendInvite('${inv.id}')" title="Reenviar"></button>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  if (form) {
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = document.getElementById('invite-input-name')?.value?.trim();
-      const email = document.getElementById('invite-input-email')?.value?.trim();
-      const role = document.getElementById('invite-select-role')?.value || 'employee';
-      const message = document.getElementById('invite-input-message')?.value?.trim() || '';
-
-      const result = createInvite({ name, email, role, message });
-
-      if (!result.success) {
-        showToast(result.error, 'error');
-        return;
-      }
-
-      // Copy invite text to clipboard
-      const shareText = generateInviteShareText(result.invite);
-      navigator.clipboard.writeText(shareText).catch(() => {});
-
-      showToast(`Convite enviado para ${name}! Credenciais copiadas para a área de transferência.`, 'success');
-      sendPushNotification(`Novo convite enviado`, {
-        body: `${name} (${email}) foi convidado como ${role}`,
-        data: { type: NOTIFICATION_TYPES.TEAM_INVITE }
-      });
-
-      form.reset();
-      renderInvitesList();
-    });
-  }
-
-  // Global handlers for invite actions
-  window.handleCopyInvite = function(inviteId) {
-    const invites = getInvites();
-    const inv = invites.find(i => i.id === inviteId);
-    if (!inv) return;
-    const shareText = generateInviteShareText(inv);
-    navigator.clipboard.writeText(shareText);
-    showToast(`Credenciais de ${inv.name} copiadas! Envie via WhatsApp ou E-mail.`, 'success');
-  };
-
-  window.handleRevokeInvite = function(inviteId) {
-    if (!confirm('Tem certeza que deseja revogar este convite?')) return;
-    const result = revokeInvite(inviteId);
-    if (result.success) {
-      showToast('Convite revogado com sucesso.', 'info');
-      renderInvitesList();
-    } else {
-      showToast(result.error, 'error');
-    }
-  };
-
-  window.handleResendInvite = function(inviteId) {
-    const result = resendInvite(inviteId);
-    if (result.success) {
-      const shareText = generateInviteShareText(result.invite);
-      navigator.clipboard.writeText(shareText).catch(() => {});
-      showToast(`Convite reenviado! Novas credenciais copiadas.`, 'success');
-      renderInvitesList();
-    } else {
-      showToast(result.error, 'error');
-    }
-  };
-
-  // Card de Código de Acesso da Equipe (Exclusivo do Dono da Empresa)
   const displayTeamCode = document.getElementById('display-team-invite-code');
   const btnCopyTeamCode = document.getElementById('btn-copy-team-code');
-  const teamInviteCode = getCompanyTeamInviteCode();
+  const btnNewTeamCode = document.getElementById('btn-new-team-code');
 
-  if (displayTeamCode) {
-    displayTeamCode.textContent = teamInviteCode;
+  function renderTeamView() {
+    const employees = getEmployees();
+    const statMembers = document.getElementById('stat-total-members');
+    const statAdmin = document.getElementById('stat-admin-count');
+    const statBlocked = document.getElementById('stat-blocked-members');
+
+    // +1: the signed-in administrator is not in the list
+    if (statMembers) statMembers.textContent = employees.filter(e => e.status !== 'blocked').length + 1;
+    if (statAdmin) statAdmin.textContent = employees.filter(e => e.role === 'admin').length + 1;
+    if (statBlocked) statBlocked.textContent = employees.filter(e => e.status === 'blocked').length;
+
+    if (displayTeamCode) displayTeamCode.textContent = getCompanyTeamInviteCode() || 'sem código';
+    if (btnNewTeamCode) btnNewTeamCode.style.display = isCloudSession() ? '' : 'none';
   }
+  window.refreshTeamInviteCard = renderTeamView;
 
   if (btnCopyTeamCode) {
     btnCopyTeamCode.addEventListener('click', () => {
-      const code = displayTeamCode ? displayTeamCode.textContent.trim() : teamInviteCode;
-      const textToCopy = `*Convite para a Equipe Nexus CRM*\n\nUse o código de acesso abaixo para entrar na equipe da nossa empresa no CRM:\n\n*Código de Convite:* ${code}\n\nCadastre-se na aba "Sou Colaborador" em: ${window.location.origin}`;
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        showToast(`Código ${code} copiado! Envie para seus vendedores pelo WhatsApp.`, 'success');
+      const code = getCompanyTeamInviteCode();
+      if (!code) return;
+      if (isDemoSession()) {
+        showToast('Na demonstração o código é só um exemplo. Numa conta real, ele deixa sua equipe criar o próprio acesso.', 'info');
+        return;
+      }
+      navigator.clipboard.writeText(generateInviteShareText(code)).then(() => {
+        showToast('Convite copiado. Envie para quem deve entrar na equipe.', 'success');
       }).catch(() => {
         showToast(`Código da equipe: ${code}`, 'info');
       });
     });
   }
 
-  // Initial render
-  renderInvitesList();
+  if (btnNewTeamCode) {
+    btnNewTeamCode.addEventListener('click', async () => {
+      if (!confirm('Gerar um novo código? O código atual para de funcionar na hora. Quem já entrou na equipe não é afetado.')) return;
+      const result = await replaceCompanyTeamInviteCode();
+      if (!result.success) {
+        showToast(result.error, 'error');
+        return;
+      }
+      renderTeamView();
+      showToast('Novo código gerado. O anterior não vale mais.', 'success');
+    });
+  }
 
-  // Re-render when employees change
-  onEmployeesChange(renderInvitesList);
+  renderTeamView();
+  onEmployeesChange(renderTeamView);
 }
 
 // ==========================================================================

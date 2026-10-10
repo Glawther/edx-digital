@@ -59,7 +59,7 @@ export const PLANS = {
       'Leads ilimitados',
       'Equipe e consultores ilimitados',
       'Cota de IA ilimitada (Gemini BYOK)',
-      'Trilha de auditoria CID imutável',
+      'Histórico de auditoria',
       'Multi-tenant com isolamento total',
       'Suporte prioritário VIP 24/7'
     ]

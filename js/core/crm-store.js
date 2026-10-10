@@ -58,7 +58,7 @@ import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-ser
 export const SALES_TEAM = [
   { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com', role: 'employee' },
   { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@nexuscrm.com', role: 'employee' },
-  { id: 'admin-user-01', name: 'Administrador do Sistema', email: 'admin@nexuscrm.com', role: 'admin' }
+  { id: 'admin-user-01', name: 'Paula Andrade', email: 'admin@nexuscrm.com', role: 'admin' }
 ];
 
 class CRMStore {

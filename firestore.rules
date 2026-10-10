@@ -1,55 +1,205 @@
 rules_version = '2';
+
+// Regras de acesso do Nexus CRM.
+//
+// Princípio: ninguém lê nem grava nada sem estar autenticado, e cada pessoa só alcança os
+// dados da empresa a que pertence. O perfil (users/{uid}) diz qual é a empresa e o papel;
+// ele não pode ser alterado pela própria pessoa.
+//
+// Testes: `npm run test:rules` (emulador local). Detalhes em docs/LOGIN_E_SEGURANCA.md.
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Validação estrita de tipo e integridade para Clientes (Tríade CID)
-    function isValidCustomerData(data) {
-      return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 300)) &&
-             (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0)) &&
-             (!('stage' in data) || (data.stage is string && data.stage in validStages()));
+    // ---------------------------------------------------------------- helpers
+
+    function signedIn() {
+      return request.auth != null;
     }
 
-    // O app grava o estágio "Primeiro Contato" como 'contact'. A lista antiga só tinha 'contacted',
-    // então mover ou criar um lead nesse estágio era recusado e o cartão voltava sozinho.
+    function profilePath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function myProfile() {
+      return get(profilePath(request.auth.uid)).data;
+    }
+
+    // Membro ativo da empresa (quem foi bloqueado deixa de ser)
+    function isMember(orgId) {
+      return signedIn()
+        && exists(profilePath(request.auth.uid))
+        && myProfile().orgId == orgId
+        && myProfile().status == 'active';
+    }
+
+    function isOrgAdmin(orgId) {
+      return isMember(orgId) && myProfile().role == 'admin';
+    }
+
+    function orgOwner(orgId) {
+      return get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerUid;
+    }
+
     function validStages() {
+      // 'contacted' é o nome antigo de 'contact'; fica aceito por causa de registros antigos
       return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
     }
 
-    // 1. Coleção de Clientes e Oportunidades (Customers)
-    // Sincronização multi-cliente em tempo real via onSnapshot
-    match /customers/{customerId} {
-      allow read: if true;
-      allow create: if request.resource.data.name is string && 
-                       request.resource.data.stage in validStages();
-      allow update: if isValidCustomerData(request.resource.data);
-      allow delete: if true;
+    function validCustomer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 300
+        && data.stage in validStages()
+        && (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0))
+        && data.orgId is string;
     }
 
-    // 2. Trilha de Auditoria Imutável (Audit Trail)
-    match /audit_logs/{logId} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['action', 'timestamp']);
-      allow update, delete: if false; // Estritamente imutável
+    function assignedToMe(data) {
+      return 'assignedTo' in data && data.assignedTo.id == request.auth.uid;
     }
 
-    // 3. Coleção de Configurações
-    match /system_config/{configId} {
-      allow read, write: if true;
+    // ---------------------------------------------------------------- perfis
+
+    match /users/{uid} {
+      // A própria pessoa e os colegas da mesma empresa. CPF e telefone não ficam aqui.
+      allow read: if signedIn()
+        && (request.auth.uid == uid || isMember(resource.data.orgId));
+
+      allow create: if signedIn() && validNewProfile(request.resource.data) && (
+        // 1. quem acabou de registrar a empresa vira o primeiro administrador dela
+        (request.auth.uid == uid
+          && request.resource.data.role == 'admin'
+          && request.resource.data.email == request.auth.token.email
+          && orgOwner(request.resource.data.orgId) == uid)
+        // 2. quem tem o código de convite entra como vendedor
+        || (request.auth.uid == uid
+          && request.resource.data.role == 'employee'
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.inviteCode is string
+          && inviteOpens(request.resource.data.inviteCode, request.resource.data.orgId))
+        // 3. o administrador cadastra alguém da própria empresa
+        || (request.auth.uid != uid && isOrgAdmin(request.resource.data.orgId))
+      );
+
+      allow update: if signedIn() && (
+        // a própria pessoa: só o nome e o aviso de troca de senha
+        (request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'mustChangePassword', 'updatedAt']))
+        // o administrador: dados de outra pessoa da empresa, menos do dono
+        || (request.auth.uid != uid
+          && isOrgAdmin(resource.data.orgId)
+          && orgOwner(resource.data.orgId) != uid
+          && request.resource.data.role in ['admin', 'employee']
+          && request.resource.data.status in ['active', 'blocked']
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'role', 'status', 'jobTitle', 'department', 'mustChangePassword', 'updatedAt']))
+      );
+
+      allow delete: if signedIn()
+        && request.auth.uid != uid
+        && isOrgAdmin(resource.data.orgId)
+        && orgOwner(resource.data.orgId) != uid;
     }
 
-    // 4. Coleção de Funcionários & Credenciais Corporativas (CID / RBAC)
-    match /employees/{employeeId} {
-      allow read, write: if true;
+    function validNewProfile(data) {
+      return data.orgId is string
+        && data.role in ['admin', 'employee']
+        && data.status == 'active'
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.email is string;
     }
 
-    // 5. Coleção de Organizações Comerciais e Whitelabel (Multi-tenant SaaS)
+    function inviteOpens(code, orgId) {
+      let invite = get(/databases/$(database)/documents/invites/$(code)).data;
+      return invite.active == true && invite.orgId == orgId;
+    }
+
+    // CPF e telefone dos colaboradores: só a própria pessoa e os administradores da empresa
+    match /user_private/{uid} {
+      allow read: if signedIn()
+        && (request.auth.uid == uid || isOrgAdmin(resource.data.orgId));
+      allow create: if isOrgAdmin(request.resource.data.orgId);
+      allow update: if isOrgAdmin(resource.data.orgId)
+        && request.resource.data.orgId == resource.data.orgId;
+      allow delete: if isOrgAdmin(resource.data.orgId);
+    }
+
+    // ---------------------------------------------------------------- empresas
+
     match /organizations/{orgId} {
-      allow read, write: if true;
-      
-      // Subcoleção dedicada de clientes isolados por empresa
-      match /customers/{customerId} {
-        allow read, write: if true;
-      }
+      allow read: if isMember(orgId);
+
+      // Uma conta sem empresa pode registrar a sua, sempre em período de teste
+      allow create: if signedIn()
+        && !exists(profilePath(request.auth.uid))
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
+        && request.resource.data.plan in ['starter', 'pro', 'enterprise']
+        && request.resource.data.planStatus == 'trial';
+
+      // O plano e a situação do pagamento não são alteráveis pelo aplicativo
+      allow update: if isOrgAdmin(orgId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------- convites
+
+    match /invites/{code} {
+      // Quem tem o código confere se ele vale; ninguém consegue listar os códigos
+      allow get: if true;
+      allow list: if false;
+      allow create: if isOrgAdmin(request.resource.data.orgId)
+        && request.resource.data.role == 'employee'
+        && request.resource.data.active is bool;
+      allow update: if isOrgAdmin(resource.data.orgId)
+        && request.resource.data.orgId == resource.data.orgId
+        && request.resource.data.role == 'employee';
+      allow delete: if isOrgAdmin(resource.data.orgId);
+    }
+
+    // ---------------------------------------------------------------- clientes
+
+    match /customers/{customerId} {
+      // O administrador vê a empresa inteira; o vendedor, só a própria carteira
+      allow read: if isOrgAdmin(resource.data.orgId)
+        || (isMember(resource.data.orgId) && assignedToMe(resource.data));
+
+      allow create: if validCustomer(request.resource.data) && (
+        isOrgAdmin(request.resource.data.orgId)
+        || (isMember(request.resource.data.orgId) && assignedToMe(request.resource.data))
+      );
+
+      allow update: if validCustomer(request.resource.data)
+        && request.resource.data.orgId == resource.data.orgId
+        && (
+          isOrgAdmin(resource.data.orgId)
+          || (isMember(resource.data.orgId)
+              && assignedToMe(resource.data)
+              && assignedToMe(request.resource.data))
+        );
+
+      // Só o administrador exclui
+      allow delete: if isOrgAdmin(resource.data.orgId);
+    }
+
+    // ---------------------------------------------------------------- auditoria
+
+    match /audit_logs/{logId} {
+      allow read: if isOrgAdmin(resource.data.orgId);
+      allow create: if isMember(request.resource.data.orgId)
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.keys().hasAll(['action', 'timestamp']);
+      allow update, delete: if false; // o registro não pode ser alterado nem apagado
+    }
+
+    // Tudo o que não está listado acima fica fechado (inclusive as coleções antigas
+    // employees e system_config, que eram públicas).
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

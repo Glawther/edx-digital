@@ -4,16 +4,16 @@
  * Rich Activity Timeline, Tasks & Loss Reasons Support.
  */
 
-import { STORAGE_KEYS, getSavedFirebaseConfig, getSavedOrganization, setLocalOnlyMode } from './config.js';
+import { STORAGE_KEYS, getSavedOrganization } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
-import { getCurrentUser, isAdmin, USER_ROLES } from '../services/auth-service.js';
+import { getCurrentUser, isAdmin, isCloudSession, isDemoSession } from '../services/auth-service.js';
 import { crmStore, getLossReasonLabel } from './crm-store.js';
 
 let lastCloudWarningAt = 0;
 
 /**
- * Tells the user when the cloud refused or missed a write. The change stays in this browser,
- * but without this notice a card would silently jump back on the next sync.
+ * Tells the user when the cloud refused or missed a write.
+ * Without this notice a card would silently jump back on the next sync.
  */
 function warnCloudWriteFailed(err) {
   console.warn("Firestore write failed (the change was kept locally):", err);
@@ -24,11 +24,22 @@ function warnCloudWriteFailed(err) {
     const denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
     window.showToast(
       denied
-        ? 'A nuvem recusou esta alteração (regras de acesso do Firestore). Ela ficou salva só neste aparelho.'
-        : 'Sem conexão com a nuvem: a alteração ficou salva só neste aparelho.',
+        ? 'Esta alteração não foi salva: seu perfil não tem permissão para ela.'
+        : 'Esta alteração não foi salva: sem conexão com o servidor. Tente de novo em instantes.',
       'warning'
     );
   }
+}
+
+function warnCloudReadFailed(err) {
+  if (typeof window === 'undefined' || typeof window.showToast !== 'function') return;
+  const denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
+  window.showToast(
+    denied
+      ? 'Não foi possível carregar os clientes: seu acesso a esta empresa foi negado.'
+      : 'Não foi possível carregar os clientes. Verifique a conexão e recarregue a página.',
+    'error'
+  );
 }
 
 // Realistic seed dataset with rich timeline activities, tasks and expected closing dates
@@ -43,7 +54,7 @@ const INITIAL_DEMO_LEADS = [
     stage: 'lead',
     dealValue: 65000,
     priority: 'high',
-    tags: ['Fintech', 'Enterprise', 'Inbound'],
+    tags: ['Fintech', 'Inbound'],
     notes: 'Interesse em integração de API para pagamento em lote.',
     assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com' },
     expectedCloseDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
@@ -263,42 +274,61 @@ class StorageManager {
   }
 
   /**
-   * Initializes the storage engine
+   * Starts (or restarts) the storage for the current session:
+   * a signed-in account reads its company from the cloud, the demo reads the sample data
+   * kept in this browser.
    */
   async init() {
-    const config = getSavedFirebaseConfig();
-    const currentOrg = getSavedOrganization();
-    if (config) {
+    firestoreService.stopFirestoreSync();
+    const user = getCurrentUser();
+
+    if (isCloudSession() && user) {
+      this.mode = 'firestore';
+      this.currentData = [];
       try {
-        await firestoreService.initializeFirestore(config);
-        this.mode = 'firestore';
+        await firestoreService.initializeFirestore();
         await firestoreService.subscribeToFirestoreCustomers(
           (customers) => {
             this.currentData = customers;
             this.notifyListeners();
           },
           (err) => {
-            console.warn("Falling back to local data due to Firestore error:", err);
-            this.mode = 'local';
-            this.loadLocalData();
-            this.notifyListeners();
+            // Never fall back to the sample data here: a real account must not see fake leads
+            console.warn("Firestore listener error:", err);
+            warnCloudReadFailed(err);
           },
-          currentOrg?.id
+          { orgId: user.orgId, uid: user.uid, isAdmin: isAdmin() }
         );
         this.isInitialized = true;
+        this.notifyListeners();
         return { mode: 'firestore', success: true };
       } catch (err) {
-        console.warn("Failed to connect to Firestore on startup, using local fallback:", err);
-        this.mode = 'local';
+        console.warn("Failed to connect to Firestore:", err);
+        this.isInitialized = true;
+        this.notifyListeners();
+        return { mode: 'firestore', success: false, error: err };
       }
-    } else {
-      this.mode = 'local';
     }
 
-    this.loadLocalData();
+    this.mode = 'local';
+    if (isDemoSession()) {
+      this.loadLocalData();
+    } else {
+      this.currentData = [];
+    }
     this.isInitialized = true;
     this.notifyListeners();
     return { mode: 'local', success: true };
+  }
+
+  /**
+   * Drops everything held in memory (used on sign-out)
+   */
+  reset() {
+    firestoreService.stopFirestoreSync();
+    this.mode = 'local';
+    this.currentData = [];
+    this.notifyListeners();
   }
 
   /**
@@ -324,6 +354,8 @@ class StorageManager {
   }
 
   saveLocalData() {
+    // Only the sample data lives in this browser; a real account's data stays in the cloud
+    if (this.mode !== 'local') return;
     try {
       localStorage.setItem(STORAGE_KEYS.LOCAL_DATA, JSON.stringify(this.currentData));
     } catch (e) {
@@ -415,7 +447,7 @@ class StorageManager {
     } else {
       const org = getSavedOrganization();
       const newLead = {
-        orgId: customerData.orgId || org?.id || 'org_nexus_default',
+        orgId: user.orgId || customerData.orgId || org?.id || 'org_nexus_default',
         activities: [],
         tasks: [],
         assignedTo: defaultAssignedTo,
@@ -447,7 +479,7 @@ class StorageManager {
 
       if (this.mode === 'firestore') {
         try {
-          const result = await firestoreService.addFirestoreCustomer(newLead, newLead.orgId);
+          const result = await firestoreService.addFirestoreCustomer(newLead);
           // Match by id only: matching by name used to overwrite another lead with the same name
           const index = this.currentData.findIndex(c => c.id === result.id);
           if (index !== -1) {
@@ -589,10 +621,14 @@ class StorageManager {
 
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
-      await firestoreService.updateFirestoreCustomer(docId, {
-        activities: customer.activities,
-        updatedAt
-      });
+      try {
+        await firestoreService.updateFirestoreCustomer(docId, {
+          activities: customer.activities,
+          updatedAt
+        });
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
     }
   }
 
@@ -631,11 +667,15 @@ class StorageManager {
 
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
-      await firestoreService.updateFirestoreCustomer(docId, {
-        tasks: customer.tasks,
-        activities: customer.activities,
-        updatedAt
-      });
+      try {
+        await firestoreService.updateFirestoreCustomer(docId, {
+          tasks: customer.tasks,
+          activities: customer.activities,
+          updatedAt
+        });
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
     }
   }
 
@@ -659,10 +699,14 @@ class StorageManager {
 
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
-      await firestoreService.updateFirestoreCustomer(docId, {
-        tasks: customer.tasks,
-        updatedAt
-      });
+      try {
+        await firestoreService.updateFirestoreCustomer(docId, {
+          tasks: customer.tasks,
+          updatedAt
+        });
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
     }
   }
 
@@ -672,8 +716,8 @@ class StorageManager {
    */
   async deleteCustomer(customerId) {
     if (!isAdmin()) {
-      crmStore.addAuditLog('Tentativa de Exclusão Negada', `Tentativa de exclusão do lead ${customerId} bloqueada pela política de Integridade (Tríade CID).`);
-      throw new Error("Operação negada pela política de Integridade (Tríade CID): Apenas o Administrador possui privilégios para excluir oportunidades do sistema.");
+      crmStore.addAuditLog('Exclusão negada', `Tentativa de excluir o lead ${customerId} por alguém que não é administrador.`);
+      throw new Error("Só administradores podem excluir oportunidades.");
     }
 
     const customer = this.getCustomer(customerId);
@@ -689,7 +733,7 @@ class StorageManager {
       try {
         await firestoreService.deleteFirestoreCustomer(docId);
       } catch (err) {
-        console.warn("Firestore delete notice:", err);
+        warnCloudWriteFailed(err);
       }
     }
   }
@@ -704,7 +748,7 @@ class StorageManager {
     }
     const user = getCurrentUser();
     const snapshot = {
-      system: 'Nexus CRM - Suite Corporativa CID',
+      system: 'Nexus CRM',
       version: '2.0.0',
       exportedAt: new Date().toISOString(),
       exportedBy: user ? user.name : 'Administrador',
@@ -729,36 +773,20 @@ class StorageManager {
       throw new Error("Arquivo de backup inválido ou corrompido.");
     }
 
-    this.currentData = snapshotData.customers;
-    this.saveLocalData();
+    if (this.mode === 'firestore') {
+      // Each record is written to this company's database; the live listener brings them back
+      for (const customer of snapshotData.customers) {
+        if (!customer || !customer.name) continue;
+        const { firestoreId, clientLeadId, orgId, ...rest } = customer;
+        await firestoreService.addFirestoreCustomer(rest);
+      }
+    } else {
+      this.currentData = snapshotData.customers;
+      this.saveLocalData();
+    }
     crmStore.addAuditLog('Restauração de Banco Realizada', `Banco restaurado com sucesso a partir de snapshot (${snapshotData.customers.length} registros recuperados).`);
     this.notifyListeners();
     return true;
-  }
-
-  /**
-   * Switches to Firebase mode dynamically with new config
-   */
-  async connectToFirebase(config) {
-    const testResult = await firestoreService.testFirestoreConnection(config);
-    if (!testResult.success) {
-      throw new Error(testResult.error || "Não foi possível conectar ao Firestore.");
-    }
-
-    setLocalOnlyMode(false);
-    localStorage.setItem(STORAGE_KEYS.FIREBASE_CONFIG, JSON.stringify(config));
-    await this.init();
-    return true;
-  }
-
-  disconnectFirebase() {
-    localStorage.removeItem(STORAGE_KEYS.FIREBASE_CONFIG);
-    // Stay local on the next load too, instead of reconnecting to the default project
-    setLocalOnlyMode(true);
-    firestoreService.stopFirestoreSync();
-    this.mode = 'local';
-    this.loadLocalData();
-    this.notifyListeners();
   }
 }
 
