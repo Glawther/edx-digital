@@ -1,5 +1,5 @@
 ---
-name: nexus-crm-architecture
+name: edx-digital-architecture
 description: Directives, architectural patterns, and quality standards for EDX Digital development (Vanilla JS, PWA Offline-First, Firestore Sync, Gemini AI, and Ergonomics).
 ---
 
@@ -16,7 +16,7 @@ description: Directives, architectural patterns, and quality standards for EDX D
 - Preserve bidirectional ID mapping (`id` vs `firestoreId` vs `clientLeadId`).
 
 ## 3. Gemini AI Integration Patterns
-- Keep API Keys safe in user-controlled browser storage (`nexus_crm_gemini_api_key`).
+- Keep API Keys safe in user-controlled browser storage (`edx_gemini_api_key`).
 - Use Gemini 1.5/2.0 Flash for speed and cost efficiency.
 - Generate structured actionable insights: Win Probability (0-100%), Deal Sentiment, SWOT Analysis, Recommended Next Action, and tailored outreach drafts.
 

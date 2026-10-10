@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const { SecurityContext, defaultRepository } = require('../database/repository');
 const { auditService, AUDIT_ACTIONS, SEVERITY } = require('../security/audit-service');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'nexus_enterprise_jwt_super_secret_signing_key_32_bytes!';
+const JWT_SECRET = process.env.JWT_SECRET || 'edx_enterprise_jwt_super_secret_signing_key_32_bytes!';
 
 /**
  * Creates a signed JWT-like HS256 token for testing and API sessions

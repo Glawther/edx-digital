@@ -3,7 +3,7 @@
  * Inspired by Doctor+ Modern Dashboard (Dark Matte with Neon Lime & Crisp Clean Light)
  */
 
-const THEME_STORAGE_KEY = 'nexus_crm_theme';
+const THEME_STORAGE_KEY = 'edx_theme';
 
 /**
  * Returns current saved theme, defaulting to 'light' (the sober white look the product is meant to have)
@@ -24,7 +24,7 @@ export function setTheme(theme) {
     console.warn("Could not save theme preference:", e);
   }
   updateThemeUI(finalTheme);
-  window.dispatchEvent(new CustomEvent('nexus-theme-change', { detail: { theme: finalTheme } }));
+  window.dispatchEvent(new CustomEvent('edx-theme-change', { detail: { theme: finalTheme } }));
   return finalTheme;
 }
 

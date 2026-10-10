@@ -24,7 +24,7 @@ const webhookController = new SecureWebhookController(defaultRepository);
       const demoTenant = {
         id: 'tenant-enterprise-demo',
         name: 'EDX Digital',
-        slug: 'nexus-enterprise',
+        slug: 'edx-enterprise',
         plan: 'enterprise',
         status: 'active',
         created_at: new Date().toISOString(),
@@ -142,7 +142,7 @@ async function handleApiV1(req, res, parsedUrl) {
     try {
       const { rawBuffer } = await parseJsonBody(req);
       const signature = req.headers['x-signature-256'] || req.headers['x-hub-signature-256'] || '';
-      const signingSecret = process.env.BILLING_WEBHOOK_SECRET || 'billing_secret_nexus_2026';
+      const signingSecret = process.env.BILLING_WEBHOOK_SECRET || 'billing_secret_edx_2026';
 
       const result = await commercialService.processBillingWebhook(rawBuffer, signature, signingSecret, clientIp);
       return sendJson(res, result.status, result);

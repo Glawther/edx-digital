@@ -7,7 +7,7 @@ import { crmStore } from '../core/crm-store.js';
 import { getCurrentUser, getCurrentRole, isCloudSession, USER_ROLES } from './auth-service.js';
 import { getFirebase, createAccountForSomeoneElse, describeAuthError } from './firebase-app.js';
 
-const EMPLOYEES_STORAGE_KEY = 'nexus_crm_employees_db';
+const EMPLOYEES_STORAGE_KEY = 'edx_employees_db';
 
 // Listeners for reactive updates
 const employeeListeners = [];

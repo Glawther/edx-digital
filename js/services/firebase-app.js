@@ -8,7 +8,7 @@
 import { defaultFirebaseConfig } from '../core/config.js';
 
 const SDK_BASE = 'https://www.gstatic.com/firebasejs/11.4.0/';
-const EMULATOR_FLAG = 'nexus_crm_use_emulator';
+const EMULATOR_FLAG = 'edx_use_emulator';
 const AUTH_EMULATOR_URL = 'http://127.0.0.1:9099';
 const FIRESTORE_EMULATOR_PORT = 8080;
 
@@ -16,7 +16,7 @@ let firebasePromise = null;
 
 /**
  * The local emulator is only ever used from a development host, and only when asked for
- * (localStorage nexus_crm_use_emulator = "1"). Production never takes this path.
+ * (localStorage edx_use_emulator = "1"). Production never takes this path.
  */
 export function isUsingEmulator() {
   try {
@@ -46,7 +46,7 @@ export function getFirebase() {
       const { appMod, authMod, fsMod } = await loadModules();
       const emulator = isUsingEmulator();
       const config = emulator
-        ? { ...defaultFirebaseConfig, projectId: 'demo-nexus-crm', apiKey: 'demo-key' }
+        ? { ...defaultFirebaseConfig, projectId: 'demo-edx-digital', apiKey: 'demo-key' }
         : defaultFirebaseConfig;
 
       const app = appMod.initializeApp(config);
@@ -73,7 +73,7 @@ export function getFirebase() {
  */
 export async function createAccountForSomeoneElse(email, password) {
   const { appMod, authMod, config } = await getFirebase();
-  const secondary = appMod.initializeApp(config, 'nexus-provisioning-' + Date.now());
+  const secondary = appMod.initializeApp(config, 'edx-provisioning-' + Date.now());
   try {
     const secondaryAuth = authMod.initializeAuth(secondary, { persistence: authMod.inMemoryPersistence });
     if (isUsingEmulator()) {
@@ -106,11 +106,11 @@ export function describeAuthError(err) {
     'auth/requires-recent-login': 'Por segurança, saia e entre de novo antes de trocar a senha.',
     'auth/operation-not-allowed': 'O login por e-mail e senha ainda não foi ativado no Firebase deste projeto.',
     'permission-denied': 'Você não tem permissão para fazer isso.',
-    'nexus/no-profile': 'Esta conta ainda não está ligada a uma empresa. Use Criar conta para cadastrar a empresa ou entrar com um convite.',
-    'nexus/blocked': 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.',
-    'nexus/invalid-invite': 'Código de convite inválido ou desativado. Confira com quem administra o CRM da sua empresa.',
-    'nexus/account-exists': 'Este e-mail já tem uma conta ligada a uma empresa. Use a aba Entrar.',
-    'nexus/not-owner': 'Só quem criou a empresa pode excluí-la.'
+    'edx/no-profile': 'Esta conta ainda não está ligada a uma empresa. Use Criar conta para cadastrar a empresa ou entrar com um convite.',
+    'edx/blocked': 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.',
+    'edx/invalid-invite': 'Código de convite inválido ou desativado. Confira com quem administra o CRM da sua empresa.',
+    'edx/account-exists': 'Este e-mail já tem uma conta ligada a uma empresa. Use a aba Entrar.',
+    'edx/not-owner': 'Só quem criou a empresa pode excluí-la.'
   };
   return messages[code] || (err && err.message) || 'Não foi possível concluir. Tente de novo.';
 }

@@ -11,7 +11,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 
-const PROJECT = 'demo-nexus-crm';
+const PROJECT = 'demo-edx-digital';
 const AUTH = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
 const DOCS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 const RUN = Date.now().toString(36);

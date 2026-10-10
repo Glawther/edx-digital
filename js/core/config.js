@@ -3,12 +3,12 @@
  */
 
 const STORAGE_KEYS = {
-  LOCAL_DATA: 'nexus_crm_local_customers',
-  ACTIVITIES_DATA: 'nexus_crm_local_activities',
-  APP_PREFS: 'nexus_crm_preferences',
-  ORGANIZATION: 'nexus_crm_organization_config',
-  AI_METRICS: 'nexus_crm_ai_usage_metrics',
-  STORAGE_MODE: 'nexus_crm_storage_mode'
+  LOCAL_DATA: 'edx_local_customers',
+  ACTIVITIES_DATA: 'edx_local_activities',
+  APP_PREFS: 'edx_preferences',
+  ORGANIZATION: 'edx_organization_config',
+  AI_METRICS: 'edx_ai_usage_metrics',
+  STORAGE_MODE: 'edx_storage_mode'
 };
 
 /**
@@ -34,7 +34,7 @@ export function setLocalOnlyMode(enabled) {
 
 // Default commercial organization & whitelabel parameters
 export const defaultOrganization = {
-  id: 'org_nexus_default',
+  id: 'org_edx_default',
   name: 'Empresa Exemplo',
   legalName: '',
   cnpj: '',

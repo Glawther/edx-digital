@@ -125,7 +125,7 @@ export function renderKPIs(metrics, permissions = {}) {
   `;
 }
 
-const SHOW_LOST_KEY = 'nexus_crm_show_lost';
+const SHOW_LOST_KEY = 'edx_show_lost';
 
 /**
  * Renders the funnel. The "lost" column stays folded until asked for, so the stages that

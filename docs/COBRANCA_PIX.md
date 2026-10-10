@@ -92,4 +92,4 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 
 Testes da lógica (sem rede): `npm test`, arquivo `server/tests/billing-pix.test.js`.
 
-Para rodar de ponta a ponta sem tocar em nada real: emuladores do Firebase (`npm run emulators`) e o servidor com `FIREBASE_PROJECT_ID=demo-nexus-crm`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST` e `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira. Os emuladores são ignorados quando `NODE_ENV=production`.
+Para rodar de ponta a ponta sem tocar em nada real: emuladores do Firebase (`npm run emulators`) e o servidor com `FIREBASE_PROJECT_ID=demo-edx-digital`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST` e `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira. Os emuladores são ignorados quando `NODE_ENV=production`.

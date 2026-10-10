@@ -81,7 +81,7 @@ Se você possui uma VPS (Hostinger, DigitalOcean, Contabo, AWS EC2):
 
 ## 5. 🧪 Como Testar o Fluxo Comercial de Ponta a Ponta
 
-1. Abra a Landing Page: [https://nexuscrm-d8e13.web.app/landing](https://nexuscrm-d8e13.web.app/landing).
+1. Abra a Landing Page: [https://edx-digital.web.app/landing](https://edx-digital.web.app/landing).
 2. Escolha o **Plano Professional** e clique em **"Assinar Professional"**.
 3. O portal abrirá em `index.html#register?plan=pro` já com o badge `⚡ Plano Selecionado: Professional`.
 4. Preencha seu nome, e-mail corporativo, empresa e senha.

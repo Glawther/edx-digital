@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nexus-webhook-'));
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edx-webhook-'));
 process.env.DATA_DIR = dataDir;
 process.env.PORT = '0';
 

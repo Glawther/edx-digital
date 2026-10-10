@@ -40,7 +40,7 @@ As coleções antigas `employees` e `system_config` ficam fechadas. Se `employee
 npm run emulators
 ```
 
-Com o emulador ligado, abra o app em `http://localhost:3000`, e no console do navegador rode `localStorage.setItem('nexus_crm_use_emulator', '1')` e recarregue. O app passa a usar o login e o banco locais. Esse atalho só funciona em `localhost`.
+Com o emulador ligado, abra o app em `http://localhost:3000`, e no console do navegador rode `localStorage.setItem('edx_use_emulator', '1')` e recarregue. O app passa a usar o login e o banco locais. Esse atalho só funciona em `localhost`.
 
 Testes das regras (21 cenários: isolamento entre empresas, papéis, convite, bloqueio, auditoria):
 

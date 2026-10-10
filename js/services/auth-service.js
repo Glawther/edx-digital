@@ -29,10 +29,10 @@ export const SESSION_KINDS = {
   CLOUD: 'cloud'
 };
 
-const ROLE_STORAGE_KEY = 'nexus_crm_user_role';
-const SESSION_STORAGE_KEY = 'nexus_crm_session_active';
+const ROLE_STORAGE_KEY = 'edx_user_role';
+const SESSION_STORAGE_KEY = 'edx_session_active';
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const ACTIVITY_KEY = 'nexus_crm_last_activity';
+const ACTIVITY_KEY = 'edx_last_activity';
 
 // Version of the Terms of Use and Privacy Policy a person accepts when creating an account.
 // Change it whenever termos.html or privacidade.html change in substance.
@@ -95,21 +95,21 @@ function withTimeout(promise, ms) {
 
 /**
  * Loads the profile and the company of a signed-in account and makes it the current user.
- * Throws nexus/no-profile when the account exists but was never linked to a company.
+ * Throws edx/no-profile when the account exists but was never linked to a company.
  */
 async function applyFirebaseUser(fbUser) {
   const { auth, db, authMod, fsMod } = await getFirebase();
 
   const profileSnap = await fsMod.getDoc(fsMod.doc(db, 'users', fbUser.uid));
   if (!profileSnap.exists()) {
-    throw authError('nexus/no-profile');
+    throw authError('edx/no-profile');
   }
   const profile = profileSnap.data();
 
   if (profile.status === 'blocked') {
     await authMod.signOut(auth);
     clearSession();
-    throw authError('nexus/blocked');
+    throw authError('edx/blocked');
   }
 
   const orgSnap = await fsMod.getDoc(fsMod.doc(db, 'organizations', profile.orgId));
@@ -158,7 +158,7 @@ export async function signIn(email, password) {
     return await applyFirebaseUser(cred.user);
   } catch (err) {
     // An account without a company cannot use the CRM: do not leave it half signed in
-    if (err.code === 'nexus/no-profile') await authMod.signOut(auth).catch(() => {});
+    if (err.code === 'edx/no-profile') await authMod.signOut(auth).catch(() => {});
     throw err;
   }
 }
@@ -181,7 +181,7 @@ async function createOrResumeAccount(email, password) {
     const existing = await fsMod.getDoc(fsMod.doc(db, 'users', cred.user.uid));
     if (existing.exists()) {
       await authMod.signOut(auth).catch(() => {});
-      throw authError('nexus/account-exists');
+      throw authError('edx/account-exists');
     }
     return cred;
   }
@@ -249,7 +249,7 @@ export async function joinCompany({ inviteCode, name, email, password }) {
   // Checked before creating the account, so a wrong code leaves nothing behind
   const inviteSnap = await fsMod.getDoc(fsMod.doc(db, 'invites', code)).catch(() => null);
   if (!inviteSnap || !inviteSnap.exists() || inviteSnap.data().active !== true) {
-    throw authError('nexus/invalid-invite');
+    throw authError('edx/invalid-invite');
   }
   const orgId = inviteSnap.data().orgId;
 
@@ -388,7 +388,7 @@ export async function deleteCompany(password) {
 
   const orgSnap = await fsMod.getDoc(fsMod.doc(db, 'organizations', orgId));
   if (!orgSnap.exists() || orgSnap.data().ownerUid !== fbUser.uid) {
-    throw authError('nexus/not-owner');
+    throw authError('edx/not-owner');
   }
 
   await deleteDocsWhere('customers', orgId);
