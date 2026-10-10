@@ -9,7 +9,7 @@
     "test": "node --test \"server/tests/*.test.js\" \"tests/unit/*.test.mjs\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-edx-digital",
     "test:rules": "node scripts/test-rules.mjs",
-    "deploy": "firebase deploy --only hosting",
+    "deploy": "npm run build && firebase deploy --only firestore:rules,hosting",
     "build": "node scripts/build.mjs"
   },
   "keywords": [

@@ -6,7 +6,7 @@
  *   - each stylesheet minified;
  *   - pages without their comments;
  *   - a service worker that lists exactly the files that exist.
- * The source files are not changed. Run with `npm run build`; `firebase deploy` runs it by itself.
+ * The source files are not changed. Run with `npm run build`; `npm run deploy` runs it before publishing.
  */
 
 import { build, transform } from 'esbuild';
