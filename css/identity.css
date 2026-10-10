@@ -1,0 +1,959 @@
+/* ==========================================================================
+   Nexus CRM - Identity layer
+   Loaded after components.css. It settles the look of the main pieces
+   (type, navigation, header, indicators, pipeline cards, sign-in) so the
+   product reads as one quiet system instead of a collection of badges.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Base type
+   -------------------------------------------------------------------------- */
+html, body {
+  font-size: 15px;
+  line-height: 1.5;
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar
+   -------------------------------------------------------------------------- */
+.sidebar {
+  padding: 1rem 0.75rem;
+}
+
+.brand {
+  margin-bottom: 1.5rem;
+  gap: 0.6rem;
+}
+
+.brand-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.brand-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-badge {
+  display: none;
+}
+
+.brand-theme-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+.brand-theme-btn:hover {
+  transform: none;
+  color: var(--text-primary);
+}
+
+.nav-menu {
+  gap: 2px;
+}
+
+.nav-item {
+  gap: 0.7rem;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  font-size: 0.93rem;
+  font-weight: 500;
+}
+
+.nav-item.active,
+[data-theme="dark"] .nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 0;
+  font-weight: 600;
+}
+
+.nav-item.active svg,
+[data-theme="dark"] .nav-item.active svg {
+  stroke: currentColor;
+}
+
+/* Counts are plain numbers, not badges */
+.nav-count,
+.nav-item.active .nav-count,
+[data-theme="dark"] .nav-item.active .nav-count {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.sidebar-tool-btn {
+  background: transparent;
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+.sidebar-tool-btn:hover,
+.sidebar-tool-btn.active {
+  color: var(--text-primary);
+}
+
+#header-tools-menu,
+.sidebar-tools-wrapper .sidebar-dropdown-menu,
+[data-theme="light"] #header-tools-menu,
+[data-theme="light"] .sidebar-tools-wrapper .sidebar-dropdown-menu {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-strong) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.tools-group-title,
+[data-theme="light"] .tools-group-title {
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Menu items lost their emoji icons: an empty icon slot takes no room */
+.dropdown-item-icon:empty {
+  display: none;
+}
+
+[data-theme="dark"] .sidebar-dropdown-menu .dropdown-item:hover {
+  background: var(--bg-surface-elevated);
+}
+
+[data-theme="dark"] .sidebar-dropdown-menu .dropdown-item:hover .dropdown-item-title {
+  color: var(--text-primary);
+}
+
+.sidebar-user-card {
+  border-radius: var(--radius-lg);
+  background: transparent;
+}
+
+.sidebar-user-avatar-placeholder {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 0;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+.header {
+  padding: 0 1.5rem;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.header-center {
+  max-width: 480px;
+}
+
+.search-box-large {
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.75rem;
+  box-shadow: none;
+}
+
+.search-box-large:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search-kbd-trigger kbd {
+  box-shadow: none;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+.btn-header-lead {
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.95rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.btn-header-lead:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Status indicators: text with a dot, not coloured pills */
+.connection-pill,
+.connection-pill.online,
+.connection-pill.local {
+  background: transparent;
+  border: 0;
+  padding: 0.3rem 0.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.connection-pill:hover {
+  background: transparent;
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.connection-pill.online .pulse-dot {
+  color: var(--color-won);
+}
+
+.connection-pill.local .pulse-dot {
+  color: var(--color-proposal);
+}
+
+.pulse-dot {
+  box-shadow: none;
+  animation: none;
+}
+
+.notification-dropdown {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* The header already has the action; the floating copy only helps on small screens */
+.fab-bottom-right-lead {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Content, indicators
+   -------------------------------------------------------------------------- */
+.content-area {
+  padding: 1.5rem;
+}
+
+.kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.kpi-card {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--border-subtle);
+  border-radius: 0;
+  padding: 1rem 1.25rem;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.kpi-card:first-child {
+  border-left: 0;
+}
+
+.kpi-card::before {
+  display: none;
+}
+
+.kpi-card:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-subtle);
+}
+
+.kpi-header {
+  margin-bottom: 0.35rem;
+}
+
+.kpi-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.kpi-icon-wrap {
+  display: none;
+}
+
+.kpi-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.15rem;
+}
+
+.kpi-subtext {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.kpi-badge,
+.kpi-badge.positive {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   Pipeline toolbar
+   -------------------------------------------------------------------------- */
+.pipeline-actions-bar {
+  margin-bottom: 1rem;
+}
+
+.filter-pills {
+  gap: 0;
+  padding: 2px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.filter-pill {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.filter-pill:hover {
+  background: var(--bg-surface-elevated);
+}
+
+.filter-pill.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.stage-nav-pill {
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+}
+
+.stage-nav-pill:hover {
+  box-shadow: none;
+  background: var(--bg-surface-glass-hover);
+}
+
+/* --------------------------------------------------------------------------
+   Pipeline columns and cards
+   -------------------------------------------------------------------------- */
+.pipeline-grid {
+  grid-template-columns: repeat(6, minmax(264px, 1fr));
+  gap: 0.75rem;
+}
+
+.pipeline-column {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+.column-header {
+  border-bottom: 2px solid var(--border-strong);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.column-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.column-count {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.column-amount {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.cards-container {
+  gap: 0.5rem;
+}
+
+.lead-card {
+  padding: 0.8rem 0.85rem;
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+
+.lead-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+.lead-card.is-rotting {
+  border-color: var(--color-proposal-border);
+  box-shadow: inset 3px 0 0 var(--color-proposal);
+}
+
+.lead-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  max-width: none;
+}
+
+.lead-company {
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.lead-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0;
+}
+
+.lead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0.4rem 0;
+}
+
+.lead-meta .is-warning {
+  color: var(--color-proposal);
+  font-weight: 500;
+}
+
+.lead-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lead-loss {
+  font-size: 0.8rem;
+  color: var(--color-lost);
+  margin-bottom: 0.5rem;
+}
+
+/* Priority is a word in colour, not a pill */
+.priority-badge,
+.priority-badge.high,
+.priority-badge.medium,
+.priority-badge.low {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.priority-badge.low {
+  color: var(--priority-low);
+}
+
+.lead-tags {
+  margin-bottom: 0.5rem;
+  gap: 0.25rem;
+}
+
+.tag-badge {
+  font-size: 0.74rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-elevated);
+  border: 0;
+  padding: 1px 6px;
+}
+
+.salesperson-badge,
+.deal-rotting-badge,
+.lead-task-badge {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.card-footer {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.card-footer-row {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.card-actions {
+  width: auto;
+  border-top: 0;
+  padding-top: 0;
+  flex-wrap: nowrap;
+  gap: 0;
+}
+
+.move-stage-select {
+  font-size: 0.8rem;
+  background: var(--bg-surface);
+  padding: 3px 4px;
+}
+
+/* Card actions stay quiet until the card is hovered or focused */
+.action-btn,
+.action-btn.ai-btn {
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.lead-card:hover .action-btn,
+.lead-card:focus-within .action-btn {
+  color: var(--text-secondary);
+}
+
+.action-btn:hover,
+.action-btn.ai-btn:hover {
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.action-btn.delete-btn,
+.lead-card:hover .action-btn.delete-btn {
+  color: var(--text-muted);
+}
+
+.action-btn.delete-btn:hover {
+  color: var(--color-lost);
+}
+
+.btn-wa {
+  background: transparent;
+  border-color: transparent;
+  padding: 0.25rem 0.35rem;
+  color: var(--color-won);
+}
+
+.btn-wa span {
+  display: none;
+}
+
+.btn-wa:hover {
+  background: var(--color-won-bg);
+  box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons, forms, dialogs, toasts
+   -------------------------------------------------------------------------- */
+.btn-primary {
+  box-shadow: none;
+}
+
+.btn-primary:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-gemini {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.btn-gemini:hover {
+  background: var(--accent-hover);
+  box-shadow: none;
+  transform: none;
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.crm-dialog {
+  border-radius: var(--radius-xl);
+}
+
+.crm-dialog::backdrop {
+  background: rgba(16, 24, 40, 0.45);
+  backdrop-filter: none;
+}
+
+.dialog-header {
+  padding: 1rem 1.5rem;
+}
+
+.dialog-body {
+  padding: 1.5rem;
+}
+
+.dialog-footer {
+  padding: 1rem 1.5rem;
+  background: var(--bg-surface);
+}
+
+.toast {
+  border-radius: var(--radius-lg);
+}
+
+.toast.success,
+.toast.info,
+.toast.error,
+.toast.warning {
+  border-left-width: 3px;
+}
+
+.toast.warning {
+  border-left: 3px solid var(--color-proposal);
+}
+
+/* --------------------------------------------------------------------------
+   Sign-in screen
+   -------------------------------------------------------------------------- */
+.auth-portal-wrapper {
+  background: var(--bg-deep);
+  align-items: flex-start;
+  padding: 8vh 1.5rem 3rem;
+}
+
+.auth-portal-card {
+  max-width: 420px;
+  border-radius: var(--radius-xl);
+  box-shadow: none;
+  padding: 2rem;
+  animation: none;
+}
+
+.auth-portal-header {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.auth-brand-badge {
+  display: none;
+}
+
+.auth-portal-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.auth-portal-subtitle {
+  font-size: 0.93rem;
+}
+
+.auth-tabs-nav {
+  border-radius: var(--radius-md);
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.auth-tab-btn {
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 7px 10px;
+}
+
+.auth-tab-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.auth-demo-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.auth-demo-grid {
+  margin: 0 0 1rem;
+  gap: 0.5rem;
+}
+
+.auth-demo-btn {
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: 0.7rem 0.8rem;
+}
+
+.auth-demo-btn:hover {
+  transform: none;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.auth-demo-btn-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.auth-demo-btn-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.auth-divider {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.82rem;
+  margin: 1rem 0;
+}
+
+.auth-reg-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+  padding: 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.auth-reg-toggle-btn {
+  flex: 1;
+  padding: 7px 8px;
+  border: 0 !important;
+  border-radius: var(--radius-sm);
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+}
+
+.auth-reg-toggle-btn.active {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+.auth-note {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+}
+
+.auth-plans-link {
+  font-size: 0.88rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-plans-link:hover {
+  text-decoration: underline;
+}
+
+.auth-footer-security {
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+/* --------------------------------------------------------------------------
+   Narrow screens
+   -------------------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-card:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .kpi-card:nth-child(n + 3) {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  #trial-header-pill {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    padding: 0.6rem 1rem 0;
+  }
+
+  .brand {
+    margin-bottom: 0.5rem;
+  }
+
+  /* One row of sections that scrolls sideways, without a visible scrollbar or wrapped labels */
+  .nav-menu {
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 0 0 auto;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  .nav-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-menu li {
+    flex: 0 0 auto;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+    border-radius: 0;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .nav-item svg {
+    display: none;
+  }
+
+  .nav-item.active,
+  [data-theme="dark"] .nav-item.active {
+    background: transparent;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .nav-count {
+    margin-left: 0.35rem;
+  }
+
+  /* Tools and profile move out of the way: they sit in one compact row under the sections */
+  .sidebar-footer {
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 0;
+    padding: 0.4rem 0;
+  }
+
+  .sidebar-user-card {
+    border: 0;
+    padding: 0;
+  }
+
+  .header {
+    padding: 0.75rem 1rem;
+  }
+
+  .header-right {
+    flex: 1 1 100%;
+    order: 4;
+    justify-content: flex-start;
+  }
+
+  .btn-header-lead {
+    display: none;
+  }
+
+  .fab-bottom-right-lead {
+    display: inline-flex !important;
+    bottom: 1rem;
+    right: 1rem;
+    height: 46px;
+    padding: 0 1.1rem;
+    border-radius: var(--radius-full);
+    background: var(--accent-primary);
+    color: var(--accent-text);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .fab-bottom-right-lead:hover {
+    background: var(--accent-primary-hover);
+    transform: none;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .content-area {
+    padding: 1rem;
+  }
+
+  .kpi-card {
+    padding: 0.8rem 1rem;
+  }
+
+  .kpi-value {
+    font-size: 1.3rem;
+  }
+
+  .pipeline-nav-controls {
+    display: none;
+  }
+
+  .auth-portal-wrapper {
+    padding: 1.5rem 1rem;
+  }
+
+  .auth-portal-card {
+    padding: 1.5rem 1.25rem;
+  }
+}

@@ -28,11 +28,29 @@ export const LOSS_REASONS = [
   { id: 'other', label: 'Outro motivo' }
 ];
 
+/**
+ * Resolves a stored loss reason to its id. Older records stored the label instead of the id.
+ */
+export function getLossReasonId(stored) {
+  if (!stored) return 'other';
+  const match = LOSS_REASONS.find(r => r.id === stored || r.label === stored);
+  return match ? match.id : 'other';
+}
+
+/**
+ * Human-readable label for a stored loss reason (id or legacy label)
+ */
+export function getLossReasonLabel(stored) {
+  if (!stored) return '';
+  const match = LOSS_REASONS.find(r => r.id === stored || r.label === stored);
+  return match ? match.label : String(stored);
+}
+
 export const TASK_TYPES = [
-  { id: 'call', label: 'Ligação', icon: '📞' },
-  { id: 'meeting', label: 'Reunião', icon: '📅' },
-  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-  { id: 'followup', label: 'Follow-up', icon: '📝' }
+  { id: 'call', label: 'Ligação', icon: '' },
+  { id: 'meeting', label: 'Reunião', icon: '' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '' },
+  { id: 'followup', label: 'Follow-up', icon: '' }
 ];
 
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';
@@ -155,12 +173,12 @@ class CRMStore {
         const createdBy = (c.createdBy ? c.createdBy.toLowerCase() : '');
 
         // 1. Criado pelo funcionário: sempre visível
-        if (createdBy && (createdBy.includes('lucas') || (userName && createdBy.includes(userName)))) {
+        if (createdBy && userName && createdBy === userName) {
           return true;
         }
 
         // 2. Atribuído explicitamente ao funcionário (email ou nome)
-        if (assignedEmail === userEmail || (userEmail && assignedEmail.includes(userEmail)) || assignedName.includes('lucas') || (userName && assignedName.includes(userName))) {
+        if ((userEmail && assignedEmail === userEmail) || (userName && assignedName === userName)) {
           return true;
         }
 
@@ -307,14 +325,9 @@ class CRMStore {
         wonCount += 1;
       } else if (stage === 'lost') {
         lostCount += 1;
-        const reasonId = c.lossReason || 'other';
-        if (lossReasonCounts[reasonId]) {
-          lossReasonCounts[reasonId].count += 1;
-          lossReasonCounts[reasonId].totalValue += val;
-        } else if (lossReasonCounts['other']) {
-          lossReasonCounts['other'].count += 1;
-          lossReasonCounts['other'].totalValue += val;
-        }
+        const reasonId = getLossReasonId(c.lossReason);
+        lossReasonCounts[reasonId].count += 1;
+        lossReasonCounts[reasonId].totalValue += val;
       } else {
         pipelineTotal += val;
         activeDealsCount += 1;

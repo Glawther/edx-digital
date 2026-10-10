@@ -48,6 +48,21 @@ export async function initializeFirestore(config) {
 }
 
 /**
+ * Stops the real-time listener and forgets the Firestore instance (used when going local-only)
+ */
+export function stopFirestoreSync() {
+  if (unsubscribeCustomers) {
+    try {
+      unsubscribeCustomers();
+    } catch (e) {
+      console.warn("Error stopping Firestore listener:", e);
+    }
+    unsubscribeCustomers = null;
+  }
+  db = null;
+}
+
+/**
  * Returns the current active Firestore instance
  */
 export function getFirestoreDb() {

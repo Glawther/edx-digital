@@ -6,10 +6,10 @@
 const THEME_STORAGE_KEY = 'nexus_crm_theme';
 
 /**
- * Returns current saved theme, defaulting to 'dark' (as in the Doctor+ reference)
+ * Returns current saved theme, defaulting to 'light' (the sober white look the product is meant to have)
  */
 export function getSavedTheme() {
-  return localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+  return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
 }
 
 /**
@@ -42,14 +42,16 @@ export function toggleTheme() {
  * Updates all theme toggle switches on the page
  */
 export function updateThemeUI(theme) {
-  // 1. Sidebar Brand Toggle (Doctor+ Moon/Sun Style)
+  // 1. Sidebar Brand Toggle: shows the theme you would switch to
   const brandToggle = document.getElementById('btn-brand-theme-toggle');
   if (brandToggle) {
     brandToggle.setAttribute('data-current-theme', theme);
-    brandToggle.innerHTML = theme === 'dark' 
-      ? '<span class="theme-icon-moon" style="display:inline-block; transform: scale(1.1);">🌙</span>' 
-      : '<span class="theme-icon-sun" style="display:inline-block; transform: scale(1.1);">☀️</span>';
-    brandToggle.title = theme === 'dark' ? 'Mudar para Modo Claro (☀️)' : 'Mudar para Modo Noturno (🌙)';
+    brandToggle.innerHTML = theme === 'dark'
+      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    const label = theme === 'dark' ? 'Mudar para o tema claro' : 'Mudar para o tema escuro';
+    brandToggle.title = label;
+    brandToggle.setAttribute('aria-label', label);
   }
 
   // 2. Header Switcher Toggle
@@ -65,7 +67,7 @@ export function updateThemeUI(theme) {
   // 3. Header Tools Menu Item
   const menuThemeLabel = document.getElementById('menu-theme-label');
   if (menuThemeLabel) {
-    menuThemeLabel.textContent = theme === 'dark' ? 'Ativar Modo Claro (☀️)' : 'Ativar Modo Noturno (🌙)';
+    menuThemeLabel.textContent = theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro';
   }
 }
 
@@ -82,7 +84,7 @@ export function initTheme() {
     brandToggle.addEventListener('click', () => {
       const newTheme = toggleTheme();
       if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? '🌙 Modo Noturno Doctor+ ativado' : '☀️ Modo Claro ativado', 'info');
+        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
       }
     });
   }
@@ -93,7 +95,7 @@ export function initTheme() {
     headerToggle.addEventListener('click', () => {
       const newTheme = toggleTheme();
       if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? '🌙 Modo Noturno Doctor+ ativado' : '☀️ Modo Claro ativado', 'info');
+        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
       }
     });
   }
@@ -104,7 +106,7 @@ export function initTheme() {
     menuThemeBtn.addEventListener('click', () => {
       const newTheme = toggleTheme();
       if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? '🌙 Modo Noturno Doctor+ ativado' : '☀️ Modo Claro ativado', 'info');
+        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
       }
       const toolsMenu = document.getElementById('header-tools-menu');
       if (toolsMenu) toolsMenu.style.display = 'none';
@@ -117,7 +119,7 @@ export function initTheme() {
       e.preventDefault();
       const newTheme = toggleTheme();
       if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? '🌙 Modo Noturno Doctor+ ativado' : '☀️ Modo Claro ativado', 'info');
+        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
       }
     }
   });

@@ -3,7 +3,7 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
-import { STAGES, PRIORITIES, LOSS_REASONS, TASK_TYPES } from '../core/crm-store.js';
+import { STAGES, PRIORITIES, LOSS_REASONS, TASK_TYPES, getLossReasonLabel } from '../core/crm-store.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
 
 export function formatBRL(amount) {
@@ -27,22 +27,22 @@ export function escapeHtml(str) {
 export const WA_TEMPLATES = [
   {
     id: 'intro',
-    title: '👋 Apresentação Comercial',
+    title: 'Apresentação Comercial',
     getText: (c) => `Olá ${c.name || ''}, tudo bem? Sou da equipe comercial do Nexus CRM. Recebi seu contato e gostaria de entender seus principais desafios comerciais hoje na ${c.company || 'sua empresa'}.`
   },
   {
     id: 'proposal',
-    title: '📄 Envio de Proposta',
+    title: 'Envio de Proposta',
     getText: (c) => `Olá ${c.name || ''}! Preparamos a proposta comercial para a ${c.company || 'sua empresa'} com investimento previsto de ${formatBRL(c.dealValue)}. Gostaria de alinhar os detalhes com você. Tem 5 minutos hoje?`
   },
   {
     id: 'followup',
-    title: '🔔 Follow-up de Proposta',
+    title: 'Follow-up de Proposta',
     getText: (c) => `Olá ${c.name || ''}, tudo bem? Passando para checar se você conseguiu avaliar a proposta que enviamos para a ${c.company || 'sua empresa'}. Ficou com alguma dúvida que possamos esclarecer?`
   },
   {
     id: 'meeting',
-    title: '📅 Agendamento de Reunião',
+    title: 'Agendamento de Reunião',
     getText: (c) => `Olá ${c.name || ''}, tudo bem? Gostaria de agendar uma breve conversa de 15 minutos esta semana para demonstrar como o Nexus CRM pode otimizar a operação da ${c.company || 'sua empresa'}. Qual melhor dia para você?`
   }
 ];
@@ -68,53 +68,53 @@ export function renderKPIs(metrics, permissions = {}) {
   container.innerHTML = `
     <div class="kpi-card" style="--card-accent: var(--color-lead);">
       <div class="kpi-header">
-        <span class="kpi-title">${isEmp ? 'Minha Carteira (Pipeline)' : 'Pipeline Geral em Aberto'}</span>
+        <span class="kpi-title">${isEmp ? 'Minha carteira em aberto' : 'Em aberto no funil'}</span>
         <div class="kpi-icon-wrap" style="color: var(--color-lead); background: var(--color-lead-bg); border-color: var(--color-lead-border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
       </div>
       <div class="kpi-value">${formatBRL(metrics.pipelineTotal)}</div>
       <div class="kpi-subtext">
-        <span class="kpi-badge positive">${metrics.activeDealsCount} oportunidades</span> ${isEmp ? 'sob sua gestão' : 'ativas na empresa'}
+        ${metrics.activeDealsCount} ${metrics.activeDealsCount === 1 ? 'oportunidade ativa' : 'oportunidades ativas'}
       </div>
     </div>
 
     <div class="kpi-card" style="--card-accent: var(--color-won);">
       <div class="kpi-header">
-        <span class="kpi-title">${isEmp ? 'Minhas Vendas Ganhas' : 'Negócios Fechados (Total)'}</span>
+        <span class="kpi-title">${isEmp ? 'Minhas vendas fechadas' : 'Vendas fechadas'}</span>
         <div class="kpi-icon-wrap" style="color: var(--color-won); background: var(--color-won-bg); border-color: var(--color-won-border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
       </div>
-      <div class="kpi-value" style="color: var(--color-won);">${formatBRL(metrics.wonTotal)}</div>
+      <div class="kpi-value">${formatBRL(metrics.wonTotal)}</div>
       <div class="kpi-subtext">
-        <span class="kpi-badge positive">${metrics.wonCount} contratos</span> ${isEmp ? 'fechados por você' : 'assinados no total'}
+        ${metrics.wonCount} ${metrics.wonCount === 1 ? 'contrato' : 'contratos'}
       </div>
     </div>
 
     <div class="kpi-card" style="--card-accent: var(--color-contact);">
       <div class="kpi-header">
-        <span class="kpi-title">Taxa de Conversão</span>
+        <span class="kpi-title">Taxa de conversão</span>
         <div class="kpi-icon-wrap" style="color: var(--color-contact); background: var(--color-contact-bg); border-color: var(--color-contact-border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         </div>
       </div>
       <div class="kpi-value">${metrics.conversionRate}%</div>
       <div class="kpi-subtext">
-        ${isEmp ? 'Seu índice individual' : 'Média da equipe comercial'}
+        ${metrics.wonCount} ganhas de ${metrics.wonCount + metrics.lostCount} decididas
       </div>
     </div>
 
     <div class="kpi-card" style="--card-accent: var(--color-negotiation);">
       <div class="kpi-header">
-        <span class="kpi-title">Ticket Médio</span>
+        <span class="kpi-title">Ticket médio</span>
         <div class="kpi-icon-wrap" style="color: var(--color-negotiation); background: var(--color-negotiation-bg); border-color: var(--color-negotiation-border);">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
         </div>
       </div>
       <div class="kpi-value">${formatBRL(metrics.avgTicket)}</div>
       <div class="kpi-subtext">
-        ${isEmp ? '🔒 Confidencialidade individual' : 'Visão financeira executiva'}
+        ${metrics.wonCount > 0 ? 'Por venda fechada' : 'Estimado pelo funil em aberto'}
       </div>
     </div>
   `;
@@ -168,74 +168,49 @@ function renderLeadCard(customer, permissions = {}) {
   // Pending tasks count
   const pendingTasks = (customer.tasks || []).filter(t => !t.completed);
 
+  const company = [customer.company, customer.role].filter(Boolean).map(escapeHtml).join(', ');
+
+  // One quiet line of facts instead of a stack of badges
+  const meta = [];
+  if (customer.assignedTo) {
+    meta.push(`<span title="Responsável: ${escapeHtml(customer.assignedTo.name)}">${escapeHtml(customer.assignedTo.name.split(' ')[0])}</span>`);
+  }
+  if (customer.expectedCloseDate) {
+    const closeDate = new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+    meta.push(`<span title="Previsão de fechamento">Fecha em ${closeDate}</span>`);
+  }
+  if (pendingTasks.length > 0) {
+    meta.push(`<span>${pendingTasks.length} tarefa${pendingTasks.length > 1 ? 's' : ''}</span>`);
+  }
+  if (isRotting) {
+    meta.push(`<span class="is-warning" title="Sem contato registrado há mais de 3 dias">Parado há ${daysIdle} dias</span>`);
+  }
+
   return `
-    <div class="lead-card ${isRotting ? 'is-rotting' : ''}" 
-         draggable="true" 
+    <div class="lead-card ${isRotting ? 'is-rotting' : ''}"
+         draggable="true"
          ondragstart="window.handleDragStartCard(event, '${customer.id}')"
          data-id="${customer.id}">
       <div class="lead-card-header">
-        <div class="lead-name" onclick="window.handleOpenLeadDetails('${customer.id}')" style="cursor: pointer;" title="Clique para ver histórico completo">
+        <div class="lead-name" onclick="window.handleOpenLeadDetails('${customer.id}')" style="cursor: pointer;" title="Ver histórico completo">
           ${escapeHtml(customer.name)}
         </div>
-        <span class="priority-badge ${priorityClass}">${priorityLabel}</span>
-      </div>
-      
-      <div class="lead-company">
-        ${customer.company ? `🏢 ${escapeHtml(customer.company)}` : ''}
-        ${customer.role ? ` • ${escapeHtml(customer.role)}` : ''}
+        <span class="priority-badge ${priorityClass}" title="Prioridade">${priorityLabel}</span>
       </div>
 
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem;">
-        <div class="lead-value">${formatBRL(customer.dealValue)}</div>
-        ${customer.expectedCloseDate ? `
-          <span style="font-size: 0.72rem; color: var(--text-muted); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 1px 5px; border-radius: 4px;" title="Previsão de Fechamento">
-            📅 ${new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-          </span>
-        ` : ''}
-      </div>
+      ${company ? `<div class="lead-company">${company}</div>` : ''}
 
-      <!-- Salesperson & CID Attribute -->
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.65rem; flex-wrap: wrap; gap: 0.35rem;">
-        ${customer.assignedTo ? `
-          <span class="salesperson-badge" title="Responsável: ${escapeHtml(customer.assignedTo.name)}">
-            👤 ${escapeHtml(customer.assignedTo.name.split(' ')[0])}
-          </span>
-        ` : '<span class="salesperson-badge">👤 Sem atribuição</span>'}
+      <div class="lead-value">${formatBRL(customer.dealValue)}</div>
 
-        ${customer.createdBy ? `
-          <span style="font-size: 0.68rem; color: var(--text-muted);" title="Criado por ${escapeHtml(customer.createdBy)}">
-            ✍️ ${escapeHtml(customer.createdBy.split(' ')[0])}
-          </span>
-        ` : ''}
-      </div>
-
-      <!-- Rotting & Task Badges -->
-      <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.65rem;">
-        ${isRotting ? `
-          <span class="deal-rotting-badge" title="Lead estagnado: sem contato recente há mais de 3 dias">
-            ⏳ Parado há ${daysIdle}d
-          </span>
-        ` : ''}
-        ${pendingTasks.length > 0 ? `
-          <span class="lead-task-badge" title="${pendingTasks.length} tarefa(s) pendente(s)">
-            ✓ ${pendingTasks.length} tarefa${pendingTasks.length > 1 ? 's' : ''}
-          </span>
-        ` : ''}
-      </div>
+      ${meta.length > 0 ? `<div class="lead-meta">${meta.join('')}</div>` : ''}
 
       ${customer.tags && customer.tags.length > 0 ? `<div class="lead-tags">${tagsHtml}</div>` : ''}
 
       ${customer.stage === 'lost' && customer.lossReason ? `
-        <div style="font-size: 0.72rem; color: var(--color-lost); background: var(--color-lost-bg); border: 1px solid var(--color-lost-border); border-radius: 4px; padding: 3px 6px; margin-bottom: 0.5rem;">
-          🛑 Motivo: ${escapeHtml(customer.lossReason)}
-        </div>
+        <div class="lead-loss">Motivo: ${escapeHtml(getLossReasonLabel(customer.lossReason))}</div>
       ` : ''}
 
-      ${customer.notes ? `
-        <div style="font-size: 0.72rem; color: var(--text-secondary); background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 4px 6px; margin-bottom: 0.5rem; max-height: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(customer.notes)}">
-          💬 ${escapeHtml(customer.notes)}
-        </div>
-      ` : ''}
+      ${customer.notes ? `<div class="lead-note" title="${escapeHtml(customer.notes)}">${escapeHtml(customer.notes)}</div>` : ''}
 
       <div class="card-footer">
         <div class="card-footer-row">
@@ -257,25 +232,21 @@ function renderLeadCard(customer, permissions = {}) {
 
         <div class="card-actions">
 
-          <button class="action-btn" onclick="window.handleOpenProposalModal('${customer.id}')" title="Gerar Proposta Comercial Executiva (PDF / Impressão)" style="color: var(--text-primary);">
+          <button class="action-btn" onclick="window.handleOpenProposalModal('${customer.id}')" title="Gerar proposta comercial">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           </button>
           <button class="action-btn" onclick="window.handleOpenLeadDetails('${customer.id}')" title="Histórico e Linha do Tempo">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </button>
-          <button class="action-btn" onclick="window.handleAnalyzeWithAI('${customer.id}')" title="Analisar com Google Gemini AI" style="color: #2563eb;">
+          <button class="action-btn" onclick="window.handleAnalyzeWithAI('${customer.id}')" title="Analisar com IA">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </button>
           <button class="action-btn" onclick="window.handleOpenEditCustomer('${customer.id}')" title="Editar oportunidade">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
 
-          ${permissions && permissions.canDelete === false ? `
-            <button class="action-btn disabled" disabled title="🔒 Exclusão restrita ao Administrador (Tríade CID: Integridade)" style="opacity: 0.35; cursor: not-allowed;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
-          ` : `
-            <button class="action-btn" onclick="window.handleDeleteCustomer('${customer.id}')" title="Excluir (Permissão de Administrador)" style="color: var(--color-lost);">
+          ${permissions && permissions.canDelete === false ? '' : `
+            <button class="action-btn delete-btn" onclick="window.handleDeleteCustomer('${customer.id}')" title="Excluir oportunidade">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           `}
@@ -339,9 +310,9 @@ export function renderTable(customers, permissions = {}) {
         <td>
           ${customer.assignedTo ? `
             <span class="salesperson-badge" title="${escapeHtml(customer.assignedTo.email)}">
-              👤 ${escapeHtml(customer.assignedTo.name.split(' ')[0])}
+              ${escapeHtml(customer.assignedTo.name.split(' ')[0])}
             </span>
-          ` : '<span class="salesperson-badge">👤 Sem atribuição</span>'}
+          ` : '<span class="salesperson-badge">Sem atribuição</span>'}
         </td>
         <td>
           <span style="font-weight: 700; color: var(--color-won); font-family: var(--font-heading);">
@@ -367,19 +338,19 @@ export function renderTable(customers, permissions = {}) {
         </td>
         <td style="text-align: right;">
           <button class="btn btn-outline btn-sm" onclick="window.handleOpenLeadDetails('${customer.id}')" style="margin-right: 0.35rem;" title="Histórico e Linha do Tempo">
-            📜 Histórico
+            Histórico
           </button>
           <button class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI('${customer.id}')" style="margin-right: 0.35rem; color: #2563eb; border-color: #cbd5e1;" title="Análise com Gemini AI">
-            ✦ IA
+            IA
           </button>
           <button class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal('${customer.id}')" style="margin-right: 0.35rem;" title="Gerar Proposta Comercial Executiva (PDF / Impressão)">
-            📄 Proposta
+            Proposta
           </button>
           <button class="btn btn-outline btn-sm" onclick="window.handleOpenEditCustomer('${customer.id}')" style="margin-right: 0.35rem;">
             Editar
           </button>
           ${permissions && permissions.canDelete === false ? `
-            <button class="btn btn-outline btn-sm disabled" disabled title="🔒 Exclusão restrita ao Administrador (Integridade CID)" style="opacity: 0.35; cursor: not-allowed;">
+            <button class="btn btn-outline btn-sm disabled" disabled title="Exclusão restrita ao Administrador (Integridade CID)" style="opacity: 0.35; cursor: not-allowed;">
               Excluir
             </button>
           ` : `
@@ -447,7 +418,7 @@ export function renderTasksView(tasks, filter, customers) {
         <div style="display: flex; align-items: center; gap: 0.75rem;">
           <span class="task-type-pill">${typeObj.icon} ${typeObj.label}</span>
           <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}" title="${isOverdue ? 'Atividade Atrasada!' : 'Data de vencimento'}">
-            📅 ${task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
+            ${task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
             ${isOverdue ? ' (Atrasada)' : ''}
           </span>
         </div>
@@ -488,7 +459,7 @@ export function renderDetailedMetrics(metrics, allCustomers = [], permissions = 
   if (targetRem) {
     targetRem.textContent = remaining > 0 
       ? `Faltam ${formatBRL(remaining)} para a meta máxima`
-      : `🎉 Parabéns! Meta comercial batida com sucesso!`;
+      : `Parabéns! Meta comercial batida com sucesso!`;
   }
 
   // Gamification & Commissions (5% rate)
@@ -507,7 +478,7 @@ export function renderDetailedMetrics(metrics, allCustomers = [], permissions = 
     leaderboardEl.innerHTML = `
       <div class="commission-row">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.1rem;">🥇</span>
+          <span style="font-size: 1.1rem;"></span>
           <div>
             <div style="font-weight: 600; font-size: 0.82rem;">Mariana Costa (Consultora)</div>
             <div style="font-size: 0.72rem; color: var(--text-muted);">${formatBRL(marianaWon)} faturados</div>
@@ -521,7 +492,7 @@ export function renderDetailedMetrics(metrics, allCustomers = [], permissions = 
 
       <div class="commission-row">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.1rem;">🥈</span>
+          <span style="font-size: 1.1rem;"></span>
           <div>
             <div style="font-weight: 600; font-size: 0.82rem;">Lucas Mendes (Consultor)</div>
             <div style="font-size: 0.72rem; color: var(--text-muted);">${formatBRL(lucasWon)} faturados</div>
@@ -625,7 +596,7 @@ export function renderAuthBadge(user) {
   if (!container) return;
 
   const role = user?.role || 'admin';
-  const roleLabel = role === 'admin' ? '🛡️ Admin' : '💼 Funcionário';
+  const roleLabel = role === 'admin' ? 'Admin' : 'Funcionário';
   const roleClass = role === 'admin' ? 'admin' : 'employee';
 
   if (user) {
@@ -649,13 +620,13 @@ export function renderAuthBadge(user) {
         
         <div class="sidebar-user-actions">
           <!-- Quick Switch Button for Role (Admin vs Employee) -->
-          <button type="button" class="btn-sidebar-user-action" id="btn-toggle-role" title="Alternar entre Administrador e Funcionário (RBAC)">
-            🔄
+          <button type="button" class="btn-sidebar-user-action" id="btn-toggle-role" title="Trocar entre administrador e vendedor" aria-label="Trocar entre administrador e vendedor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           </button>
 
           <!-- Return to Auth & Registration Portal -->
-          <button type="button" class="btn-sidebar-user-action logout" id="btn-portal-logout" title="Encerrar sessão e retornar ao Portal de Login">
-            🚪
+          <button type="button" class="btn-sidebar-user-action logout" id="btn-portal-logout" title="Sair" aria-label="Sair">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
       </div>
@@ -710,7 +681,7 @@ export function renderSecurityView(state) {
         <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
           <span style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">Segurança &amp; Governança de Redes</span>
           <span class="cid-role-badge ${state.currentRole}">
-            ${isAdm ? '🛡️ Administrador' : '💼 Consultor de Vendas'}
+            ${isAdm ? 'Administrador' : 'Consultor de Vendas'}
           </span>
         </div>
         <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0;">
@@ -718,35 +689,35 @@ export function renderSecurityView(state) {
         </p>
       </div>
       <button type="button" class="btn btn-primary btn-sm" onclick="window.handleToggleRole()">
-        ${isAdm ? 'Simular Visão do Funcionário 💼' : 'Alternar para Administrador 🛡️'}
+        ${isAdm ? 'Simular Visão do Funcionário ' : 'Alternar para Administrador '}
       </button>
     </div>
 
     <!-- Barra de Conformidade com Normas de Segurança de Redes -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
       <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-contact-bg); color: var(--color-contact); display: flex; align-items: center; justify-content: center; font-size: 1rem;">🔒</div>
+        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-contact-bg); color: var(--color-contact); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
         <div>
           <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Criptografia em Redes</div>
           <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">TLS 1.3 &amp; AES-256</div>
         </div>
       </div>
       <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-proposal-bg); color: var(--color-proposal); display: flex; align-items: center; justify-content: center; font-size: 1rem;">🛡️</div>
+        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-proposal-bg); color: var(--color-proposal); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
         <div>
           <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Controle de Acesso</div>
           <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">RBAC Menor Privilégio</div>
         </div>
       </div>
       <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-lost-bg); color: var(--color-lost); display: flex; align-items: center; justify-content: center; font-size: 1rem;">📝</div>
+        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-lost-bg); color: var(--color-lost); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
         <div>
           <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Auditoria &amp; LGPD</div>
           <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">Logs Imutáveis &amp; CPF Seguro</div>
         </div>
       </div>
       <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.65rem;">
-        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-won-bg); color: var(--color-won); display: flex; align-items: center; justify-content: center; font-size: 1rem;">⚡</div>
+        <div style="width: 32px; height: 32px; border-radius: 6px; background: var(--color-won-bg); color: var(--color-won); display: flex; align-items: center; justify-content: center; font-size: 1rem;"></div>
         <div>
           <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Disponibilidade</div>
           <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary);">Zero Downtime (PWA)</div>
@@ -760,7 +731,7 @@ export function renderSecurityView(state) {
         <div class="employee-section-header">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.2rem;">
-              <span style="font-size: 1.15rem;">👥</span>
+              <span style="font-size: 1.15rem;"></span>
               <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0;">
                 Gestão de Colaboradores &amp; Credenciais Corporativas
               </h3>
@@ -808,7 +779,7 @@ export function renderSecurityView(state) {
                         <div>
                           <div class="employee-name-title">
                             ${escapeHtml(emp.name)}
-                            ${emp.role === 'admin' ? '<span title="Administrador" style="font-size: 0.75rem;">🛡️</span>' : ''}
+                            ${emp.role === 'admin' ? '<span title="Administrador" style="font-size: 0.75rem;"></span>' : ''}
                           </div>
                           <div class="employee-job-meta">${escapeHtml(emp.jobTitle)} • ${escapeHtml(emp.department)}</div>
                         </div>
@@ -818,7 +789,7 @@ export function renderSecurityView(state) {
                       <div class="cpf-cell-container" id="cpf-container-${emp.id}">
                         <span class="cpf-text" id="cpf-text-${emp.id}" data-masked="${escapeHtml(maskCPF(emp.cpf))}" data-raw="${escapeHtml(emp.cpf)}">${escapeHtml(maskCPF(emp.cpf))}</span>
                         <button type="button" class="btn-toggle-cpf" onclick="window.handleToggleCPFVisibility('${emp.id}')" title="Mostrar/Ocultar CPF completo">
-                          👁️
+                          
                         </button>
                       </div>
                     </td>
@@ -829,9 +800,9 @@ export function renderSecurityView(state) {
                       ${emp.requirePasswordChange ? `
                         <div>
                           <span class="temp-password-badge" title="Senha temporária emitida aguardando primeiro login">
-                            🔑 ${escapeHtml(emp.tempPassword || '***')}
+                            ${escapeHtml(emp.tempPassword || '***')}
                           </span>
-                          <div style="font-size: 0.68rem; color: #b45309; margin-top: 2px;">⚠️ Troca obrigatória no 1º acesso</div>
+                          <div style="font-size: 0.68rem; color: #b45309; margin-top: 2px;">Troca obrigatória no 1º acesso</div>
                         </div>
                       ` : `
                         <div>
@@ -844,24 +815,24 @@ export function renderSecurityView(state) {
                     </td>
                     <td>
                       ${isBlocked ? `
-                        <span class="badge-status-blocked">🔴 Bloqueado</span>
+                        <span class="badge-status-blocked">Bloqueado</span>
                       ` : `
-                        <span class="badge-status-active">🟢 Ativo</span>
+                        <span class="badge-status-active">Ativo</span>
                       `}
                     </td>
                     <td>
                       <div class="emp-actions-group" style="justify-content: flex-end;">
                         <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleCopyEmployeeCredentials('${emp.id}')" title="Copiar credenciais prontas para enviar no WhatsApp ou E-mail">
-                          📋 Copiar
+                          Copiar
                         </button>
                         <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleResetEmployeePassword('${emp.id}')" title="Gerar nova senha temporária imediata">
-                          🔑 Resetar
+                          Resetar
                         </button>
                         <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleToggleEmployeeStatus('${emp.id}')" title="${isBlocked ? 'Desbloquear acesso' : 'Bloquear acesso do funcionário'}">
-                          ${isBlocked ? '🔓 Liberar' : '🛡️ Bloquear'}
+                          ${isBlocked ? 'Liberar' : 'Bloquear'}
                         </button>
                         <button type="button" class="btn btn-outline btn-sm btn-emp-action" onclick="window.handleDeleteEmployee('${emp.id}')" title="Excluir colaborador" style="color: var(--color-lost);">
-                          🗑️
+                          
                         </button>
                       </div>
                     </td>
@@ -875,7 +846,7 @@ export function renderSecurityView(state) {
     ` : `
       <div class="employee-management-section">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.5rem;">🔒</span>
+          <span style="font-size: 1.5rem;"></span>
           <div>
             <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0; color: var(--text-primary);">
               Gestão de Credenciais Corporativas (Menor Privilégio - RBAC)
@@ -893,7 +864,7 @@ export function renderSecurityView(state) {
       <div class="cid-card">
         <div class="cid-card-header">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-c">🔒</div>
+            <div class="cid-icon-wrapper cid-icon-c"></div>
             <div>
               <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">1. Confidencialidade (C)</h3>
               <span style="font-size: 0.72rem; color: var(--text-secondary);">Isolamento &amp; Menor Privilégio</span>
@@ -920,23 +891,23 @@ export function renderSecurityView(state) {
           <tbody>
             <tr>
               <td>Visualizar Oportunidades</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">✅ Todos (${state.allCustomers.length})</span></td>
-              <td><span style="color: var(--color-contact); font-weight: 600;">🔒 Seus Leads (${state.visibleCustomers.length})</span></td>
+              <td><span style="color: var(--color-won); font-weight: 600;">Todos (${state.allCustomers.length})</span></td>
+              <td><span style="color: var(--color-contact); font-weight: 600;">Seus Leads (${state.visibleCustomers.length})</span></td>
             </tr>
             <tr>
               <td>Métricas de Faturamento Geral</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">✅ Total</span></td>
-              <td><span style="color: var(--color-lost); font-weight: 600;">🔒 Oculto</span></td>
+              <td><span style="color: var(--color-won); font-weight: 600;">Total</span></td>
+              <td><span style="color: var(--color-lost); font-weight: 600;">Oculto</span></td>
             </tr>
             <tr>
               <td>Configurações Cloud / IA</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">✅ Liberado</span></td>
-              <td><span style="color: var(--color-lost); font-weight: 600;">🔒 Bloqueado</span></td>
+              <td><span style="color: var(--color-won); font-weight: 600;">Liberado</span></td>
+              <td><span style="color: var(--color-lost); font-weight: 600;">Bloqueado</span></td>
             </tr>
             <tr>
               <td>Exportação Geral de Dados</td>
-              <td><span style="color: var(--color-won); font-weight: 600;">✅ Total</span></td>
-              <td><span style="color: var(--color-proposal); font-weight: 600;">🔒 Restrito</span></td>
+              <td><span style="color: var(--color-won); font-weight: 600;">Total</span></td>
+              <td><span style="color: var(--color-proposal); font-weight: 600;">Restrito</span></td>
             </tr>
           </tbody>
         </table>
@@ -946,7 +917,7 @@ export function renderSecurityView(state) {
       <div class="cid-card">
         <div class="cid-card-header">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-i">🛡️</div>
+            <div class="cid-icon-wrapper cid-icon-i"></div>
             <div>
               <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">2. Integridade (I)</h3>
               <span style="font-size: 0.72rem; color: var(--text-secondary);">Trilha de Auditoria &amp; Imutabilidade</span>
@@ -970,7 +941,7 @@ export function renderSecurityView(state) {
       <div class="cid-card">
         <div class="cid-card-header">
           <div style="display: flex; align-items: center; gap: 0.65rem;">
-            <div class="cid-icon-wrapper cid-icon-d">⚡</div>
+            <div class="cid-icon-wrapper cid-icon-d"></div>
             <div>
               <h3 style="font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text-primary);">3. Disponibilidade (D)</h3>
               <span style="font-size: 0.72rem; color: var(--text-secondary);">Resiliência &amp; Disaster Recovery</span>
@@ -986,7 +957,7 @@ export function renderSecurityView(state) {
         <div style="margin: 0.6rem 0; padding: 0.75rem; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: 6px; font-size: 0.8rem; color: var(--text-primary);">
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: var(--text-secondary);">Status da Conexão:</span>
-            <strong>${state.availability.isOnline ? '🟢 TLS 1.3 Seguro (Online)' : '🟡 Modo Resiliente Offline'}</strong>
+            <strong>${state.availability.isOnline ? 'TLS 1.3 Seguro (Online)' : 'Modo Resiliente Offline'}</strong>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
             <span style="color: var(--text-secondary);">Banco de Dados:</span>
@@ -998,11 +969,11 @@ export function renderSecurityView(state) {
           </div>
         </div>
         <div style="display: flex; gap: 0.5rem; margin-top: auto;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleDownloadBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="🔒 Apenas Administrador pode exportar backups"'}>
-            💾 Exportar Backup
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleDownloadBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="Apenas Administrador pode exportar backups"'}>
+            Exportar Backup
           </button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleTriggerRestoreBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="🔒 Apenas Administrador pode restaurar backups"'}>
-            🔄 Restaurar Banco
+          <button type="button" class="btn btn-outline btn-sm" onclick="window.handleTriggerRestoreBackup()" style="flex: 1;" ${isAdm ? '' : 'disabled title="Apenas Administrador pode restaurar backups"'}>
+            Restaurar Banco
           </button>
         </div>
       </div>
@@ -1048,7 +1019,7 @@ export function renderSecurityView(state) {
                 <td>
                   <div style="font-weight: 600; font-size: 0.8rem;">${escapeHtml(log.userName)}</div>
                   <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">
-                    ${log.userRole === 'admin' ? '🛡️ Admin' : '💼 Funcionário'}
+                    ${log.userRole === 'admin' ? 'Admin' : 'Funcionário'}
                   </div>
                 </td>
                 <td style="color: var(--text-secondary); font-size: 0.8rem;">

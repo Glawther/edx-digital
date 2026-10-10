@@ -833,7 +833,7 @@
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(217, 249, 66, 0.2);
+  box-shadow: 0 0 0 3px var(--accent-line);
 }
 
 .form-textarea {
@@ -1825,7 +1825,7 @@
   display: flex;
   align-items: center;
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2204,7 +2204,7 @@
   width: 100% !important;
   min-width: 230px !important;
   box-sizing: border-box !important;
-  background: #141722 !important;
+  background: var(--bg-surface-elevated) !important;
   border: 1px solid var(--border-strong) !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
@@ -2583,8 +2583,8 @@
   right: 0;
   width: 380px;
   max-height: 480px;
-  background: #181d28;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg, 16px);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
   z-index: 9999;
@@ -2599,24 +2599,24 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: #141722;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
 }
 
 .notification-list {
   flex: 1;
   overflow-y: auto;
   max-height: 340px;
-  background: #181d28;
+  background: var(--bg-surface);
 }
 
 .notification-item {
   display: flex;
   gap: 0.85rem;
   padding: 0.9rem 1.1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
   cursor: pointer;
-  background: #181d28;
+  background: var(--bg-surface);
   transition: background 150ms ease;
 }
 
@@ -2639,7 +2639,7 @@
   justify-content: center;
   border-radius: 10px;
   background: #22293a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-subtle);
 }
 
 .notification-item-content {
@@ -2657,20 +2657,20 @@
 
 .notification-item-body {
   font-size: 0.78rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   line-height: 1.4;
 }
 
 .notification-item-time {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin-top: 4px;
 }
 
 .notification-dropdown-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: #141722;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
   text-align: center;
 }
 

@@ -6,7 +6,13 @@ service cloud.firestore {
     function isValidCustomerData(data) {
       return (!('name' in data) || (data.name is string && data.name.size() > 0 && data.name.size() <= 300)) &&
              (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0)) &&
-             (!('stage' in data) || (data.stage is string && data.stage in ['lead', 'contacted', 'proposal', 'negotiation', 'won', 'lost']));
+             (!('stage' in data) || (data.stage is string && data.stage in validStages()));
+    }
+
+    // O app grava o estágio "Primeiro Contato" como 'contact'. A lista antiga só tinha 'contacted',
+    // então mover ou criar um lead nesse estágio era recusado e o cartão voltava sozinho.
+    function validStages() {
+      return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
     }
 
     // 1. Coleção de Clientes e Oportunidades (Customers)
@@ -14,7 +20,7 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow read: if true;
       allow create: if request.resource.data.name is string && 
-                       request.resource.data.stage in ['lead', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
+                       request.resource.data.stage in validStages();
       allow update: if isValidCustomerData(request.resource.data);
       allow delete: if true;
     }

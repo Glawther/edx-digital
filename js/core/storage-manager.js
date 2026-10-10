@@ -4,10 +4,32 @@
  * Rich Activity Timeline, Tasks & Loss Reasons Support.
  */
 
-import { STORAGE_KEYS, getSavedFirebaseConfig, getSavedOrganization } from './config.js';
+import { STORAGE_KEYS, getSavedFirebaseConfig, getSavedOrganization, setLocalOnlyMode } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
 import { getCurrentUser, isAdmin, USER_ROLES } from '../services/auth-service.js';
-import { crmStore } from './crm-store.js';
+import { crmStore, getLossReasonLabel } from './crm-store.js';
+
+let lastCloudWarningAt = 0;
+
+/**
+ * Tells the user when the cloud refused or missed a write. The change stays in this browser,
+ * but without this notice a card would silently jump back on the next sync.
+ */
+function warnCloudWriteFailed(err) {
+  console.warn("Firestore write failed (the change was kept locally):", err);
+  const now = Date.now();
+  if (now - lastCloudWarningAt < 8000) return;
+  lastCloudWarningAt = now;
+  if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+    const denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
+    window.showToast(
+      denied
+        ? 'A nuvem recusou esta alteração (regras de acesso do Firestore). Ela ficou salva só neste aparelho.'
+        : 'Sem conexão com a nuvem: a alteração ficou salva só neste aparelho.',
+      'warning'
+    );
+  }
+}
 
 // Realistic seed dataset with rich timeline activities, tasks and expected closing dates
 const INITIAL_DEMO_LEADS = [
@@ -192,7 +214,7 @@ const INITIAL_DEMO_LEADS = [
       {
         id: 'act-5-1',
         type: 'stage_change',
-        title: 'Contrato Fechado Ganho 🎉',
+        title: 'Contrato Fechado Ganho ',
         text: 'Negócio fechado e assinado via DocuSign no valor de R$ 95.000.',
         author: 'Mariana Costa',
         timestamp: new Date(Date.now() - 2 * 86400000).toISOString()
@@ -386,7 +408,7 @@ class StorageManager {
         try {
           await firestoreService.updateFirestoreCustomer(docId, merged);
         } catch (fsErr) {
-          console.warn("Firestore update notice (local update succeeded):", fsErr);
+          warnCloudWriteFailed(fsErr);
         }
       }
       return merged;
@@ -416,24 +438,29 @@ class StorageManager {
 
       crmStore.addAuditLog('Criação de Oportunidade', `Novo lead "${newLead.name}" (${newLead.company}) cadastrado por ${user.name} [${user.role}].`, newLead);
 
+      // The lead gets its id here and shows up right away; the cloud write follows.
+      // (Before, a refused cloud write threw and the lead never appeared at all.)
+      newLead.id = 'lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+      this.currentData.unshift(newLead);
+      this.saveLocalData();
+      this.notifyListeners();
+
       if (this.mode === 'firestore') {
-        const result = await firestoreService.addFirestoreCustomer(newLead, newLead.orgId);
-        const index = this.currentData.findIndex(c => c.id === result.id || c.name === newLead.name);
-        if (index === -1) {
-          this.currentData.unshift(result);
-        } else {
-          this.currentData[index] = result;
+        try {
+          const result = await firestoreService.addFirestoreCustomer(newLead, newLead.orgId);
+          // Match by id only: matching by name used to overwrite another lead with the same name
+          const index = this.currentData.findIndex(c => c.id === result.id);
+          if (index !== -1) {
+            this.currentData[index] = result;
+            this.saveLocalData();
+            this.notifyListeners();
+          }
+          return result;
+        } catch (fsErr) {
+          warnCloudWriteFailed(fsErr);
         }
-        this.saveLocalData();
-        this.notifyListeners();
-        return result;
-      } else {
-        newLead.id = 'lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
-        this.currentData.unshift(newLead);
-        this.saveLocalData();
-        this.notifyListeners();
-        return newLead;
       }
+      return newLead;
     }
   }
 
@@ -480,7 +507,7 @@ class StorageManager {
           activities: updatedActivities 
         });
       } catch (fsErr) {
-        console.warn("Firestore sync warning on updateStage (local update succeeded):", fsErr);
+        warnCloudWriteFailed(fsErr);
       }
     }
   }
@@ -492,16 +519,17 @@ class StorageManager {
     const user = getCurrentUser() || { name: 'Operador', role: 'admin' };
     const customer = this.getCustomer(customerId);
     const updatedAt = new Date().toISOString();
+    const lossLabel = getLossReasonLabel(lossReason);
     const activity = {
       id: 'act-' + Date.now(),
       type: 'loss',
       title: 'Oportunidade Marcada como Perdida',
-      text: `Motivo: ${lossReason}. ${lossDetails ? 'Detalhes: ' + lossDetails : ''}`,
+      text: `Motivo: ${lossLabel}. ${lossDetails ? 'Detalhes: ' + lossDetails : ''}`,
       author: user.name,
       timestamp: updatedAt
     };
 
-    crmStore.addAuditLog('Perda de Oportunidade', `Lead "${customer?.name || customerId}" marcado como perdido. Motivo: ${lossReason}.`, customer);
+    crmStore.addAuditLog('Perda de Oportunidade', `Lead "${customer?.name || customerId}" marcado como perdido. Motivo: ${lossLabel}.`, customer);
 
     // 1. Optimistic update
     if (customer) {
@@ -532,7 +560,7 @@ class StorageManager {
           activities: updatedActivities
         });
       } catch (fsErr) {
-        console.warn("Firestore sync warning on setLossReason (local update succeeded):", fsErr);
+        warnCloudWriteFailed(fsErr);
       }
     }
   }
@@ -717,6 +745,7 @@ class StorageManager {
       throw new Error(testResult.error || "Não foi possível conectar ao Firestore.");
     }
 
+    setLocalOnlyMode(false);
     localStorage.setItem(STORAGE_KEYS.FIREBASE_CONFIG, JSON.stringify(config));
     await this.init();
     return true;
@@ -724,6 +753,9 @@ class StorageManager {
 
   disconnectFirebase() {
     localStorage.removeItem(STORAGE_KEYS.FIREBASE_CONFIG);
+    // Stay local on the next load too, instead of reconnecting to the default project
+    setLocalOnlyMode(true);
+    firestoreService.stopFirestoreSync();
     this.mode = 'local';
     this.loadLocalData();
     this.notifyListeners();

@@ -8,8 +8,30 @@ const STORAGE_KEYS = {
   ACTIVITIES_DATA: 'nexus_crm_local_activities',
   APP_PREFS: 'nexus_crm_preferences',
   ORGANIZATION: 'nexus_crm_organization_config',
-  AI_METRICS: 'nexus_crm_ai_usage_metrics'
+  AI_METRICS: 'nexus_crm_ai_usage_metrics',
+  STORAGE_MODE: 'nexus_crm_storage_mode'
 };
+
+/**
+ * True when the user chose to keep data only in this browser (no cloud sync).
+ * Without this switch the app always fell back to the default Firebase project,
+ * so "disconnect" never really disconnected.
+ */
+export function isLocalOnlyMode() {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.STORAGE_MODE) === 'local';
+  } catch {
+    return false;
+  }
+}
+
+export function setLocalOnlyMode(enabled) {
+  if (enabled) {
+    localStorage.setItem(STORAGE_KEYS.STORAGE_MODE, 'local');
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.STORAGE_MODE);
+  }
+}
 
 // Default commercial organization & whitelabel parameters
 export const defaultOrganization = {
@@ -47,6 +69,9 @@ export const defaultFirebaseConfig = {
  * Retrieves the stored Firebase configuration from localStorage or environment
  */
 export function getSavedFirebaseConfig() {
+  if (isLocalOnlyMode()) {
+    return null;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
     if (raw) {
@@ -68,6 +93,7 @@ export function saveFirebaseConfig(config) {
   if (!config || !config.projectId || !config.apiKey) {
     throw new Error("Configuração inválida. 'projectId' e 'apiKey' são obrigatórios.");
   }
+  setLocalOnlyMode(false);
   localStorage.setItem(STORAGE_KEYS.FIREBASE_CONFIG, JSON.stringify(config));
 }
 

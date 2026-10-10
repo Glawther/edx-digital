@@ -201,7 +201,7 @@ export function scheduleFollowUpReminder(leadName, dueDate, taskTitle) {
 
   if (delay <= 0) {
     // Already due — send immediately
-    sendPushNotification(`⏰ Follow-up Pendente: ${leadName}`, {
+    sendPushNotification(`Follow-up Pendente: ${leadName}`, {
       body: taskTitle || 'Tarefa de follow-up está atrasada!',
       tag: 'followup-' + leadName.replace(/\s/g, '-'),
       data: { type: NOTIFICATION_TYPES.FOLLOW_UP, leadName }
@@ -212,7 +212,7 @@ export function scheduleFollowUpReminder(leadName, dueDate, taskTitle) {
   // Schedule via setTimeout (limited to browser session)
   if (delay < 86400000) { // Only schedule if within 24h
     setTimeout(() => {
-      sendPushNotification(`⏰ Follow-up Hoje: ${leadName}`, {
+      sendPushNotification(`Follow-up Hoje: ${leadName}`, {
         body: taskTitle || 'Lembre de fazer o follow-up!',
         tag: 'followup-' + leadName.replace(/\s/g, '-'),
         data: { type: NOTIFICATION_TYPES.FOLLOW_UP, leadName }
@@ -229,15 +229,15 @@ export function notifyDealEvent(type, leadName, dealValue = 0) {
 
   const messages = {
     [NOTIFICATION_TYPES.DEAL_WON]: {
-      title: `🏆 Negócio Fechado!`,
+      title: `Negócio Fechado!`,
       body: `${leadName} — ${formatBRL(dealValue)} convertido com sucesso!`
     },
     [NOTIFICATION_TYPES.DEAL_LOST]: {
-      title: `❌ Negócio Perdido`,
+      title: `Negócio Perdido`,
       body: `${leadName} — ${formatBRL(dealValue)} marcado como perdido.`
     },
     [NOTIFICATION_TYPES.LEAD_UPDATE]: {
-      title: `📋 Lead Atualizado`,
+      title: `Lead Atualizado`,
       body: `${leadName} teve alterações recentes.`
     }
   };
@@ -255,16 +255,16 @@ export function notifyDealEvent(type, leadName, dealValue = 0) {
  */
 export function getNotificationIcon(type) {
   const icons = {
-    [NOTIFICATION_TYPES.FOLLOW_UP]: '⏰',
-    [NOTIFICATION_TYPES.TASK_DUE]: '📋',
-    [NOTIFICATION_TYPES.LEAD_UPDATE]: '🔄',
-    [NOTIFICATION_TYPES.TEAM_INVITE]: '📨',
-    [NOTIFICATION_TYPES.DEAL_WON]: '🏆',
-    [NOTIFICATION_TYPES.DEAL_LOST]: '❌',
-    [NOTIFICATION_TYPES.SYSTEM]: '⚙️',
-    [NOTIFICATION_TYPES.AI_INSIGHT]: '✨'
+    [NOTIFICATION_TYPES.FOLLOW_UP]: '',
+    [NOTIFICATION_TYPES.TASK_DUE]: '',
+    [NOTIFICATION_TYPES.LEAD_UPDATE]: '',
+    [NOTIFICATION_TYPES.TEAM_INVITE]: '',
+    [NOTIFICATION_TYPES.DEAL_WON]: '',
+    [NOTIFICATION_TYPES.DEAL_LOST]: '',
+    [NOTIFICATION_TYPES.SYSTEM]: '',
+    [NOTIFICATION_TYPES.AI_INSIGHT]: ''
   };
-  return icons[type] || '🔔';
+  return icons[type] || '';
 }
 
 // Subscriber pattern for UI updates

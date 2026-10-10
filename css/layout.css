@@ -174,8 +174,8 @@ html, body {
 
 [data-theme="dark"] .nav-item.active {
   color: var(--accent-primary);
-  background: rgba(217, 249, 66, 0.09);
-  border-color: rgba(217, 249, 66, 0.25);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
 
 .nav-item svg {
@@ -255,7 +255,7 @@ html, body {
 .sidebar-tool-btn.active {
   background: var(--bg-surface-elevated);
   border-color: var(--border-strong);
-  color: var(--accent-lime, #d9f942);
+  color: var(--accent-lime, var(--accent));
 }
 
 .tool-chevron {
@@ -277,7 +277,7 @@ html, body {
   width: 100% !important;
   min-width: 230px !important;
   box-sizing: border-box !important;
-  background: #141722 !important;
+  background: var(--bg-surface-elevated) !important;
   border: 1px solid var(--border-strong) !important;
   border-radius: var(--radius-lg) !important;
   box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
@@ -301,7 +301,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--accent-lime, #d9f942);
+  color: var(--accent-lime, var(--accent));
   padding: 6px 10px 4px 10px;
   margin-top: 2px;
 }
@@ -330,11 +330,11 @@ html, body {
 }
 
 [data-theme="dark"] .sidebar-dropdown-menu .dropdown-item:hover {
-  background: rgba(217, 249, 66, 0.09);
+  background: var(--accent-soft);
 }
 
 [data-theme="dark"] .sidebar-dropdown-menu .dropdown-item:hover .dropdown-item-title {
-  color: var(--accent-lime, #d9f942);
+  color: var(--accent-lime, var(--accent));
 }
 
 .sidebar-dropdown-menu .dropdown-item-icon {
@@ -537,8 +537,8 @@ html, body {
 
 .search-box-large:focus-within {
   background: var(--bg-surface);
-  border-color: var(--accent-lime, #d9f942);
-  box-shadow: 0 0 0 3px rgba(217, 249, 66, 0.25);
+  border-color: var(--accent-lime, var(--accent));
+  box-shadow: 0 0 0 3px var(--accent-line);
 }
 
 .search-box-large svg {
@@ -620,7 +620,7 @@ html, body {
 .btn-header-lead:hover {
   background: var(--accent-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(217, 249, 66, 0.35);
+  box-shadow: 0 6px 18px var(--accent-line);
 }
 
 .btn-header-lead:active {
@@ -639,10 +639,10 @@ html, body {
   font-weight: 700;
   font-size: 0.92rem;
   letter-spacing: -0.01em;
-  background: var(--accent-lime, #d9f942);
+  background: var(--accent-lime, var(--accent));
   color: var(--accent-lime-text, #0b0f17);
   border: none;
-  box-shadow: 0 8px 24px rgba(217, 249, 66, 0.38), 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px var(--accent-line), 0 4px 12px rgba(0, 0, 0, 0.5);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -653,9 +653,9 @@ html, body {
 }
 
 .fab-bottom-right-lead:hover {
-  background: var(--accent-lime-hover, #c4eb22);
+  background: var(--accent-lime-hover, var(--accent-hover));
   transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 12px 30px rgba(217, 249, 66, 0.52), 0 6px 16px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 30px var(--accent-line), 0 6px 16px rgba(0, 0, 0, 0.6);
 }
 
 .fab-bottom-right-lead:active {
@@ -850,7 +850,7 @@ html, body {
     bottom: 1.25rem;
     right: 1.25rem;
     z-index: 1000;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(217, 249, 66, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45), 0 0 0 2px var(--accent-line);
     display: inline-flex !important;
   }
 }

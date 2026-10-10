@@ -12,27 +12,27 @@ import { addInAppNotification, NOTIFICATION_TYPES } from './notification-service
  */
 export const OUTREACH_TEMPLATES = {
   first_contact: {
-    label: '👋 Primeiro Contato (Apresentação)',
+    label: 'Primeiro Contato (Apresentação)',
     template: (lead, user, company) => 
       `Olá ${lead.name || 'tudo bem'}! Aqui é o ${user?.name || 'consultor'} da ${company || 'nossa equipe'}. Vi que você demonstrou interesse em nossas soluções e gostaria de entender melhor seu momento para podermos ajudar. Teria 5 minutinhos hoje para conversarmos?`
   },
   proposal_followup: {
-    label: '📄 Acompanhamento de Proposta',
+    label: 'Acompanhamento de Proposta',
     template: (lead, user, company) => 
       `Olá ${lead.name}! Passando para saber se você conseguiu avaliar a proposta comercial que enviamos da ${company || 'nossa empresa'}. Ficou com alguma dúvida sobre os valores ou prazos que eu possa esclarecer agora?`
   },
   negotiation: {
-    label: '🎯 Quebra de Objeção & Condição Especial',
+    label: 'Quebra de Objeção & Condição Especial',
     template: (lead, user, company) => 
       `Olá ${lead.name}! Consegui aprovar com a nossa diretoria uma condição especial de fechamento para sua proposta esta semana. Se conseguirmos assinar até sexta-feira, consigo manter os benefícios diferenciados. Podemos fechar?`
   },
   cold_lead: {
-    label: '❄️ Reativação de Lead Frio',
+    label: 'Reativação de Lead Frio',
     template: (lead, user, company) => 
       `Olá ${lead.name}, tudo bem? Faz alguns dias que conversamos sobre seu projeto. O projeto ainda é uma prioridade para você este mês ou prefere que eu retome o contato mais adiante?`
   },
   closing: {
-    label: '🚀 Fechamento & Próximos Passos',
+    label: 'Fechamento & Próximos Passos',
     template: (lead, user, company) => 
       `Excelente ${lead.name}! Estamos prontos para iniciar o seu onboarding. Vou te enviar o link para assinatura do contrato e emissão da fatura para liberarmos seu acesso hoje mesmo. Combinado?`
   }
@@ -153,7 +153,7 @@ export function recordWhatsAppContact(lead, message) {
 
   addInAppNotification({
     type: NOTIFICATION_TYPES.LEAD_UPDATE,
-    title: `💬 Contato WhatsApp: ${lead.name}`,
+    title: `Contato WhatsApp: ${lead.name}`,
     body: `Mensagem enviada pelo WhatsApp para ${lead.phone || lead.name}.`
   });
 }

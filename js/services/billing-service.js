@@ -166,12 +166,12 @@ export function validateCreditCard(cardData) {
  */
 export function detectCardBrand(number) {
   const clean = (number || '').replace(/\D/g, '');
-  if (/^4/.test(clean)) return 'Visa 💳';
-  if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(clean)) return 'Mastercard 💳';
-  if (/^3[47]/.test(clean)) return 'American Express 💳';
-  if (/^6(011|5)/.test(clean)) return 'Discover 💳';
-  if (/^(4011|4389|4514|4576|5041|5066|5090)/.test(clean)) return 'Elo 💳';
-  return 'Cartão de Crédito 💳';
+  if (/^4/.test(clean)) return 'Visa ';
+  if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(clean)) return 'Mastercard ';
+  if (/^3[47]/.test(clean)) return 'American Express ';
+  if (/^6(011|5)/.test(clean)) return 'Discover ';
+  if (/^(4011|4389|4514|4576|5041|5066|5090)/.test(clean)) return 'Elo ';
+  return 'Cartão de Crédito ';
 }
 
 /**
@@ -254,7 +254,7 @@ export async function processPayment(paymentInfo) {
   }, AUDIT_SEVERITY.INFO);
 
   // Send push notification
-  sendPushNotification(`🎉 Assinatura ${plan.name} Confirmada!`, {
+  sendPushNotification(`Assinatura ${plan.name} Confirmada!`, {
     body: `Seu pagamento de R$ ${amount.toFixed(2)} foi processado com sucesso. Todos os recursos foram liberados!`,
     data: { type: NOTIFICATION_TYPES.SYSTEM, invoiceId: invoice.id }
   });

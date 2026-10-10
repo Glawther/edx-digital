@@ -121,7 +121,7 @@ export async function pollWebhookInbox() {
       // Trigger In-App Notification
       addInAppNotification({
         type: NOTIFICATION_TYPES.LEAD_UPDATE,
-        title: `⚡ Novo Lead Recebido! (${item.source || 'Webhook'})`,
+        title: `Novo Lead Recebido! (${item.source || 'Webhook'})`,
         body: `${newCustomer.name} (${newCustomer.company}) cadastrado automaticamente no funil!`,
         data: { leadId: newCustomer.id }
       });

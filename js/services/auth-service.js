@@ -112,13 +112,8 @@ export function setUserRole(newRole) {
 const SESSION_STORAGE_KEY = 'nexus_crm_session_active';
 
 export function isSessionActive() {
-  const val = localStorage.getItem(SESSION_STORAGE_KEY);
-  if (val === null) {
-    // Default to active on first access so CRM loads directly into dashboard
-    localStorage.setItem(SESSION_STORAGE_KEY, 'true');
-    return true;
-  }
-  return val === 'true';
+  // No session until someone signs in: the first visit lands on the login portal
+  return localStorage.getItem(SESSION_STORAGE_KEY) === 'true';
 }
 
 export function setSessionActive(active) {
