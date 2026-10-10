@@ -608,7 +608,8 @@ function setupLossReasonEvents() {
 
       try {
         const cust = storage.getCustomer(customerId);
-        await storage.setLossReason(customerId, reasonLabel, details);
+        // Store the reason id (the metrics group by id); the label is resolved when displaying
+        await storage.setLossReason(customerId, reasonVal, details);
         logAudit(AUDIT_ACTIONS.LEAD_LOST, { customerId, name: cust?.name, reason: reasonLabel, details }, AUDIT_SEVERITY.INFO);
         notifyDealEvent(NOTIFICATION_TYPES.DEAL_LOST, cust?.name || 'Cliente', cust?.dealValue || 0);
         activeLossCustomerId = null;

@@ -6,10 +6,10 @@
 const THEME_STORAGE_KEY = 'nexus_crm_theme';
 
 /**
- * Returns current saved theme, defaulting to 'dark' (as in the Doctor+ reference)
+ * Returns current saved theme, defaulting to 'light' (the sober white look the product is meant to have)
  */
 export function getSavedTheme() {
-  return localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+  return localStorage.getItem(THEME_STORAGE_KEY) || 'light';
 }
 
 /**

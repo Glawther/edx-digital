@@ -3,7 +3,7 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
-import { STAGES, PRIORITIES, LOSS_REASONS, TASK_TYPES } from '../core/crm-store.js';
+import { STAGES, PRIORITIES, LOSS_REASONS, TASK_TYPES, getLossReasonLabel } from '../core/crm-store.js';
 import { getEmployees, maskCPF } from '../services/employee-service.js';
 
 export function formatBRL(amount) {
@@ -227,7 +227,7 @@ function renderLeadCard(customer, permissions = {}) {
 
       ${customer.stage === 'lost' && customer.lossReason ? `
         <div style="font-size: 0.72rem; color: var(--color-lost); background: var(--color-lost-bg); border: 1px solid var(--color-lost-border); border-radius: 4px; padding: 3px 6px; margin-bottom: 0.5rem;">
-          🛑 Motivo: ${escapeHtml(customer.lossReason)}
+          Motivo: ${escapeHtml(getLossReasonLabel(customer.lossReason))}
         </div>
       ` : ''}
 
