@@ -13,10 +13,9 @@ import { escapeHtml, showToast } from '../ui/ui-renderer.js';
 // Dynamic Cloud Backend API Base URL Resolver
 // ==========================================================================
 window.getApiBaseUrl = function() {
-  const host = window.location.hostname;
-  // Served by the Node server itself (local development or Render): same origin
-  if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.onrender.com')) return '';
-  return 'https://nexus-crm-yfof.onrender.com';
+  // The server answers under /api at the site's own address: Firebase Hosting hands those
+  // requests to the function, and on the developer's machine server.js answers them
+  return '';
 };
 
 /**

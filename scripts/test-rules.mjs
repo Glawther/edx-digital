@@ -49,6 +49,6 @@ if (await allOpen()) {
   }
 }
 
-const tests = spawnSync(process.execPath, ['--test', 'tests/rules/firestore-rules.test.mjs'], { stdio: 'inherit' });
+const tests = spawnSync(process.execPath, ['--test', 'tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs'], { stdio: 'inherit' });
 stop(emulators);
 process.exit(tests.status === 0 ? 0 : 1);

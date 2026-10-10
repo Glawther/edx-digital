@@ -14,3 +14,6 @@ Thumbs.db
 
 # Gerado por `npm run build`
 dist/
+
+# Valores usados só pelo emulador de funções
+.secret.local

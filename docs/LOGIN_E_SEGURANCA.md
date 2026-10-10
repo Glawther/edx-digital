@@ -57,10 +57,11 @@ npm run test:rules
 
 ## Proteções do servidor
 
+- **Onde roda**: em produção o servidor é uma função do Firebase atrás de `/api` no endereço do próprio site; as páginas são entregues pelo Firebase Hosting, que só publica a pasta `dist/`. O item abaixo vale para `server.js`, usado no computador de quem desenvolve.
 - **Só arquivos públicos**: o servidor entrega as páginas, `js/`, `css/` e `assets/`. O código dele, a pasta de dados, configurações e arquivos ocultos respondem "não encontrado". A lista fica em `server/controllers/static-controller.js`.
 - **Rotas em uso**: cobrança (`/api/billing`), caixa de entrada de formulários (`/api/webhook/leads`) e `/health`. Qualquer outro endereço em `/api` responde 404.
 - **API antiga removida**: existia uma `/api/v1` que o aplicativo nunca usou, com uma rota de token que entregava sessão sem conferir quem pedia. O código e os testes dela saíram do repositório; o endereço responde 404, e `server/tests/server-surface.test.js` confere isso.
-- **Caixa de entrada de formulários**: cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
+- **Caixa de entrada de formulários**: fica na coleção `webhook_leads` do banco, fechada ao aplicativo pelas regras (só o servidor lê e grava). Cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
 
 ## Proteções do banco
 

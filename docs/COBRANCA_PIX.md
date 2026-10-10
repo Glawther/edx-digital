@@ -3,7 +3,7 @@
 ## Como funciona
 
 1. O administrador escolhe um plano em Ferramentas > Plano e uso.
-2. O servidor (Render) cria uma cobrança PIX no Mercado Pago e devolve o QR Code e o código copia e cola. A cobrança vale por 30 minutos.
+2. O servidor (uma função do Firebase, no mesmo projeto do site) cria uma cobrança PIX no Mercado Pago e devolve o QR Code e o código copia e cola. A cobrança vale por 30 minutos.
 3. O cliente paga no aplicativo do banco.
 4. O Mercado Pago avisa o servidor. O servidor **consulta o pagamento no próprio Mercado Pago** e, se estiver aprovado e com o valor do plano, grava na empresa: plano, situação ativa e validade de 30 dias.
 5. A tela do cliente confirma sozinha em alguns segundos.
@@ -19,43 +19,57 @@ Pagar antes do vencimento soma 30 dias ao período em curso. Não há cobrança 
 
 ## Colocar para funcionar
 
-São três segredos, preenchidos **no painel do Render** (Environment), nunca no código.
+O servidor é a função `api` do Firebase (`cloud.js`). O site entrega a ela tudo o que chega em `/api`, então não há outro serviço nem outro endereço.
 
-### 1. Mercado Pago: token de acesso
+### 1. Plano Blaze do Firebase
+
+Funções só rodam no plano Blaze (pago por uso, com uma faixa gratuita mensal que cobre um CRM pequeno). No console do Firebase, embaixo à esquerda, clique em **Fazer upgrade** e cadastre uma forma de pagamento. Vale criar um **alerta de orçamento** no mesmo passo, para ser avisado se algum dia houver gasto.
+
+### 2. Mercado Pago: token de acesso
 
 1. Crie a conta em https://www.mercadopago.com.br (funciona com CPF) e conclua a verificação de identidade.
 2. Cadastre uma chave PIX na conta: sem ela o Mercado Pago não gera cobrança por PIX.
 3. Em https://www.mercadopago.com.br/developers/panel/app crie uma aplicação (tipo: pagamentos online).
 4. Em **Credenciais de produção**, copie o **Access Token**.
-5. No Render, crie a variável `MERCADO_PAGO_ACCESS_TOKEN` com esse valor.
+5. No terminal, na pasta do projeto, rode o comando abaixo e cole o valor quando ele pedir (o que você digita não aparece na tela):
 
-### 2. Mercado Pago: aviso de pagamento (webhook)
+```bash
+firebase functions:secrets:set MERCADO_PAGO_ACCESS_TOKEN
+```
+
+### 3. Mercado Pago: aviso de pagamento (webhook)
 
 1. Na mesma aplicação, abra **Webhooks > Configurar notificações**, modo produção.
-2. URL: `https://nexus-crm-yfof.onrender.com/api/billing/webhook/mercadopago`
+2. URL: `https://edx-digital.web.app/api/billing/webhook/mercadopago`
 3. Evento: **Pagamentos**.
 4. Salve e copie a **assinatura secreta** que aparece.
-5. No Render, crie a variável `MERCADO_PAGO_WEBHOOK_SECRET` com esse valor.
+5. No terminal:
 
-### 3. Firebase: conta de serviço
-
-É o que permite ao servidor gravar o plano no banco.
-
-1. Console do Firebase > Configurações do projeto > **Contas de serviço** > **Gerar nova chave privada**. Um arquivo `.json` é baixado.
-2. No Render, crie a variável `FIREBASE_SERVICE_ACCOUNT` e cole o **conteúdo inteiro** do arquivo.
-3. Apague o arquivo do computador. Ele dá acesso total ao banco: nunca o coloque no repositório nem o envie por mensagem.
-
-### 4. Conferir
-
-Depois de salvar as variáveis, o Render reinicia o servidor. Abra:
-
-```
-https://nexus-crm-yfof.onrender.com/api/billing/status
+```bash
+firebase functions:secrets:set MERCADO_PAGO_WEBHOOK_SECRET
 ```
 
-Deve responder `{"configured":true}`. Se responder `false`, falta o token do Mercado Pago ou a conta de serviço.
+Os dois valores ficam no Secret Manager do Google, nunca no código nem no repositório. Enquanto um deles for a palavra `pendente`, a cobrança conta como não configurada.
 
-Faça então um pagamento real de teste com a sua própria conta do CRM (o plano Starter, R$ 97) e veja o plano liberar. Para devolver o dinheiro a si mesmo, use a opção de devolução no painel do Mercado Pago.
+### 4. Publicar e conferir
+
+A função só passa a usar um segredo novo depois de publicada de novo:
+
+```bash
+npm run deploy
+```
+
+Abra então:
+
+```
+https://edx-digital.web.app/api/billing/status
+```
+
+Deve responder `{"configured":true}`.
+
+Faça um pagamento real de teste com a sua própria conta do CRM (o plano Starter, R$ 97) e veja o plano liberar. Para devolver o dinheiro a si mesmo, use a opção de devolução no painel do Mercado Pago.
+
+Não existe mais arquivo de chave do Firebase: dentro do Google, a função grava no banco com a identidade do próprio projeto.
 
 ## Enquanto não estiver configurado
 
@@ -83,7 +97,8 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 
 ## Limites conhecidos
 
-- **Servidor gratuito do Render dorme** depois de um tempo sem uso. O primeiro PIX depois disso pode levar até um minuto para ser gerado, e o aviso do Mercado Pago pode chegar com atraso (ele tenta de novo sozinho). A tela do cliente também consulta o pagamento a cada 5 segundos, o que acorda o servidor. Um plano pago do Render elimina a espera.
+- **Primeira chamada depois de um tempo parado**: a função é ligada sob demanda, e a primeira resposta pode levar alguns segundos. O aviso do Mercado Pago que chegar nesse momento é repetido por ele sozinho, e a tela do cliente consulta o pagamento a cada 5 segundos.
+- **Limites de chamadas** (contatos por minuto, cobranças por conta) são contados em cada cópia da função, e podem existir até três ao mesmo tempo.
 - **Limites do plano** (pessoas com acesso, oportunidades em aberto) são conferidos pelo aplicativo, não pelas regras do banco. Na conta de quem administra a contagem de oportunidades é exata; a de um vendedor conta só a própria carteira. Com a equipe completa, o código de convite fica pausado.
 - **Reembolso**: você devolve o valor no painel do Mercado Pago e o sistema tira sozinho os 30 dias daquele pagamento, quando o Mercado Pago avisa (estorno total ou contestação). Sem outro período pago, a empresa volta para onde o teste está, em geral modo de leitura. Devolução parcial não muda nada: ajuste `paidUntilMs` e `paidUntil` no console do Firebase se precisar.
 - **Nota fiscal** não é emitida pelo sistema.
@@ -92,4 +107,4 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 
 Testes da lógica (sem rede): `npm test`. A cobrança está em `server/tests/billing-pix.test.js`; importação, lembretes, relatório e personalização estão em `tests/unit/`.
 
-Para rodar de ponta a ponta sem tocar em nada real: emuladores do Firebase (`npm run emulators`) e o servidor com `FIREBASE_PROJECT_ID=demo-edx-digital`, `FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST` e `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira. Os emuladores são ignorados quando `NODE_ENV=production`.
+Para rodar de ponta a ponta sem tocar em nada real: `npm run build` e depois `firebase emulators:start --only auth,firestore,functions,hosting --project demo-edx-digital`. O site abre em http://127.0.0.1:5000 com a função atrás de `/api`, como em produção. O emulador lê os segredos de um arquivo `.secret.local` (fora do repositório); com `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira dá para simular pagamentos. Os emuladores são ignorados em produção.

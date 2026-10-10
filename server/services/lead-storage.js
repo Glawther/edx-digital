@@ -1,16 +1,25 @@
 /**
  * EDX Digital - Inbox for leads sent by forms
- * One JSON file on the server's disk. It is a short-lived queue, not a database: each CRM
- * account collects its own leads within seconds and they are then kept in the cloud.
+ * A short-lived queue, not a database: each CRM account collects its own leads within
+ * seconds and keeps them with its other data.
+ *
+ * Two places to keep the queue, behind the same four operations:
+ *   - Firestore (collection webhook_leads, closed to the app by the rules) in production,
+ *     where the function has no disk of its own and may run as several copies;
+ *   - one JSON file on disk on the developer's machine and in the tests.
  */
 
 const fs = require('fs');
 const fsPromises = fs.promises;
 const { DATA_DIR, WEBHOOK_FILE } = require('../config/constants');
+const { firestoreEmulatorHost, onGoogleCloud } = require('../billing/google-auth');
+const { queryDocs, setDoc, deleteDoc } = require('../billing/firestore-store');
 
-const MAX_TOTAL = 5000;          // across every inbox
+const MAX_TOTAL = 5000;          // across every inbox (file only)
 const MAX_PER_INBOX = 500;       // waiting to be collected by one account
 const KEEP_PROCESSED_MS = 24 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------- file
 
 function initStorage() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -36,6 +45,7 @@ let queue = Promise.resolve();
  */
 function updateLeads(change) {
   const run = queue.then(async () => {
+    initStorage();
     const cutoff = Date.now() - KEEP_PROCESSED_MS;
     const current = (await readLeads()).filter(lead => lead.status !== 'processed' || Date.parse(lead.createdAt) > cutoff);
     const next = change(current);
@@ -46,8 +56,62 @@ function updateLeads(change) {
   return run;
 }
 
-function getWebhookLeads() {
-  return queue.then(readLeads);
+const fileInbox = {
+  /** @returns {Promise<boolean>} false when this inbox already holds as many as it may */
+  async add(lead) {
+    let full = false;
+    await updateLeads((leads) => {
+      const waiting = leads.filter(item => item.inbox === lead.inbox && item.status === 'unread').length;
+      if (waiting >= MAX_PER_INBOX) {
+        full = true;
+        return leads;
+      }
+      return [lead, ...leads].slice(0, MAX_TOTAL);
+    });
+    return !full;
+  },
+
+  async list(inbox) {
+    return (await queue.then(readLeads)).filter(lead => lead.inbox === inbox);
+  },
+
+  /** @param {string[]|null} ids - null acknowledges everything in the inbox */
+  async acknowledge(inbox, ids) {
+    await updateLeads(leads => leads.map(lead => (
+      lead.inbox === inbox && (!ids || ids.includes(lead.id)) ? { ...lead, status: 'processed' } : lead
+    )));
+  }
+};
+
+// ---------------------------------------------------------------- Firestore
+
+const COLLECTION = 'webhook_leads';
+
+const firestoreInbox = {
+  async add(lead) {
+    const waiting = await queryDocs(COLLECTION, [['inbox', lead.inbox], ['status', 'unread']], MAX_PER_INBOX);
+    if (waiting.length >= MAX_PER_INBOX) return false;
+    await setDoc(`${COLLECTION}/${lead.id}`, lead);
+    return true;
+  },
+
+  async list(inbox) {
+    return (await queryDocs(COLLECTION, [['inbox', inbox]], MAX_PER_INBOX)).map(doc => doc.data);
+  },
+
+  // Once collected, a lead lives in the company's own data: here it is simply removed
+  async acknowledge(inbox, ids) {
+    const mine = await queryDocs(COLLECTION, [['inbox', inbox]], MAX_PER_INBOX);
+    const wanted = mine.filter(doc => !ids || ids.includes(doc.data.id));
+    await Promise.all(wanted.map(doc => deleteDoc(`${COLLECTION}/${doc.id}`)));
+  }
+};
+
+/** Firestore in production (and against the emulator when asked); the file otherwise */
+function leadInbox() {
+  if (onGoogleCloud()) return firestoreInbox;
+  if (process.env.LEADS_STORE === 'firestore' && firestoreEmulatorHost()) return firestoreInbox;
+  return fileInbox;
 }
 
 // Plain text with a size limit. Escaping for the screen is the screen's job.
@@ -78,8 +142,9 @@ function normalizeLeadPayload(rawData) {
 
 module.exports = {
   initStorage,
-  getWebhookLeads,
-  updateLeads,
+  leadInbox,
+  fileInbox,
+  firestoreInbox,
   normalizeLeadPayload,
   MAX_TOTAL,
   MAX_PER_INBOX

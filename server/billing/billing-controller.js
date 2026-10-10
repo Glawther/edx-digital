@@ -14,7 +14,7 @@ const mercadopago = require('./mercadopago');
 const { createBillingService, BillingError } = require('./billing-service');
 
 function publicBaseUrl() {
-  return (process.env.PUBLIC_API_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
+  return (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
 }
 
 function isBillingConfigured() {
@@ -118,7 +118,7 @@ async function handleWebhook(req, res) {
   if (topic && topic !== 'payment') return send(res, 200, { ignored: true });
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(dataId))) return send(res, 200, { ignored: true });
 
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET || '';
+  const secret = mercadopago.webhookSecret();
   if (secret) {
     const valid = mercadopago.verifyWebhookSignature({
       signatureHeader: req.headers['x-signature'],

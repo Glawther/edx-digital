@@ -3,6 +3,23 @@
  */
 
 function parseJsonBody(req, maxSizeBytes = 1048576) {
+  // In Firebase Functions the body was read before the request got here
+  if (Buffer.isBuffer(req.rawBody)) {
+    const rawBuffer = req.rawBody;
+    if (rawBuffer.length > maxSizeBytes) return Promise.reject(new Error('PAYLOAD_TOO_LARGE'));
+    if (rawBuffer.length === 0) return Promise.resolve({ rawBuffer, body: {} });
+    try {
+      const body = JSON.parse(rawBuffer.toString('utf8'));
+      return Promise.resolve({ rawBuffer, body: body && typeof body === 'object' ? body : {} });
+    } catch {
+      return Promise.reject(new Error('INVALID_JSON'));
+    }
+  }
+  if (req.body !== undefined) {
+    // read by the platform, and there was nothing in it
+    return Promise.resolve({ rawBuffer: Buffer.alloc(0), body: {} });
+  }
+
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;

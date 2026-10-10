@@ -10,8 +10,18 @@ function apiBase() {
   return process.env.MERCADO_PAGO_API_BASE || 'https://api.mercadopago.com';
 }
 
+// "pendente" is what the secret holds until the real credential is set (docs/COBRANCA_PIX.md)
+function real(value) {
+  const text = String(value || '').trim();
+  return text && text.toLowerCase() !== 'pendente' ? text : '';
+}
+
 function accessToken() {
-  return process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
+  return real(process.env.MERCADO_PAGO_ACCESS_TOKEN);
+}
+
+function webhookSecret() {
+  return real(process.env.MERCADO_PAGO_WEBHOOK_SECRET);
 }
 
 function isConfigured() {
@@ -93,4 +103,4 @@ function verifyWebhookSignature({ signatureHeader, requestId, dataId, secret }) 
   return given.length === wanted.length && crypto.timingSafeEqual(given, wanted);
 }
 
-module.exports = { isConfigured, createPixPayment, getPayment, verifyWebhookSignature };
+module.exports = { isConfigured, webhookSecret, createPixPayment, getPayment, verifyWebhookSignature };

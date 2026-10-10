@@ -154,6 +154,17 @@ test('sem login: nada de clientes, perfis, empresas ou auditoria', async () => {
   assert.equal(q.denied, true);
 });
 
+test('a caixa de entrada de formulários (webhook_leads) é só do servidor', async () => {
+  const contato = { inbox: 'x', name: 'Fulano', status: 'unread' };
+  assert.equal(await put(SERVER, `webhook_leads/teste-${RUN}`, contato), OK);
+  for (const who of [null, world.a.owner, world.ana]) {
+    assert.equal(await get(who, `webhook_leads/teste-${RUN}`), DENIED);
+    assert.equal(await put(who, `webhook_leads/outro-${RUN}`, contato), DENIED);
+    assert.equal(await del(who, `webhook_leads/teste-${RUN}`), DENIED);
+    assert.equal((await list(who, 'webhook_leads', [['inbox', 'x']])).denied, true);
+  }
+});
+
 test('sem login: as coleções antigas (employees, system_config) estão fechadas', async () => {
   assert.equal(await get(null, 'employees/qualquer'), DENIED);
   assert.equal(await put(null, 'employees/qualquer', { cpf: '000' }), DENIED);

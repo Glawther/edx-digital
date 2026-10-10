@@ -8,7 +8,7 @@ Funil de vendas, clientes e tarefas para equipes pequenas. Site: https://edx-dig
 |---|---|---|
 | Aplicativo | `index.html`, `js/`, `css/` | Roda inteiro no navegador, em JavaScript puro (módulos ES), sem framework. |
 | Dados e login | Firebase (Authentication e Firestore) | Cada empresa só alcança os próprios dados; quem garante isso são as regras em `firestore.rules`. |
-| Servidor | `server.js`, `server/` | Node sem dependências, no Render. Cobra por PIX (Mercado Pago) e guarda por instantes os contatos enviados por formulários. |
+| Servidor | `cloud.js`, `server/` | Uma função do Firebase, no mesmo projeto: o site entrega a ela tudo o que chega em `/api`. Cobra por PIX (Mercado Pago) e guarda por instantes os contatos enviados por formulários. `server.js` faz o mesmo no seu computador e serve o site. |
 | Páginas públicas | `landing.html`, `termos.html`, `privacidade.html` | Apresentação, termos de uso e política de privacidade. |
 
 ```
@@ -61,9 +61,9 @@ O HTML não carrega código: nada de `onclick` nem de `<script>` com conteúdo. 
 npm run deploy
 ```
 
-O comando roda o build e depois publica as regras do banco e o site. Os índices do banco (`firestore.indexes.json`) só precisam ser publicados quando mudam, com `npm run deploy:indexes`. O build junta o JavaScript num arquivo só, minifica JavaScript e CSS e grava tudo em `dist/`, que é a única pasta enviada. Os arquivos de origem não mudam. Publicar com `firebase deploy` direto, sem o build antes, enviaria uma `dist/` antiga ou vazia.
+O comando roda o build e depois publica as regras do banco, a função do servidor e o site. Os índices do banco (`firestore.indexes.json`) só precisam ser publicados quando mudam, com `npm run deploy:indexes`. O build junta o JavaScript num arquivo só, minifica JavaScript e CSS e grava tudo em `dist/`, que é a única pasta enviada. Os arquivos de origem não mudam. Publicar com `firebase deploy` direto, sem o build antes, enviaria uma `dist/` antiga ou vazia.
 
-O servidor é publicado pelo Render a cada alteração na branch `main`.
+Publicar a função exige o plano Blaze do Firebase e os dois segredos do Mercado Pago criados; o passo a passo está em [docs/COBRANCA_PIX.md](docs/COBRANCA_PIX.md).
 
 ## Documentação
 
