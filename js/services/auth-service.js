@@ -12,7 +12,9 @@ import {
   saveOrganization,
   clearSavedOrganization,
   setLocalOnlyMode,
-  setOrganizationSyncHook
+  setOrganizationSyncHook,
+  getPlanState,
+  TRIAL_DAYS
 } from '../core/config.js';
 import { getFirebase } from './firebase-app.js';
 
@@ -208,7 +210,8 @@ export async function registerCompany({ name, email, company, password, plan = '
     ownerUid: uid,
     plan: ['starter', 'pro', 'enterprise'].includes(plan) ? plan : 'pro',
     planStatus: 'trial',
-    trialDaysLeft: 14,
+    // The database rules refuse a later date than 14 days from now
+    trialEndsAtMs: Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
     createdAt: now
   });
   await fsMod.setDoc(fsMod.doc(db, 'users', uid), {
@@ -407,6 +410,14 @@ export async function deleteCompany(password) {
   clearSavedOrganization();
   notifyRoleListeners();
   notifyListeners();
+}
+
+/**
+ * True when the company's plan has lapsed: everything can be seen and exported, nothing changed.
+ * The demo is never read-only.
+ */
+export function isReadOnly() {
+  return sessionKind === SESSION_KINDS.CLOUD && getPlanState().readOnly === true;
 }
 
 /**

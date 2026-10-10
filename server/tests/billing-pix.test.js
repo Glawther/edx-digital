@@ -117,6 +117,7 @@ test('pagamento aprovado libera o plano por 30 dias', async () => {
   assert.equal(db.organizations.org_a.plan, 'enterprise');
   assert.equal(db.organizations.org_a.planStatus, 'active');
   assert.equal(Date.parse(db.organizations.org_a.paidUntil), NOW + PERIOD_DAYS * DAY);
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + PERIOD_DAYS * DAY, 'as regras do banco comparam este número');
   assert.equal(db.organizations.org_a.pendingPaymentId, null);
   assert.equal(db.payments[charge.paymentId].status, 'approved');
 });

@@ -158,25 +158,41 @@ export function applyWhitelabelStyles(org = null) {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const TRIAL_DAYS = 14;
+export const GRACE_DAYS = 3;
 
 /**
- * Where the company's plan stands today:
- *   trial        still inside the free period
- *   trial_ended  free period over, nothing paid yet
+ * Where the company's plan stands today. The same rules are enforced by the database.
+ *   trial        inside the free period
+ *   trial_ended  free period over, nothing paid          -> read-only
  *   active       paid, with days left
- *   expired      paid before, period over
+ *   grace        paid period over, within the tolerance  (daysLeft = days until read-only)
+ *   expired      paid period and tolerance over          -> read-only
  */
 export function getPlanState(org = getSavedOrganization()) {
   const now = Date.now();
-  if (org.planStatus === 'active' && org.paidUntil) {
-    const daysLeft = Math.ceil((Date.parse(org.paidUntil) - now) / DAY_MS);
-    return daysLeft > 0
-      ? { status: 'active', daysLeft, until: org.paidUntil }
-      : { status: 'expired', daysLeft: 0, until: org.paidUntil };
+
+  if (org.planStatus === 'active') {
+    const paidUntilMs = Number(org.paidUntilMs) || Date.parse(org.paidUntil) || 0;
+    const until = new Date(paidUntilMs).toISOString();
+    if (now < paidUntilMs) {
+      return { status: 'active', daysLeft: Math.ceil((paidUntilMs - now) / DAY_MS), until, readOnly: false };
+    }
+    const blockAt = paidUntilMs + GRACE_DAYS * DAY_MS;
+    return now < blockAt
+      ? { status: 'grace', daysLeft: Math.ceil((blockAt - now) / DAY_MS), until, readOnly: false }
+      : { status: 'expired', daysLeft: 0, until, readOnly: true };
   }
-  const created = Date.parse(org.createdAt) || now;
-  const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor((now - created) / DAY_MS));
-  return daysLeft > 0 ? { status: 'trial', daysLeft } : { status: 'trial_ended', daysLeft: 0 };
+
+  // Companies created before the trial end was recorded keep working
+  if (org.trialEndsAtMs === undefined || org.trialEndsAtMs === null) {
+    const created = Date.parse(org.createdAt) || now;
+    const daysLeft = Math.max(0, TRIAL_DAYS - Math.floor((now - created) / DAY_MS));
+    return { status: 'trial', daysLeft, readOnly: false, legacy: true };
+  }
+  const trialEndsAtMs = Number(org.trialEndsAtMs);
+  return now < trialEndsAtMs
+    ? { status: 'trial', daysLeft: Math.ceil((trialEndsAtMs - now) / DAY_MS), readOnly: false }
+    : { status: 'trial_ended', daysLeft: 0, readOnly: true };
 }
 
 /**

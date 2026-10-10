@@ -61,10 +61,29 @@ Faça então um pagamento real de teste com a sua própria conta do CRM (o plano
 
 A tela de assinatura mostra "A cobrança automática ainda não está disponível". Nada quebra, e nenhum plano é liberado.
 
+## O que acontece quando vence
+
+| Situação | O que o cliente vê | O que pode fazer |
+|---|---|---|
+| Teste, com dias restantes | "Teste: N dias restantes" no topo | Tudo |
+| Pago, faltando 5 dias ou menos | "Plano vence em N dias" no topo | Tudo |
+| Pago, vencido há até 3 dias (tolerância) | Aviso pedindo a renovação | Tudo |
+| Teste encerrado, ou vencido há mais de 3 dias | Aviso de modo de leitura | Ver, exportar e excluir. Não cria nem altera. |
+
+O modo de leitura é aplicado pelas regras do banco (`planAllowsWrites` em `firestore.rules`), não só pela tela. Ao pagar, a empresa volta ao normal na hora.
+
+Quem controla as datas:
+
+- `trialEndsAtMs`: gravado na criação da empresa. As regras recusam mais de 14 dias e não deixam alterar depois.
+- `paidUntilMs`: gravado só pelo servidor de cobrança, quando um pagamento é confirmado.
+
+Para dar mais prazo a um cliente (cortesia, acordo), altere `trialEndsAtMs` ou `paidUntilMs` da empresa no console do Firebase. São números em milissegundos; https://www.epochconverter.com converte uma data.
+
+Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca entram em modo de leitura pelo teste. Hoje isso vale só para a sua própria conta.
+
 ## Limites conhecidos
 
 - **Servidor gratuito do Render dorme** depois de um tempo sem uso. O primeiro PIX depois disso pode levar até um minuto para ser gerado, e o aviso do Mercado Pago pode chegar com atraso (ele tenta de novo sozinho). A tela do cliente também consulta o pagamento a cada 5 segundos, o que acorda o servidor. Um plano pago do Render elimina a espera.
-- **Vencimento não bloqueia o uso.** Quando o teste ou o período pago termina, o sistema avisa no topo da tela, mas continua funcionando. Bloquear ou limitar é uma decisão de produto ainda em aberto.
 - **Limites do plano** (pessoas, oportunidades) são mostrados, mas não impedidos.
 - **Reembolso** é feito por você no painel do Mercado Pago. O sistema não desfaz o período automaticamente; ajuste `paidUntil` da empresa no console do Firebase se precisar.
 - **Nota fiscal** não é emitida pelo sistema.

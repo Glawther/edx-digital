@@ -53,7 +53,8 @@ import {
   markActivity,
   isIdleTooLong,
   getIdToken,
-  refreshOrganization
+  refreshOrganization,
+  isReadOnly
 } from './services/auth-service.js';
 import { describeAuthError } from './services/firebase-app.js';
 import {
@@ -381,7 +382,12 @@ function setupIdleSignOut() {
     showToast('Você ficou muito tempo sem usar o CRM e a sessão foi encerrada. Entre de novo.', 'info');
   };
   setInterval(check, 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  setInterval(refreshPlanPill, 10 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    check();
+    refreshPlanPill();
+  });
 }
 
 // Nothing that belongs to a company stays in this browser after its session ends.
@@ -770,7 +776,7 @@ window.handleDropCard = async function(event, targetStage) {
 
     setTimeout(() => window.scrollToKanbanStage(targetStage), 100);
   } catch (err) {
-    showToast("Erro ao mover estágio: " + err.message, "error");
+    reportError("Não foi possível mover", err);
   } finally {
     draggedCustomerId = null;
   }
@@ -804,7 +810,7 @@ window.handleMoveStage = async function(customerId, newStage) {
     // Revert select back to previous stage
     const select = document.querySelector(`.lead-card[data-id="${customerId}"] .move-stage-select`);
     if (select && currentStage) select.value = currentStage;
-    showToast("Erro ao mover oportunidade: " + err.message, "error");
+    reportError("Não foi possível mover", err);
   }
 };
 
@@ -893,7 +899,7 @@ function setupLossReasonEvents() {
         showToast(`${cust?.name || 'Oportunidade'} marcada como perdida.`, "info", undoAction(before, 'A oportunidade voltou para a etapa anterior.'));
         setTimeout(() => window.scrollToKanbanStage('lost'), 100);
       } catch (err) {
-        showToast("Erro ao registrar perda: " + err.message, "error");
+        reportError("Não foi possível registrar a perda", err);
       }
     });
   }
@@ -1340,6 +1346,10 @@ function setupDialogEvents() {
 
   const openNewLead = () => {
     if (!customerDialog) return;
+    if (isReadOnly()) {
+      window.handleReadOnlyAttempt();
+      return;
+    }
     document.getElementById('dialog-customer-id').value = '';
     document.getElementById('customer-dialog-title').textContent = 'Nova oportunidade';
     customerForm.reset();
@@ -1453,13 +1463,17 @@ function setupDialogEvents() {
           window.scrollToKanbanStage(stage || 'lead');
         }, 150);
       } catch (err) {
-        showToast("Erro ao salvar: " + err.message, "error");
+        reportError("Não foi possível salvar", err);
       }
     });
   }
 }
 
 window.handleOpenEditCustomer = function(customerId) {
+  if (isReadOnly()) {
+    window.handleReadOnlyAttempt();
+    return;
+  }
   const customerDialog = document.getElementById('customer-dialog');
   const customer = storage.getCustomer(customerId);
   if (!customer || !customerDialog) return;
@@ -1503,7 +1517,7 @@ window.handleDeleteCustomer = async function(customerId) {
     logAudit(AUDIT_ACTIONS.LEAD_DELETED, { customerId, name: cust?.name, company: cust?.company }, AUDIT_SEVERITY.WARNING);
     showToast(`${cust?.name || 'Oportunidade'} excluída.`, "info", undoAction(before, 'Oportunidade restaurada.'));
   } catch (err) {
-    showToast("Erro ao excluir: " + err.message, "error");
+    reportError("Não foi possível excluir", err);
   }
 };
 
@@ -3516,28 +3530,83 @@ function setupNotificationCenter() {
 // Plain words for where the plan stands
 function describePlanState(state) {
   const days = (n) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+  const date = (iso) => new Date(iso).toLocaleDateString('pt-BR');
   if (state.status === 'trial') return `Período de teste: ${days(state.daysLeft)} restantes`;
   if (state.status === 'trial_ended') return 'Período de teste encerrado';
-  if (state.status === 'active') return `Ativo até ${new Date(state.until).toLocaleDateString('pt-BR')}`;
-  return `Vencido em ${new Date(state.until).toLocaleDateString('pt-BR')}`;
+  if (state.status === 'active') return `Ativo até ${date(state.until)}`;
+  if (state.status === 'grace') return `Vencido em ${date(state.until)}`;
+  return `Vencido em ${date(state.until)}, em modo de leitura`;
 }
 
-// The pill in the header: quiet while all is well, visible when something needs doing
+/**
+ * Everything on screen that depends on where the plan stands: the pill in the header,
+ * the notice above the content and the read-only mode.
+ */
 function refreshPlanPill() {
-  const pill = document.getElementById('trial-header-pill');
-  const text = document.getElementById('trial-pill-text');
-  if (!pill || !text) return;
   const state = getPlanState();
-  let label = '';
-  if (state.status === 'trial') label = `Teste: ${state.daysLeft} ${state.daysLeft === 1 ? 'dia' : 'dias'} restantes`;
-  else if (state.status === 'trial_ended') label = 'Teste encerrado. Assinar';
-  else if (state.status === 'expired') label = 'Plano vencido. Renovar';
-  else if (state.daysLeft <= 5) label = `Plano vence em ${state.daysLeft} ${state.daysLeft === 1 ? 'dia' : 'dias'}`;
-  text.textContent = label;
-  pill.style.display = label && isAdmin() ? '' : 'none';
-  pill.classList.toggle('needs-attention', state.status === 'trial_ended' || state.status === 'expired');
+  const cloud = isCloudSession();
+  const admin = isAdmin();
+  const days = (n) => `${n} ${n === 1 ? 'dia' : 'dias'}`;
+
+  // Read-only mode: creating and changing are switched off across the app
+  document.body.classList.toggle('is-read-only', cloud && state.readOnly);
+
+  const pill = document.getElementById('trial-header-pill');
+  const pillText = document.getElementById('trial-pill-text');
+  if (pill && pillText) {
+    let label = '';
+    if (state.status === 'trial') label = `Teste: ${days(state.daysLeft)} restantes`;
+    else if (state.status === 'active' && state.daysLeft <= 5) label = `Plano vence em ${days(state.daysLeft)}`;
+    pillText.textContent = label;
+    pill.style.display = label && admin ? '' : 'none';
+  }
+
+  const banner = document.getElementById('plan-banner');
+  const bannerText = document.getElementById('plan-banner-text');
+  const bannerAction = document.getElementById('plan-banner-action');
+  if (!banner || !bannerText || !bannerAction) return;
+
+  let text = '';
+  let action = '';
+  if (cloud && state.status === 'trial_ended') {
+    text = 'O período de teste terminou. Você continua vendo e exportando seus dados, mas não é possível criar nem alterar nada.';
+    action = 'Assinar um plano';
+  } else if (cloud && state.status === 'expired') {
+    text = `O plano venceu em ${new Date(state.until).toLocaleDateString('pt-BR')}. Você continua vendo e exportando seus dados, mas não é possível criar nem alterar nada.`;
+    action = 'Renovar o plano';
+  } else if (cloud && state.status === 'grace') {
+    text = `O plano venceu em ${new Date(state.until).toLocaleDateString('pt-BR')}. Renove em até ${days(state.daysLeft)} para o CRM não entrar em modo de leitura.`;
+    action = 'Renovar o plano';
+  }
+
+  banner.hidden = !text;
+  banner.classList.toggle('is-blocking', state.readOnly === true);
+  bannerText.textContent = text && !admin ? `${text} Fale com quem administra o CRM da sua empresa.` : text;
+  bannerAction.textContent = action;
+  bannerAction.style.display = admin ? '' : 'none';
 }
 window.refreshPlanPill = refreshPlanPill;
+
+// Called by the storage layer when something tries to change data in read-only mode
+let lastReadOnlyNotice = 0;
+window.handleReadOnlyAttempt = function() {
+  refreshPlanPill();
+  const banner = document.getElementById('plan-banner');
+  if (banner && !banner.hidden) banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (Date.now() - lastReadOnlyNotice < 4000) return;
+  lastReadOnlyNotice = Date.now();
+  showToast(
+    isAdmin() ? 'O CRM está em modo de leitura. Assine um plano para voltar a criar e alterar.' : 'O CRM está em modo de leitura. Fale com quem administra o CRM da sua empresa.',
+    'warning',
+    isAdmin() ? { label: 'Ver planos', onClick: () => window.openCheckoutModal() } : null
+  );
+};
+
+// An error from a blocked change was already explained by the notice above
+function reportError(prefix, err) {
+  if (err && err.code === 'read-only') return;
+  showToast(`${prefix}: ${err.message}`, 'error');
+}
 
 // ==========================================================================
 // Subscribing: a PIX charge is created on the billing server, and this window

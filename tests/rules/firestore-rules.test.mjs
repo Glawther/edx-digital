@@ -91,17 +91,20 @@ function fieldFilter([field, value]) {
 }
 
 const OK = 200;
+const DAY = 24 * 60 * 60 * 1000;
+// O emulador aceita este token como o servidor (conta de serviço), que passa por cima das regras
+const SERVER = { token: 'owner' };
 const DENIED = 403;
 
 // ---------------------------------------------------------------- cenário
 
 const world = {};
 
-async function registerCompany(label) {
+async function registerCompany(label, { trialEndsAtMs } = {}) {
   const owner = await signUp(label);
   const orgId = `org_${label}_${RUN}`;
   const code = `NX-${label.toUpperCase()}${RUN.toUpperCase()}`;
-  assert.equal(await put(owner, `organizations/${orgId}`, { name: `Empresa ${label}`, ownerUid: owner.uid, plan: 'pro', planStatus: 'trial' }), OK);
+  assert.equal(await put(owner, `organizations/${orgId}`, { name: `Empresa ${label}`, ownerUid: owner.uid, plan: 'pro', planStatus: 'trial', trialEndsAtMs: trialEndsAtMs ?? Date.now() + 14 * DAY }), OK);
   assert.equal(await put(owner, `users/${owner.uid}`, { orgId, role: 'admin', name: `Dona ${label}`, email: owner.email, status: 'active' }), OK);
   assert.equal(await put(owner, `invites/${code}`, { orgId, role: 'employee', active: true, createdBy: owner.uid }), OK);
   return { owner, orgId, code };
@@ -263,7 +266,7 @@ test('o plano não pode ser alterado pelo aplicativo, e não se cria empresa já
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { planStatus: 'active' }), DENIED);
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { plan: 'enterprise' }), DENIED);
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { name: 'Alfa Ltda' }), OK);
-  assert.equal(await put(world.solto, `organizations/org_paga_${RUN}`, { name: 'Paga', ownerUid: world.solto.uid, plan: 'enterprise', planStatus: 'active' }), DENIED);
+  assert.equal(await put(world.solto, `organizations/org_paga_${RUN}`, { name: 'Paga', ownerUid: world.solto.uid, plan: 'enterprise', planStatus: 'active', trialEndsAtMs: Date.now() + DAY }), DENIED);
 });
 
 test('um administrador promovido não derruba o dono da empresa', async () => {
@@ -307,6 +310,71 @@ test('ninguém grava cobranças nem muda o plano pelo aplicativo; só o servidor
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { paidUntil: '2099-01-01T00:00:00.000Z' }), DENIED);
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { planStatus: 'active', plan: 'enterprise' }), DENIED);
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { pendingPaymentId: 'x' }), DENIED);
+});
+
+// ---------------------------------------------------------------- plano vencido: modo de leitura
+
+test('ninguém cria empresa com teste maior que 14 dias, sem data de fim ou já paga', async () => {
+  const u = await signUp('esperto');
+  const base = { name: 'Esperta', ownerUid: u.uid, plan: 'pro', planStatus: 'trial' };
+  assert.equal(await put(u, `organizations/org_e1_${RUN}`, base), DENIED);
+  assert.equal(await put(u, `organizations/org_e2_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await put(u, `organizations/org_e3_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 14 * DAY, paidUntilMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await put(u, `organizations/org_e4_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 14 * DAY }), OK);
+});
+
+test('o fim do teste não pode ser empurrado pelo aplicativo', async () => {
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { trialEndsAtMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { paidUntilMs: Date.now() + 365 * DAY }), DENIED);
+});
+
+test('teste encerrado: a empresa lê, exporta e exclui, mas não cria nem altera', async () => {
+  const c = await registerCompany('vencida', { trialEndsAtMs: Date.now() + 14 * DAY });
+  const vend = await join('vera', c);
+  assert.equal(await put(c.owner, `customers/v1-${RUN}`, lead(c.orgId, vend)), OK);
+  assert.equal(await put(c.owner, `customers/v2-${RUN}`, lead(c.orgId, c.owner)), OK);
+
+  // o servidor encerra o teste
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { trialEndsAtMs: Date.now() - DAY }), OK);
+
+  assert.equal(await put(c.owner, `customers/v3-${RUN}`, lead(c.orgId, c.owner)), DENIED);
+  assert.equal(await patch(c.owner, `customers/v1-${RUN}`, { stage: 'won' }), DENIED);
+  assert.equal(await patch(vend, `customers/v1-${RUN}`, { stage: 'contact' }), DENIED);
+  assert.equal(await put(vend, `customers/v4-${RUN}`, lead(c.orgId, vend)), DENIED);
+
+  assert.equal(await get(c.owner, `customers/v1-${RUN}`), OK);
+  assert.equal(await get(vend, `customers/v1-${RUN}`), OK);
+  const tudo = await list(c.owner, 'customers', [['orgId', c.orgId]]);
+  assert.equal(tudo.count, 2);
+  assert.equal(await del(c.owner, `customers/v2-${RUN}`), OK);
+});
+
+test('pagamento confirmado libera de novo; vencido além da tolerância volta a bloquear', async () => {
+  const c = await registerCompany('paga');
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { trialEndsAtMs: Date.now() - 30 * DAY }), OK);
+  assert.equal(await put(c.owner, `customers/p1-${RUN}`, lead(c.orgId, c.owner)), DENIED);
+
+  // pago e em dia
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { planStatus: 'active', paidUntilMs: Date.now() + 30 * DAY }), OK);
+  assert.equal(await put(c.owner, `customers/p1-${RUN}`, lead(c.orgId, c.owner)), OK);
+  assert.equal(await patch(c.owner, `customers/p1-${RUN}`, { stage: 'contact' }), OK);
+
+  // venceu ontem: ainda dentro dos 3 dias de tolerância
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { paidUntilMs: Date.now() - DAY }), OK);
+  assert.equal(await patch(c.owner, `customers/p1-${RUN}`, { stage: 'proposal' }), OK);
+
+  // venceu há 4 dias: modo de leitura
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { paidUntilMs: Date.now() - 4 * DAY }), OK);
+  assert.equal(await patch(c.owner, `customers/p1-${RUN}`, { stage: 'won' }), DENIED);
+  assert.equal(await get(c.owner, `customers/p1-${RUN}`), OK);
+});
+
+test('empresa criada antes desta regra (sem data de fim do teste) continua funcionando', async () => {
+  const dono = await signUp('antiga');
+  const orgId = `org_antiga_${RUN}`;
+  assert.equal(await put(SERVER, `organizations/${orgId}`, { name: 'Antiga', ownerUid: dono.uid, plan: 'pro', planStatus: 'trial' }), OK);
+  assert.equal(await put(dono, `users/${dono.uid}`, { orgId, role: 'admin', name: 'Dona Antiga', email: dono.email, status: 'active' }), OK);
+  assert.equal(await put(dono, `customers/ant-${RUN}`, lead(orgId, dono)), OK);
 });
 
 // ---------------------------------------------------------------- exclusão de conta e de empresa
