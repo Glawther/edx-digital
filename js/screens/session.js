@@ -2,6 +2,7 @@
  * EDX Digital - Entering a session: loads what belongs to the signed-in person, or shows the sign-in screen
  */
 
+import { startTourIfPending } from '../ui/tour.js';
 import { crmStore } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
 import { AUDIT_ACTIONS, initAuditFirestore, logAudit } from '../services/audit-service.js';
@@ -58,6 +59,9 @@ export async function enterSession({ resumed = false } = {}) {
     if (spanName) spanName.textContent = user.name;
     if (firstAccessDialog && !firstAccessDialog.open) firstAccessDialog.showModal();
   }
+
+  // an account created a moment ago gets the tour (it waits for any window above to be closed)
+  startTourIfPending();
 }
 
 // Nothing that belongs to a company stays in this browser after its session ends.

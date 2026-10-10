@@ -2,6 +2,7 @@
  * EDX Digital - Signing in, registering, the person's own account, signing out after a long idle time
  */
 
+import { requestTourForNewAccount } from '../ui/tour.js';
 import { passwordProblem } from '../core/attention.js';
 import { getSavedOrganization } from '../core/config.js';
 import { AUDIT_ACTIONS, logAudit } from '../services/audit-service.js';
@@ -364,6 +365,8 @@ export function setupAuthPortalEvents() {
       const restore = setBusy(document.getElementById('btn-submit-register'), 'Criando a empresa...');
       try {
         await registerCompany({ name, email, company, password, plan });
+        // a new account is shown around on its first screen
+        requestTourForNewAccount();
         formRegister.reset();
         clearRegisterHash();
         await enterSession();
@@ -400,6 +403,7 @@ export function setupAuthPortalEvents() {
       const restore = setBusy(document.getElementById('btn-submit-join-team'), 'Conferindo o convite...');
       try {
         await joinCompany({ inviteCode, name, email, password });
+        requestTourForNewAccount();
         formJoinTeam.reset();
         clearRegisterHash();
         await enterSession();
