@@ -261,3 +261,100 @@ test('relato de erro: o servidor aceita o relato, recusa o vazio e limita a quan
     await new Promise(resolve => server.close(resolve));
   }
 });
+
+// ---------------------------------------------------------------- painel do dono
+
+const { buildOverview, planState } = require('../controllers/owner-controller');
+const { mailOwners } = require('../controllers/error-controller');
+
+test('situação do plano: igual à que as regras do banco aplicam', () => {
+  const now = Date.parse('2026-10-12T12:00:00Z');
+  assert.equal(planState({ planStatus: 'trial', trialEndsAtMs: now + DAY }, now).state, 'trial');
+  assert.equal(planState({ planStatus: 'trial', trialEndsAtMs: now - 1 }, now).state, 'trial_ended');
+  assert.equal(planState({ planStatus: 'trial' }, now).state, 'legacy');
+  assert.equal(planState({ planStatus: 'active', paidUntilMs: now + DAY }, now).state, 'paid');
+  assert.equal(planState({ planStatus: 'active', paidUntilMs: now - DAY }, now).state, 'grace');
+  assert.equal(planState({ planStatus: 'active', paidUntilMs: now - 4 * DAY }, now).state, 'expired');
+});
+
+test('painel do dono: uma linha por empresa, quem precisa de atenção primeiro, e os totais', async () => {
+  const now = Date.parse('2026-10-12T12:00:00Z');
+  const store = {
+    listOrganizations: async () => [
+      { id: 'org_paga', data: { name: 'Paga', plan: 'pro', planStatus: 'active', paidUntilMs: now + 20 * DAY, ownerUid: 'u1', createdAt: '2026-09-01T00:00:00Z' } },
+      { id: 'org_teste', data: { name: 'Teste', plan: 'starter', planStatus: 'trial', trialEndsAtMs: now + 2 * DAY, ownerUid: 'u2', createdAt: '2026-10-01T00:00:00Z', usage: { seatsFull: true } } },
+      { id: 'org_tol', data: { name: 'Tolerância', plan: 'enterprise', planStatus: 'active', paidUntilMs: now - DAY, ownerUid: 'u3', createdAt: '2026-08-01T00:00:00Z' } },
+      { id: 'org_fim', data: { name: 'Acabou', plan: 'pro', planStatus: 'trial', trialEndsAtMs: now - 9 * DAY, ownerUid: 'u4', createdAt: '2026-09-15T00:00:00Z' } }
+    ],
+    listAllUsers: async () => [
+      { id: 'u1', data: { orgId: 'org_paga', status: 'active', email: 'a@a.com' } },
+      { id: 'u1b', data: { orgId: 'org_paga', status: 'blocked', email: 'b@a.com' } },
+      { id: 'u2', data: { orgId: 'org_teste', status: 'active', email: 't@t.com' } },
+      { id: 'u2b', data: { orgId: 'org_teste', status: 'active', email: 't2@t.com' } },
+      { id: 'u3', data: { orgId: 'org_tol', status: 'active', email: 'x@x.com' } }
+    ],
+    listAllPayments: async () => [
+      { id: 'p1', data: { status: 'approved', amount: 197, approvedAt: new Date(now - 5 * DAY).toISOString() } },
+      { id: 'p2', data: { status: 'approved', amount: 497, approvedAt: new Date(now - 40 * DAY).toISOString() } },
+      { id: 'p3', data: { status: 'pending', amount: 97 } },
+      { id: 'p4', data: { status: 'refunded', amount: 197, approvedAt: new Date(now - 2 * DAY).toISOString() } }
+    ],
+    countDocs: async (collection, filters) => ({ org_paga: 40, org_teste: 3 }[filters[0][1]] || 0)
+  };
+  const overview = await buildOverview(store, now);
+  assert.deepEqual(overview.companies.map(company => [company.id, company.state]), [['org_tol', 'grace'], ['org_teste', 'trial'], ['org_paga', 'paid'], ['org_fim', 'trial_ended']]);
+  const teste = overview.companies[1];
+  assert.deepEqual({ people: teste.people, owner: teste.ownerEmail, days: teste.daysLeft, opportunities: teste.opportunities, full: teste.full }, { people: 2, owner: 't@t.com', days: 2, opportunities: 3, full: true });
+  assert.equal(overview.companies[2].people, 1, 'quem está bloqueado não conta');
+  assert.deepEqual(overview.totals, { companies: 4, trial: 1, paying: 2, grace: 1, ended: 1, people: 4, monthlyValue: 197 + 497, received30d: 197, receivedAll: 694 });
+});
+
+test('painel do dono: só para o e-mail do dono, confirmado; para os demais o endereço nem existe', async () => {
+  const { handleOwner } = require('../controllers/owner-controller');
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099'; // tokens sem assinatura, só nos testes
+  process.env.OWNER_EMAILS = 'dono@edx.com, socio@edx.com';
+  const token = (claims) => `${Buffer.from('{"alg":"none"}').toString('base64url')}.${Buffer.from(JSON.stringify({ aud: 'nexuscrm-d8e13', sub: 'u', exp: Math.floor(Date.now() / 1000) + 600, ...claims })).toString('base64url')}.x`;
+  const store = { listOrganizations: async () => [], listAllUsers: async () => [], listAllPayments: async () => [], countDocs: async () => 0 };
+  const call = async (pathname, claims, method = 'GET') => {
+    let status; let body;
+    const res = { writeHead: (code) => { status = code; }, end: (text) => { body = JSON.parse(text); } };
+    await handleOwner({ method, headers: claims ? { authorization: `Bearer ${token(claims)}` } : {} }, res, pathname, store);
+    return { status, body };
+  };
+  try {
+    assert.deepEqual((await call('/api/owner/check', { email: 'DONO@edx.com', email_verified: true })).body, { owner: true });
+    assert.deepEqual((await call('/api/owner/check', { email: 'dono@edx.com', email_verified: false })).body, { owner: false });
+    assert.deepEqual((await call('/api/owner/check', { email: 'cliente@empresa.com', email_verified: true })).body, { owner: false });
+    assert.deepEqual((await call('/api/owner/check', null)).body, { owner: false });
+
+    assert.equal((await call('/api/owner/overview', { email: 'socio@edx.com', email_verified: true })).status, 200);
+    assert.equal((await call('/api/owner/overview', { email: 'cliente@empresa.com', email_verified: true })).status, 404);
+    assert.equal((await call('/api/owner/overview', { email: 'dono@edx.com', email_verified: false })).status, 404);
+    assert.equal((await call('/api/owner/overview', null)).status, 404);
+    assert.equal((await call('/api/owner/overview', { email: 'dono@edx.com', email_verified: true }, 'POST')).status, 405);
+  } finally {
+    delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    delete process.env.OWNER_EMAILS;
+  }
+});
+
+test('erro na tela: o dono é avisado por e-mail no máximo uma vez por hora', async () => {
+  process.env.OWNER_EMAILS = 'dono@edx.com';
+  const sent = [];
+  let state = null;
+  const store = { getState: async () => state, setState: async (name, data) => { state = data; } };
+  const mail = { isConfigured: () => true, sendEmail: async (message) => { sent.push(message); } };
+  const report = { message: 'x is not a function <b>', stack: 'at y', view: 'today', version: '3.19.0', browser: 'Edge' };
+  const t0 = Date.parse('2026-10-12T12:00:00Z');
+  try {
+    assert.equal(await mailOwners(report, { store, mail, now: t0 }), true);
+    assert.equal(await mailOwners(report, { store, mail, now: t0 + 59 * 60 * 1000 }), false);
+    assert.equal(await mailOwners(report, { store, mail, now: t0 + 61 * 60 * 1000 }), true);
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].to.email, 'dono@edx.com');
+    assert.equal(sent[0].html.includes('<b>'), false);
+    assert.equal(await mailOwners(report, { store, mail: { ...mail, isConfigured: () => false }, now: t0 + 5 * 60 * 60 * 1000 }), false);
+  } finally {
+    delete process.env.OWNER_EMAILS;
+  }
+});

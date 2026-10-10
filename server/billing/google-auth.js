@@ -74,7 +74,7 @@ async function verifyIdToken(token) {
 
   if (authEmulatorHost()) {
     // Emulator tokens are unsigned; accepted only outside production
-    return { uid: payload.sub, email: payload.email || '', name: payload.name || '' };
+    return { uid: payload.sub, email: payload.email || '', name: payload.name || '', emailVerified: payload.email_verified === true };
   }
 
   if (header.alg !== 'RS256' || !header.kid) throw new Error('Assinatura do token não suportada.');
@@ -91,7 +91,7 @@ async function verifyIdToken(token) {
     throw new Error('Assinatura do token inválida.');
   }
 
-  return { uid: payload.sub, email: payload.email || '', name: payload.name || '' };
+  return { uid: payload.sub, email: payload.email || '', name: payload.name || '', emailVerified: payload.email_verified === true };
 }
 
 // ---------------------------------------------------------------- service account

@@ -3,6 +3,7 @@
  * Wires the screens to the store, the storage and the services
  */
 
+import { setupOwnerPanel } from './ui/owner-panel.js';
 import { setupErrorReporting } from './services/error-report.js';
 import { applyWhitelabelStyles, getSavedOrganization } from './core/config.js';
 import { applyStageNames, crmStore } from './core/crm-store.js';
@@ -107,6 +108,7 @@ async function initApp() {
     setupProposalModalEvents();
     setupImportDialog();
     setupCustomizeDialog();
+    setupOwnerPanel();
     setupAuthPortalEvents();
     setupCommandPalette();
     setupKeyboardShortcuts();

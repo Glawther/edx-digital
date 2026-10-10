@@ -10,6 +10,35 @@
  */
 
 const { parseJsonBody } = require('../middleware/body-parser');
+const mailer = require('../mail/brevo');
+const { firestoreStore } = require('../billing/firestore-store');
+const { isServiceAccountConfigured } = require('../billing/google-auth');
+
+const MAIL_EVERY_MS = 60 * 60 * 1000;
+const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * Tells the owners of the system by e-mail, at most once an hour (the rest stay in the log).
+ * Never lets a problem here reach whoever reported the error.
+ */
+async function mailOwners(report, { store = firestoreStore, mail = mailer, now = Date.now() } = {}) {
+  const owners = String(process.env.OWNER_EMAILS || '').split(',').map(item => item.trim()).filter(item => /@/.test(item));
+  if (owners.length === 0 || !mail.isConfigured()) return false;
+  const state = await store.getState('error_mail');
+  if (state && now - (Number(state.lastSentMs) || 0) < MAIL_EVERY_MS) return false;
+  // marked first: two reports arriving together send one message
+  await store.setState('error_mail', { lastSentMs: now });
+  const lines = [`Mensagem: ${report.message}`, `Tela: ${report.view || 'não informada'}`, `Versão: ${report.version || 'não informada'}`, `Navegador: ${report.browser || 'não informado'}`, '', report.stack || '(sem rastro)'];
+  for (const email of owners) {
+    await mail.sendEmail({
+      to: { email },
+      subject: `EDX Digital: erro na tela de alguém (${report.message.slice(0, 60)})`,
+      text: [...lines, '', 'Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.'].join('\n'),
+      html: `<pre style="font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;">${escapeHtml(lines.join('\n'))}</pre><p style="font-family:Arial,sans-serif;font-size:13px;color:#4a5565;">Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.</p>`
+    });
+  }
+  return true;
+}
 
 const WINDOW_MS = 60000;
 const PER_ADDRESS = 10;
@@ -60,6 +89,9 @@ async function handleErrorReport(req, res) {
   // one JSON line with "severity" is what Google's log viewer files as an error
   console.error(JSON.stringify({ severity: 'ERROR', message: `[Tela] ${report.message}`, report }));
   send(res, 204, {});
+  if (isServiceAccountConfigured()) {
+    mailOwners(report).catch(err => console.error('[Tela] aviso por e-mail:', err.message));
+  }
 }
 
-module.exports = { handleErrorReport, scrub };
+module.exports = { handleErrorReport, mailOwners, scrub };

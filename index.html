@@ -359,6 +359,13 @@
                 <span class="dropdown-item-desc">Seus dados, exportação e exclusão</span>
               </div>
             </button>
+            <button type="button" class="dropdown-item" id="btn-menu-owner" hidden>
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Painel do sistema</span>
+                <span class="dropdown-item-desc">Todas as empresas, planos e recebimentos</span>
+              </div>
+            </button>
             <button type="button" class="dropdown-item" id="btn-menu-tour">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -1149,6 +1156,18 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
       <button type="button" class="btn btn-outline" id="btn-import-back" hidden>Voltar</button>
       <button type="button" class="btn btn-primary" id="btn-import-next" disabled>Conferir</button>
       <button type="button" class="btn btn-primary" id="btn-confirm-import" hidden>Importar</button>
+    </div>
+  </dialog>
+
+  <dialog id="owner-dialog" class="crm-dialog" style="max-width: 1040px; width: 96%;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Painel do sistema</h2>
+      <button type="button" class="dialog-close" id="btn-close-owner-dialog" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="dialog-body" id="owner-content"></div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-outline" id="btn-owner-export">Exportar</button>
+      <button type="button" class="btn btn-outline" id="btn-owner-refresh">Atualizar</button>
     </div>
   </dialog>
 

@@ -1562,3 +1562,7 @@ body.tour-open { overflow: hidden; }
 
 /* A link among the tools menu's buttons */
 a.dropdown-item { text-decoration: none; box-sizing: border-box; }
+
+/* Owner's panel */
+.cell-sub { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+#owner-content .figure-row { margin-bottom: 1rem; }
