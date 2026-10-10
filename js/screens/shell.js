@@ -2,6 +2,7 @@
  * EDX Digital - What surrounds every screen: navigation, tools menu, search and shortcuts, notifications, installing the app
  */
 
+import { startTour } from '../ui/tour.js';
 import { todayPanel } from '../core/today.js';
 import { crmStore } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
@@ -266,6 +267,7 @@ export function setupCommandPalette() {
       { id: 'action-toggle-theme', title: 'Trocar entre tema claro e escuro', hint: '', category: 'Ações', run: () => { window.closeCommandPalette(); toggleTheme(); } },
       { id: 'action-toggle-role', title: 'Ver a demonstração com o outro perfil', hint: '', demoOnly: true, category: 'Ações', run: () => { window.closeCommandPalette(); window.handleToggleRole(); } },
       { id: 'action-shortcuts', title: 'Atalhos de teclado', hint: '?', category: 'Ações', run: () => { window.closeCommandPalette(); document.getElementById('shortcuts-dialog')?.showModal(); } },
+      { id: 'action-tour', title: 'Conhecer o sistema', hint: '', category: 'Ações', run: () => { window.closeCommandPalette(); startTour(); } },
       { id: 'nav-today', title: 'Hoje', hint: 'H', category: 'Ir para', run: go('today') },
       { id: 'nav-pipeline', title: 'Funil de vendas', hint: '1', category: 'Ir para', run: go('pipeline') },
       { id: 'nav-customers', title: 'Clientes', hint: '2', category: 'Ir para', run: go('customers') },
@@ -577,6 +579,11 @@ export function setupHeaderToolsMenu() {
       if (shortcutsDialog) shortcutsDialog.showModal();
     });
   }
+
+  document.getElementById('btn-menu-tour')?.addEventListener('click', () => {
+    closeMenu();
+    startTour();
+  });
 
   if (btnMenuPwa) {
     btnMenuPwa.addEventListener('click', () => {

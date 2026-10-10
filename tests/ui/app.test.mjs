@@ -345,3 +345,82 @@ test('relatório por vendedor: o administrador vê as duas tabelas e exporta; o 
   assert.equal(await seller.page.locator('#seller-report').count(), 0);
   assert.match(await seller.page.textContent('.figure-row'), /Conversas registradas/);
 });
+
+test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alterado', async (t) => {
+  for (const [role, viewport] of [['admin', { width: 1300, height: 800 }], ['employee', { width: 375, height: 800 }]]) {
+    const demo = await openDemo(t, role, viewport);
+    if (!demo) return;
+    const { page, problems } = demo;
+    const cardsBefore = await page.locator('.lead-card').count();
+
+    await page.click('#btn-header-tools');
+    await page.click('#btn-menu-tour');
+    await page.waitForFunction(() => /^Passo 1 de/.test(document.getElementById('tour-progress')?.textContent || ''));
+    const total = Number((await page.textContent('#tour-progress')).match(/de (\d+)/)[1]);
+    assert.ok(total >= 10, `${role}: ${total} passos`);
+
+    const titles = [];
+    for (let step = 1; step <= total; step++) {
+      await page.waitForFunction(n => document.getElementById('tour-progress')?.textContent.startsWith(`Passo ${n} de`), step);
+      await page.waitForTimeout(260); // the card slides to its place
+      titles.push(await page.textContent('#tour-title'));
+      const box = await page.locator('.tour-card').boundingBox();
+      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1, `${role}, passo ${step}: o cartão cabe na tela`);
+      const spot = page.locator('.tour-spot');
+      if (await spot.isVisible()) {
+        const lit = await spot.boundingBox();
+        const overlapX = Math.min(box.x + box.width, lit.x + lit.width) - Math.max(box.x, lit.x);
+        const overlapY = Math.min(box.y + box.height, lit.y + lit.height) - Math.max(box.y, lit.y);
+        // a card over what it explains is accepted only when that thing takes most of the screen
+        if (overlapX > 8 && overlapY > 8) assert.ok(lit.height > viewport.height * 0.4 || lit.width > viewport.width * 0.8, `${role}, passo ${step} (${titles.at(-1)}): o cartão cobre o que explica`);
+      }
+      await page.click('[data-tour="next"]');
+    }
+    await page.locator('.tour').waitFor({ state: 'detached' });
+    assert.equal(new Set(titles).size, total, 'cada passo tem o seu título');
+    assert.equal(await page.evaluate(() => document.body.dataset.view), 'today');
+    if (role === 'employee') assert.equal(titles.some(title => /Equipe|Auditoria/.test(title)), false);
+
+    await page.click('.nav-item[data-view="pipeline"]');
+    assert.equal(await page.locator('.lead-card').count(), cardsBefore);
+    assert.deepEqual(problems, []);
+  }
+});
+
+test('passeio: Esc sai, as setas andam, e os atalhos do sistema descansam enquanto ele está aberto', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page } = demo;
+  await page.click('#btn-header-tools');
+  await page.click('#btn-menu-tour');
+  await page.locator('.tour-card').waitFor();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForFunction(() => document.getElementById('tour-progress').textContent.startsWith('Passo 2'));
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(() => document.getElementById('tour-progress').textContent.startsWith('Passo 1'));
+  await page.keyboard.press('n'); // would open "Nova oportunidade"
+  assert.equal(await page.locator('#customer-dialog').isVisible(), false);
+  await page.keyboard.press('Escape');
+  await page.locator('.tour').waitFor({ state: 'detached' });
+});
+
+test('conta recém-criada: o passeio começa sozinho na primeira tela, uma vez só', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  await page.goto(base + '/');
+  // what creating an account leaves behind
+  await page.evaluate(() => localStorage.setItem('edx_tour_pending', '1'));
+  await page.click('#btn-quick-login-admin');
+  await page.locator('.tour-card').waitFor();
+  assert.match(await page.textContent('#tour-title'), /Bem-vindo/);
+  await page.click('[data-tour="skip"]');
+  await page.locator('.tour').waitFor({ state: 'detached' });
+  assert.equal(await page.evaluate(() => localStorage.getItem('edx_tour_pending')), null);
+
+  await page.reload();
+  await page.waitForSelector('#today-content > *');
+  await page.waitForTimeout(1500);
+  assert.equal(await page.locator('.tour').count(), 0);
+});
