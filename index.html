@@ -21,18 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.13.3">
-  <link rel="stylesheet" href="css/layout.css?v=3.13.3">
-  <link rel="stylesheet" href="css/components.css?v=3.13.3">
-  <link rel="stylesheet" href="css/animations.css?v=3.13.3">
-  <link rel="stylesheet" href="css/identity.css?v=3.13.3">
-  <!-- Pre-render Theme Application -->
-  <script>
-    (function() {
-      const savedTheme = localStorage.getItem('edx_theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    })();
-  </script>
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.14.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.14.0">
+  <link rel="stylesheet" href="css/components.css?v=3.14.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.14.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.14.0">
+  <!-- Applies the saved theme before the first paint -->
+  <script src="js/theme-boot.js?v=3.14.0"></script>
 </head>
 <body class="auth-pending">
 
@@ -420,7 +415,7 @@
           </div>
 
           <!-- Indicador de Assinatura / Teste Grátis de 7 Dias -->
-          <button type="button" class="connection-pill" id="trial-header-pill" onclick="window.openCheckoutModal()" title="Gerenciar assinatura e limites do CRM">
+          <button type="button" class="connection-pill" id="trial-header-pill" data-click="openCheckoutModal" title="Gerenciar assinatura e limites do CRM">
             <span id="trial-pill-text">Teste: 7 dias</span>
           </button>
 
@@ -458,7 +453,7 @@
       <!-- Aviso de plano: perto do fim, vencido ou em modo de leitura -->
       <div class="plan-banner" id="plan-banner" role="status" hidden>
         <span id="plan-banner-text"></span>
-        <button type="button" class="btn btn-primary btn-sm" id="plan-banner-action" onclick="window.openCheckoutModal()"></button>
+        <button type="button" class="btn btn-primary btn-sm" id="plan-banner-action" data-click="openCheckoutModal"></button>
       </div>
 
       <!-- Top Dynamic KPIs Cards -->
@@ -487,9 +482,9 @@
           <h2>Seu funil está vazio</h2>
           <p>Comece cadastrando uma oportunidade, ou traga os contatos que você já tem em uma planilha.</p>
           <div class="first-run-actions">
-            <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-new-lead').click()">Cadastrar a primeira oportunidade</button>
-            <button type="button" class="btn btn-outline" onclick="document.getElementById('btn-menu-import').click()">Importar de uma planilha</button>
-            <button type="button" class="btn btn-outline" id="first-run-team" onclick="window.navigateToView('team')">Convidar a equipe</button>
+            <button type="button" class="btn btn-primary" data-click="openNewOpportunity">Cadastrar a primeira oportunidade</button>
+            <button type="button" class="btn btn-outline" data-click="openImport">Importar de uma planilha</button>
+            <button type="button" class="btn btn-outline" id="first-run-team" data-click="navigateToView" data-a="team">Convidar a equipe</button>
           </div>
         </div>
 
@@ -505,10 +500,10 @@
             <h2 id="customers-count-label">Clientes</h2>
             <div class="table-tools">
               <label class="inline-field" for="customers-stage-filter">Etapa
-                <select id="customers-stage-filter" class="form-select form-select-sm" onchange="window.handleCustomersView({ stage: this.value })"></select>
+                <select id="customers-stage-filter" class="form-select form-select-sm" data-change="handleCustomersStage" data-value></select>
               </label>
               <label class="inline-field" for="customers-sort">Ordenar por
-                <select id="customers-sort" class="form-select form-select-sm" onchange="window.handleCustomersView({ sort: this.value })">
+                <select id="customers-sort" class="form-select form-select-sm" data-change="handleCustomersSort" data-value>
                   <option value="recent">Alteração mais recente</option>
                   <option value="name">Nome</option>
                   <option value="value">Maior valor</option>
@@ -630,6 +625,8 @@
             <div class="team-invite-actions">
               <span class="team-invite-code" id="display-team-invite-code"></span>
               <button type="button" class="btn btn-primary btn-sm" id="btn-copy-team-code">Copiar convite</button>
+              <a class="btn btn-outline btn-sm" id="link-invite-email" href="#">Enviar por e-mail</a>
+              <a class="btn btn-outline btn-sm" id="link-invite-whatsapp" href="#" target="_blank" rel="noopener noreferrer">Enviar pelo WhatsApp</a>
               <button type="button" class="btn btn-outline btn-sm" id="btn-new-team-code">Gerar novo código</button>
             </div>
           </div>
@@ -640,7 +637,7 @@
               <p>Você informa os dados e uma senha temporária; a pessoa troca a senha no primeiro acesso.</p>
             </div>
             <div class="team-invite-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="window.openEmployeeModal()">Cadastrar colaborador</button>
+              <button type="button" class="btn btn-outline btn-sm" data-click="openEmployeeModal">Cadastrar colaborador</button>
             </div>
           </div>
 
@@ -875,33 +872,20 @@
       </form>
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
-      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-call">
-          Registrar ligação
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-meeting">
-          Registrar reunião
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm" id="btn-quick-log-note">
-          Adicionar nota
-        </button>
-      </div>
+      <form id="contact-log-form" class="contact-log-form">
+        <select id="contact-log-type" class="form-select" aria-label="Tipo de contato"></select>
+        <input type="datetime-local" id="contact-log-when" class="form-input" aria-label="Quando aconteceu">
+        <textarea id="contact-log-text" class="form-textarea" placeholder="O que foi conversado" required maxlength="5000" aria-label="O que foi conversado"></textarea>
+        <button type="submit" class="btn btn-outline btn-sm">Registrar</button>
+      </form>
 
-      <!-- Quick Note Form (Collapsible) -->
-      <div id="quick-activity-form-container" style="display: none; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
-        <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);" id="quick-activity-title">Registrar contato</h4>
-        <input type="hidden" id="quick-activity-type" value="note">
-        <textarea id="quick-activity-text" class="form-textarea" placeholder="O que foi conversado" style="min-height: 70px; margin-bottom: 0.75rem;"></textarea>
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-          <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-quick-activity">Cancelar</button>
-          <button type="button" class="btn btn-primary btn-sm" id="btn-save-quick-activity">Salvar</button>
+      <div class="history-head">
+        <div>
+          <h3 class="section-title">Histórico</h3>
+          <p class="history-last" id="lead-details-last-contact"></p>
         </div>
+        <div class="filter-pills" id="history-filter-pills" role="group" aria-label="Filtrar o histórico"></div>
       </div>
-
-      <!-- Timeline Title -->
-      <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.4rem;">
-        <span>Histórico</span>
-      </h3>
 
       <div class="timeline-container" id="lead-details-timeline">
         <!-- Rendered dynamically -->
@@ -935,7 +919,7 @@
 
       <div id="gemini-unavailable" style="display: none; padding: 1.5rem 0.25rem;">
         <p id="gemini-unavailable-text" style="font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; margin: 0 0 1rem;"></p>
-        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('gemini-dialog').close(); document.getElementById('sidebar-gemini-btn').click();">Informar a chave do Gemini</button>
+        <button type="button" class="btn btn-primary btn-sm" data-click="openGeminiKey">Informar a chave do Gemini</button>
       </div>
 
       <div id="gemini-results" style="display: none;">
@@ -1756,17 +1740,17 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Escolha o plano</h3>
       <div class="plan-grid">
-        <button type="button" class="plan-option checkout-plan-card" data-plan="starter" onclick="window.selectCheckoutPlan('starter')">
+        <button type="button" class="plan-option checkout-plan-card" data-plan="starter" data-click="selectCheckoutPlan" data-a="starter">
           <span class="plan-option-name">Starter</span>
           <span class="plan-option-price">R$ 97<span>/mês</span></span>
           <span class="plan-option-note">2 pessoas, 500 oportunidades</span>
         </button>
-        <button type="button" class="plan-option checkout-plan-card active" data-plan="pro" onclick="window.selectCheckoutPlan('pro')">
+        <button type="button" class="plan-option checkout-plan-card active" data-plan="pro" data-click="selectCheckoutPlan" data-a="pro">
           <span class="plan-option-name">Professional</span>
           <span class="plan-option-price">R$ 197<span>/mês</span></span>
           <span class="plan-option-note">10 pessoas, 5.000 oportunidades</span>
         </button>
-        <button type="button" class="plan-option checkout-plan-card" data-plan="enterprise" onclick="window.selectCheckoutPlan('enterprise')">
+        <button type="button" class="plan-option checkout-plan-card" data-plan="enterprise" data-click="selectCheckoutPlan" data-a="enterprise">
           <span class="plan-option-name">Enterprise</span>
           <span class="plan-option-price">R$ 497<span>/mês</span></span>
           <span class="plan-option-note">Sem limites, com a sua marca</span>
@@ -1814,7 +1798,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.13.3"></script>
+  <script type="module" src="js/app.js?v=3.14.0"></script>
 
 </body>
 </html>

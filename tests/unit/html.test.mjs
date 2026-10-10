@@ -3,8 +3,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import vm from 'node:vm';
-import { escapeHtml, jsArg, safeImageUrl, isSafeId } from '../../js/core/html.js';
+import { escapeHtml, safeImageUrl, isSafeId } from '../../js/core/html.js';
 
 // What the browser does with an attribute value: turn the entities back into characters
 const decodeAttribute = (text) => text
@@ -16,25 +15,19 @@ test('texto e atributos: os cinco caracteres que importam são trocados', () => 
   assert.equal(escapeHtml(0), '0');
 });
 
-test('argumento de evento: o valor chega inteiro à função e nunca executa nada', () => {
+test('valor em atributo de dados: chega inteiro a quem lê e nunca vira marcação', () => {
   const attacks = [
     `x');alert(1);('`,
     `x");alert(1);("`,
-    `x\\');alert(1);//`,
     `</script><script>alert(1)</script>`,
     `" onmouseover="alert(1)`,
-    `\n linha`,
+    `' data-click='handleDeleteCustomer`,
     `lead-1791648532581-0-en3r1`
   ];
   for (const attack of attacks) {
-    const attribute = `handler(${jsArg(attack)})`;
+    const attribute = escapeHtml(attack);
     assert.ok(!attribute.includes('"') && !attribute.includes("'") && !attribute.includes('<'), 'nada no atributo encerra a aspa ou abre uma tag');
-
-    let received;
-    let alerted = false;
-    vm.runInNewContext(decodeAttribute(attribute), { handler: (value) => { received = value; }, alert: () => { alerted = true; } });
-    assert.equal(received, attack);
-    assert.equal(alerted, false);
+    assert.equal(decodeAttribute(attribute), attack);
   }
 });
 

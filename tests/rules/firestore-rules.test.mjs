@@ -100,11 +100,18 @@ const DENIED = 403;
 
 const world = {};
 
+// O teste gratuito fica registrado por e-mail antes de a empresa existir
+async function claimTrial(who, trialEndsAtMs = Date.now() + 14 * DAY) {
+  assert.equal(await put(who, `trial_claims/${who.email}`, { trialEndsAtMs }), OK);
+  return trialEndsAtMs;
+}
+
 async function registerCompany(label, { trialEndsAtMs } = {}) {
   const owner = await signUp(label);
   const orgId = `org_${label}_${RUN}`;
   const code = `NX-${label.toUpperCase()}${RUN.toUpperCase()}`;
-  assert.equal(await put(owner, `organizations/${orgId}`, { name: `Empresa ${label}`, ownerUid: owner.uid, plan: 'pro', planStatus: 'trial', trialEndsAtMs: trialEndsAtMs ?? Date.now() + 14 * DAY }), OK);
+  const endsAt = await claimTrial(owner, trialEndsAtMs);
+  assert.equal(await put(owner, `organizations/${orgId}`, { name: `Empresa ${label}`, ownerUid: owner.uid, plan: 'pro', planStatus: 'trial', trialEndsAtMs: endsAt }), OK);
   assert.equal(await put(owner, `users/${owner.uid}`, { orgId, role: 'admin', name: `Dona ${label}`, email: owner.email, status: 'active' }), OK);
   assert.equal(await put(owner, `invites/${code}`, { orgId, role: 'employee', active: true, createdBy: owner.uid }), OK);
   return { owner, orgId, code };
@@ -317,10 +324,34 @@ test('ninguém grava cobranças nem muda o plano pelo aplicativo; só o servidor
 test('ninguém cria empresa com teste maior que 14 dias, sem data de fim ou já paga', async () => {
   const u = await signUp('esperto');
   const base = { name: 'Esperta', ownerUid: u.uid, plan: 'pro', planStatus: 'trial' };
+  // sem o registro do teste, nenhuma data serve
+  assert.equal(await put(u, `organizations/org_e0_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 14 * DAY }), DENIED);
+  // o registro não aceita mais que 14 dias, nem o e-mail de outra pessoa
+  assert.equal(await put(u, `trial_claims/${u.email}`, { trialEndsAtMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await put(u, `trial_claims/${world.solto.email}`, { trialEndsAtMs: Date.now() + DAY }), DENIED);
+  const endsAt = await claimTrial(u);
   assert.equal(await put(u, `organizations/org_e1_${RUN}`, base), DENIED);
   assert.equal(await put(u, `organizations/org_e2_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 365 * DAY }), DENIED);
-  assert.equal(await put(u, `organizations/org_e3_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 14 * DAY, paidUntilMs: Date.now() + 365 * DAY }), DENIED);
-  assert.equal(await put(u, `organizations/org_e4_${RUN}`, { ...base, trialEndsAtMs: Date.now() + 14 * DAY }), OK);
+  assert.equal(await put(u, `organizations/org_e3_${RUN}`, { ...base, trialEndsAtMs: endsAt, paidUntilMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await put(u, `organizations/org_e4_${RUN}`, { ...base, trialEndsAtMs: endsAt }), OK);
+});
+
+test('o teste gratuito não recomeça: excluir a empresa e criar outra mantém a mesma data', async () => {
+  const c = await registerCompany('repete', { trialEndsAtMs: Date.now() + 2 * DAY });
+  const owner = c.owner;
+  // o registro do teste não é alterado nem apagado por ninguém, e outra pessoa não o lê
+  assert.equal(await put(owner, `trial_claims/${owner.email}`, { trialEndsAtMs: Date.now() + 14 * DAY }), DENIED);
+  assert.equal(await del(owner, `trial_claims/${owner.email}`), DENIED);
+  assert.equal(await get(owner, `trial_claims/${owner.email}`), OK);
+  assert.equal(await get(world.a.owner, `trial_claims/${owner.email}`), DENIED);
+  // exclui tudo, como o aplicativo faz
+  assert.equal(await del(owner, `invites/${c.code}`), OK);
+  assert.equal(await del(owner, `organizations/${c.orgId}`), OK);
+  assert.equal(await del(owner, `users/${owner.uid}`), OK);
+  // outra empresa com 14 dias novos é recusada; com a data antiga, aceita
+  const again = { name: 'De novo', ownerUid: owner.uid, plan: 'pro', planStatus: 'trial' };
+  assert.equal(await put(owner, `organizations/org_repete2_${RUN}`, { ...again, trialEndsAtMs: Date.now() + 14 * DAY }), DENIED);
+  assert.equal(await put(owner, `organizations/org_repete2_${RUN}`, { ...again, trialEndsAtMs: Date.now() + 2 * DAY + 1 }), DENIED);
 });
 
 test('o fim do teste não pode ser empurrado pelo aplicativo', async () => {

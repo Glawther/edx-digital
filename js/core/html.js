@@ -16,15 +16,6 @@ export function escapeHtml(str) {
 }
 
 /**
- * A value handed to an inline handler, as in onclick="open(${jsArg(id)})".
- * Quoted as a JavaScript string and then escaped for the attribute, so nothing in the value
- * can end the string or the attribute, whatever it contains.
- */
-export function jsArg(value) {
-  return escapeHtml(JSON.stringify(String(value ?? '')).replace(/</g, '\\u003c'));
-}
-
-/**
  * An address safe to use in src or href: https, or an embedded image. Anything else
  * (javascript:, data:text/html, a broken value) becomes an empty string.
  */

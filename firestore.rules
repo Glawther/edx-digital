@@ -57,6 +57,10 @@ service cloud.firestore {
         : (!('trialEndsAtMs' in org) || now < org.trialEndsAtMs);
     }
 
+    function trialClaim() {
+      return get(/databases/$(database)/documents/trial_claims/$(request.auth.token.email)).data;
+    }
+
     function validStages() {
       // 'contacted' é o nome antigo de 'contact'; fica aceito por causa de registros antigos
       return ['lead', 'contact', 'contacted', 'proposal', 'negotiation', 'won', 'lost'];
@@ -185,9 +189,10 @@ service cloud.firestore {
         && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 200
         && request.resource.data.plan in ['starter', 'pro', 'enterprise']
         && request.resource.data.planStatus == 'trial'
-        // o fim do teste é obrigatório e não pode passar de 14 dias a partir de agora
+        // o fim do teste é o que ficou registrado para este e-mail (trial_claims): quem já usou
+        // o teste e cria outra empresa recebe a mesma data, não 14 dias novos
         && request.resource.data.trialEndsAtMs is int
-        && request.resource.data.trialEndsAtMs <= request.time.toMillis() + trialMs() + 5 * 60 * 1000
+        && request.resource.data.trialEndsAtMs == trialClaim().trialEndsAtMs
         && !('paidUntilMs' in request.resource.data);
 
       // O plano e a situação do pagamento não são alteráveis pelo aplicativo
@@ -209,6 +214,22 @@ service cloud.firestore {
 
       // Só o dono exclui a empresa (direito de eliminação dos dados)
       allow delete: if isOrgAdmin(orgId) && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ---------------------------------------------------------------- teste gratuito
+
+    // Um registro por e-mail, com a data em que o teste dele termina. Criado uma vez, antes da
+    // empresa; nunca alterado nem apagado, nem quando a conta e a empresa são excluídas.
+    match /trial_claims/{email} {
+      allow get: if signedIn() && request.auth.token.email == email;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.token.email == email
+        && request.resource.data.trialEndsAtMs is int
+        // no máximo 14 dias a partir de agora (com 5 minutos de folga de relógio)
+        && request.resource.data.trialEndsAtMs <= request.time.toMillis() + trialMs() + 5 * 60 * 1000
+        && request.resource.data.keys().hasOnly(['trialEndsAtMs', 'createdAt']);
+      allow update, delete: if false;
     }
 
     // ---------------------------------------------------------------- convites

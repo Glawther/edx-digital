@@ -1472,3 +1472,17 @@ body[data-view="metrics"] #kpi-container,
 body[data-view="team"] #kpi-container,
 body[data-view="audit"] #kpi-container,
 body[data-view="security"] #kpi-container { display: none !important; }
+
+/* Opportunity window: registering a contact, and the history with its filter */
+.contact-log-form { display: grid; grid-template-columns: 150px 210px 1fr; gap: 0.5rem; margin-bottom: 1.25rem; }
+.contact-log-form textarea { grid-column: 1 / -1; min-height: 64px; }
+.contact-log-form button { grid-column: 1 / -1; justify-self: end; }
+.history-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.history-head .section-title { margin: 0; }
+.history-last { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--text-muted); }
+.timeline-item-date .link-btn { margin-left: 0.5rem; font-size: 0.78rem; }
+.timeline-dot.email { background: var(--accent); }
+body.is-read-only #contact-log-form { display: none !important; }
+@media (max-width: 640px) {
+  .contact-log-form { grid-template-columns: 1fr 1fr; }
+}

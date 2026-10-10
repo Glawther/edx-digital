@@ -52,6 +52,7 @@ npm run test:rules
 
 - **Plano e cobrança**: o plano da empresa não pode ser alterado pelo aplicativo (as regras recusam). Enquanto a cobrança não gravar o plano pelo servidor, toda empresa fica em período de teste.
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
+- **Limites do plano** (oportunidades em aberto e pessoas com acesso): quem confere é o aplicativo, não o banco. As regras não conseguem contar registros; para valer contra quem burla o aplicativo, a contagem precisa ser feita pelo servidor de cobrança.
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
 
 ## Proteções do servidor
@@ -68,15 +69,17 @@ Além de separar as empresas, as regras recusam o que poderia prejudicar outra p
 - **Registro malformado**: uma oportunidade com tipos trocados (por exemplo, etiquetas que não são lista) ou texto gigante é recusada. Um registro assim travava o funil de quem o abrisse. O aplicativo também normaliza tudo o que lê (`js/core/normalize.js`), então um registro antigo ou estranho aparece, mas não derruba a tela.
 - **Bloqueio que vale**: quem foi bloqueado não consegue apagar o próprio perfil para voltar pelo código de convite. Ao bloquear ou excluir alguém, o aplicativo troca o código de convite sozinho, porque a pessoa conhecia o antigo.
 - **Histórico de atividade**: cada pessoa só grava em seu próprio nome e com o seu papel real; os registros têm tamanho limitado e campos fixos. Na tela, o nome de quem fez vem da lista da equipe, não do que foi gravado.
+- **Teste gratuito por e-mail**: a data em que o teste termina fica em `trial_claims/{e-mail}`, criada uma vez e nunca alterada. Uma empresa só é aceita com essa mesma data, então excluir a empresa e registrar outra com o mesmo e-mail não dá 14 dias novos. Um e-mail diferente recebe outro teste; isso as regras não têm como impedir.
 - **Senhas**: no cadastro e na troca, o aplicativo recusa senhas curtas, as mais comuns, só de números e iguais ao nome ou ao e-mail (`passwordProblem` em `js/core/attention.js`).
 
 ## Proteções do navegador
 
-- **Dados do banco na tela**: todo texto passa por `escapeHtml`, e todo valor entregue a um clique passa por `jsArg` (`js/core/html.js`). Identificadores com caracteres que o aplicativo não gera são recusados pelas regras do banco na criação e ignorados na leitura. Sem isso, um vendedor poderia gravar um registro que executasse código na tela de quem administra.
+- **Dados do banco na tela**: todo texto e todo valor de atributo passa por `escapeHtml` (`js/core/html.js`). Identificadores com caracteres que o aplicativo não gera são recusados pelas regras do banco na criação e ignorados na leitura. Sem isso, um vendedor poderia gravar um registro que executasse código na tela de quem administra.
 - **Logotipo**: só endereço `https` ou imagem embutida.
 - **Versão nova**: quando uma publicação chega, a página recarrega uma vez sozinha (se não houver janela aberta nem texto sendo digitado), para ninguém continuar no código antigo.
 
-- **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
+- **Nenhum código no HTML**: não há `onclick` nem `<script>` com conteúdo. Os elementos dizem qual ação disparam (`data-click`, `data-change`) e um único ouvinte em `js/ui/actions.js` chama a função. Por isso a política abaixo proíbe scripts embutidos: mesmo que um texto malicioso chegasse à tela como marcação, o navegador não o executaria.
+- **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, nunca embutidos na página, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
 - **Exportação**: células que uma planilha executaria como fórmula (começando com `=`, `+`, `-` ou `@`) saem com um apóstrofo na frente.
 - **Chave do Gemini**: fica só no navegador de quem a informou e vai para o Google num cabeçalho, nunca no endereço.
 

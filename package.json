@@ -1,6 +1,6 @@
 {
   "name": "edx-digital",
-  "version": "3.13.3",
+  "version": "3.14.0",
   "description": "EDX Digital: funil de vendas, clientes e tarefas para equipes pequenas",
   "main": "server.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "test": "node --test \"server/tests/*.test.js\" \"tests/unit/*.test.mjs\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-edx-digital",
     "test:rules": "node scripts/test-rules.mjs",
+    "test:ui": "node --test --test-concurrency=1 \"tests/ui/*.test.mjs\"",
     "deploy": "npm run build && firebase deploy --only firestore:rules,hosting",
     "build": "node scripts/build.mjs",
     "deploy:indexes": "firebase deploy --only firestore:indexes"
@@ -23,7 +24,8 @@
   "author": "Glawther Soares",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "0.25.10"
+    "esbuild": "0.25.10",
+    "playwright-core": "1.64.0"
   },
   "private": true
 }

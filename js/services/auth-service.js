@@ -201,6 +201,18 @@ export async function registerCompany({ name, email, company, password, plan = '
   const orgId = `org_${slug || 'empresa'}_${randomCode(8).toLowerCase()}`;
   const inviteCode = 'EDX-' + randomCode(8);
 
+  // The free trial belongs to the e-mail, not to the company: the date it ends is recorded once
+  // and the rules only accept a company with that same date. Deleting the company and
+  // registering again does not start another trial.
+  const claimRef = fsMod.doc(db, 'trial_claims', cleanEmail);
+  let trialEndsAtMs = Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000;
+  const claim = await fsMod.getDoc(claimRef);
+  if (claim.exists()) {
+    trialEndsAtMs = claim.data().trialEndsAtMs;
+  } else {
+    await fsMod.setDoc(claimRef, { trialEndsAtMs, createdAt: now });
+  }
+
   // Order matters: the security rules only accept an administrator profile for a company
   // this same account owns, so the company record has to exist first.
   await fsMod.setDoc(fsMod.doc(db, 'organizations', orgId), {
@@ -208,8 +220,7 @@ export async function registerCompany({ name, email, company, password, plan = '
     ownerUid: uid,
     plan: ['starter', 'pro', 'enterprise'].includes(plan) ? plan : 'pro',
     planStatus: 'trial',
-    // The database rules refuse a later date than 14 days from now
-    trialEndsAtMs: Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000,
+    trialEndsAtMs,
     createdAt: now
   });
   await fsMod.setDoc(fsMod.doc(db, 'users', uid), {

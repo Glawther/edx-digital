@@ -55,19 +55,23 @@ await build({
   logLevel: 'warning'
 });
 
+// The theme script runs before the page is drawn, so it is a file of its own
+await fs.writeFile(to('js', 'theme-boot.js'), (await transform(await fs.readFile(from('js', 'theme-boot.js'), 'utf8'), { minify: true, legalComments: 'none' })).code);
+
 // 2. Stylesheets, each under its own name so the pages need no change
 for (const file of (await fs.readdir(from('css'))).filter(name => name.endsWith('.css'))) {
   const { code } = await transform(await fs.readFile(from('css', file), 'utf8'), { loader: 'css', minify: true, legalComments: 'none' });
   await fs.writeFile(to('css', file), code);
 }
 
-// 3. Pages: comments out, nothing else touched (inline scripts and the text inside tags stay as written)
+// 3. Pages: comments out, nothing else touched. A page with code of its own would be refused by the security policy.
 for (const page of PAGES) {
   const html = await fs.readFile(from(page), 'utf8');
   const clean = html
     .replace(/<!--(?!\[if)[\s\S]*?-->/g, '')
     .replace(/^[ \t]+$/gm, '')
     .replace(/(\r?\n){3,}/g, '\n\n');
+  if (/<script(?![^>]*\ssrc=)/i.test(clean) || /\son[a-z]+\s*=\s*["']/i.test(clean)) throw new Error(`${page}: script ou evento embutido no HTML`);
   await fs.writeFile(to(page), clean);
 }
 

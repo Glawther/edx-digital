@@ -4,6 +4,7 @@
  * Rich Activity Timeline, Tasks & Loss Reasons Support.
  */
 
+import { isManual } from './history.js';
 import { STORAGE_KEYS, getSavedOrganization } from './config.js';
 import * as firestoreService from '../services/firebase-service.js';
 import { getCurrentUser, isAdmin, isCloudSession, isDemoSession, isReadOnly } from '../services/auth-service.js';
@@ -712,6 +713,34 @@ class StorageManager {
         await firestoreService.updateFirestoreCustomer(docId, {
           activities: customer.activities,
           updatedAt
+        });
+      } catch (fsErr) {
+        warnCloudWriteFailed(fsErr);
+      }
+    }
+  }
+
+  /**
+   * Removes one record a person wrote in the history (a call, a meeting, a note)
+   */
+  async deleteActivity(customerId, activityId) {
+    assertCanWrite();
+    const customer = this.getCustomer(customerId);
+    if (!customer || !Array.isArray(customer.activities)) return;
+    const target = customer.activities.find(activity => activity.id === activityId);
+    // what the system recorded by itself (stage changes, tasks) is not removable
+    if (!target || !isManual(target)) return;
+
+    customer.activities = customer.activities.filter(activity => activity.id !== activityId);
+    customer.updatedAt = new Date().toISOString();
+    this.saveLocalData();
+    this.notifyListeners();
+
+    if (this.mode === 'firestore') {
+      try {
+        await firestoreService.updateFirestoreCustomer(customer.firestoreId || customer.id || customerId, {
+          activities: customer.activities,
+          updatedAt: customer.updatedAt
         });
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
