@@ -5,6 +5,7 @@
  */
 
 const crypto = require('crypto');
+const { BILLING_WEBHOOK_SECRET } = require('../config/secrets');
 
 class BillingGatewayAdapter {
   constructor(config = {}) {
@@ -21,7 +22,7 @@ class BillingGatewayAdapter {
       pro: config.checkoutProUrl || process.env.CHECKOUT_PRO_URL || 'https://pay.kiwify.com.br/pro-demo',
       enterprise: config.checkoutEnterpriseUrl || process.env.CHECKOUT_ENTERPRISE_URL || 'https://pay.kiwify.com.br/enterprise-demo'
     };
-    this.webhookSecret = config.webhookSecret || process.env.WEBHOOK_HMAC_SECRET || 'nexus_whsec_default_2026';
+    this.webhookSecret = config.webhookSecret || BILLING_WEBHOOK_SECRET;
     this.environment = config.environment || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox');
   }
 

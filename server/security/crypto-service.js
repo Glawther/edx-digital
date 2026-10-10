@@ -6,14 +6,8 @@
 
 const crypto = require('crypto');
 
-// Master Encryption Key (32 bytes / 256 bits). In production, load from KMS / Vault / Environment.
-const DEFAULT_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
-const MASTER_KEY_HEX = process.env.ENCRYPTION_MASTER_KEY || DEFAULT_KEY;
-const MASTER_KEY = Buffer.from(MASTER_KEY_HEX, 'hex');
-
-if (MASTER_KEY.length !== 32) {
-  throw new Error('FATAL SECURITY ERROR: ENCRYPTION_MASTER_KEY must be exactly 32 bytes (64 hex characters).');
-}
+// Master Encryption Key (32 bytes / 256 bits), loaded from the environment. See config/secrets.js.
+const { MASTER_KEY } = require('../config/secrets');
 
 /**
  * 1. PASSWORD HASHING (Scrypt with Cryptographically Secure Dynamic Salt)

@@ -1,0 +1,13 @@
+# Keep secrets, local data and repository metadata out of the image
+.git
+.gitignore
+.env
+.env.*
+data
+node_modules
+docs
+*.md
+server/tests
+deploy-cloudrun.ps1
+deploy-cloudrun.sh
+docker-compose.yml

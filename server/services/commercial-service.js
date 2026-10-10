@@ -6,7 +6,7 @@
 
 const crypto = require('crypto');
 const { defaultRepository, SecurityContext } = require('../database/repository');
-const { hashPassword, verifyWebhookSignature } = require('../security/crypto-service');
+const { hashPassword, verifyPassword, verifyWebhookSignature } = require('../security/crypto-service');
 const { auditService, AUDIT_ACTIONS, SEVERITY } = require('../security/audit-service');
 const { generateSessionToken } = require('../middleware/auth-context');
 const { defaultBillingAdapter } = require('./billing-gateway-adapter');
@@ -47,6 +47,9 @@ const COMMERCIAL_PLANS = {
     features: ['Isolamento RLS Dedicado', 'Trilha Auditoria ISO 27001', 'Usuários Ilimitados', 'SLA 99.9%', 'Suporte VIP']
   }
 };
+
+// Well-formed scrypt hash of a random value nobody knows, used to equalize login timing
+const DUMMY_PASSWORD_HASH = `$scrypt$N=32768,r=8,p=1$${crypto.randomBytes(32).toString('hex')}$${crypto.randomBytes(64).toString('hex')}`;
 
 class CommercialService {
   constructor(repository = defaultRepository, billingAdapter = defaultBillingAdapter) {
@@ -206,6 +209,96 @@ class CommercialService {
       },
       token: sessionToken,
       tokenType: 'Bearer'
+    };
+  }
+
+  /**
+   * Password login: verifies e-mail + password and issues a session token.
+   * `slug` is only needed when the same e-mail and password exist in more than one company.
+   * @returns {{ status: number, body: object }}
+   */
+  async login({ email, password, slug } = {}, clientIp = '127.0.0.1') {
+    const invalid = { status: 401, body: { error: 'E-mail ou senha incorretos.' } };
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      return invalid;
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const wantedSlug = typeof slug === 'string' ? slug.toLowerCase().trim() : '';
+
+    const candidates = [];
+    for (const user of this.repository.users.values()) {
+      if (user.email !== emailLower) continue;
+      const tenant = await this.repository.getTenantById(user.tenant_id);
+      if (!tenant || (wantedSlug && tenant.slug !== wantedSlug)) continue;
+      candidates.push({ user, tenant });
+    }
+
+    // Always spend one password verification, so an unknown e-mail takes as long as a wrong password
+    if (candidates.length === 0) {
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
+    }
+
+    const matches = [];
+    for (const candidate of candidates) {
+      if (await verifyPassword(password, candidate.user.password_hash)) {
+        matches.push(candidate);
+      }
+    }
+
+    if (matches.length === 0) {
+      auditService.log({
+        tenantId: candidates[0]?.tenant.id || 'unauthenticated',
+        action: AUDIT_ACTIONS.LOGIN_FAILED,
+        entityType: 'AUTH',
+        ipAddress: clientIp,
+        severity: SEVERITY.WARNING,
+        newValues: { reason: 'Invalid e-mail or password' }
+      });
+      return invalid;
+    }
+
+    if (matches.length > 1) {
+      return { status: 409, body: { error: 'Este e-mail está em mais de uma empresa. Informe o identificador da empresa (slug) para entrar.' } };
+    }
+
+    const { user, tenant } = matches[0];
+    if (tenant.status !== 'active') {
+      return { status: 403, body: { error: 'ACESSO BLOQUEADO: Organização/Tenant inativo ou suspenso por políticas de conformidade.' } };
+    }
+
+    auditService.log({
+      tenantId: tenant.id,
+      actorId: user.id,
+      actorRole: user.role,
+      action: AUDIT_ACTIONS.LOGIN_SUCCESS,
+      entityType: 'AUTH',
+      ipAddress: clientIp,
+      severity: SEVERITY.INFO,
+      newValues: { method: 'password' }
+    });
+
+    const token = generateSessionToken({
+      tenant_id: tenant.id,
+      tenantId: tenant.id,
+      user_id: user.id,
+      userId: user.id,
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      team_id: user.team_id || null
+    });
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        token,
+        tokenType: 'Bearer',
+        expiresIn: 43200,
+        tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug, plan: tenant.plan },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role }
+      }
     };
   }
 

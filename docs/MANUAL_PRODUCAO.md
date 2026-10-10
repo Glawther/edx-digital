@@ -89,3 +89,40 @@ Se você possui uma VPS (Hostinger, DigitalOcean, Contabo, AWS EC2):
 6. Você será logado instantaneamente no painel com o badge `⏳ Teste: 7 dias` no topo.
 7. Clique no botão de teste para abrir o **Modal de Assinatura & PIX 1-Clique**.
 8. O código PIX Copia e Cola e o QR Code serão renderizados prontos para pagamento!
+
+---
+
+## 6. 🔐 Variáveis de Segurança Obrigatórias em Produção
+
+Com `NODE_ENV=production`, o servidor **não inicia** se algum destes segredos faltar ou tiver menos de 32 caracteres.
+Nenhum deles tem valor padrão no código.
+
+| Variável | Para que serve | Nomes alternativos aceitos |
+| --- | --- | --- |
+| `JWT_SECRET` | Assina os tokens de sessão | — |
+| `ENCRYPTION_MASTER_KEY` | Criptografa campos sensíveis (AES-256-GCM) | `MASTER_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEY` |
+| `BILLING_WEBHOOK_SECRET` | Valida a assinatura dos webhooks de cobrança | `WEBHOOK_HMAC_SECRET` |
+
+Gere cada valor com:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Trocar `ENCRYPTION_MASTER_KEY` torna ilegíveis os campos já criptografados; trocar `JWT_SECRET` encerra todas as sessões.
+
+### Quem pode alterar o recebimento de pagamentos
+
+A chave PIX e os gateways são da plataforma, não de cada empresa cliente. Só o administrador da empresa dona
+da plataforma pode alterá-los pela API. Defina o ID dessa empresa (o `tenant.id` devolvido no cadastro):
+
+```
+PLATFORM_OWNER_TENANT_ID=<id da sua empresa>
+```
+
+Sem essa variável, ninguém altera o recebimento pela API e valem os valores de `PIX_KEY`, `PIX_MERCHANT_NAME` e demais variáveis.
+
+### Login
+
+`POST /api/v1/auth/login` recebe `email` e `password` (e `slug` da empresa, se o mesmo e-mail existir em mais de uma)
+e devolve o token de sessão. Não existe mais emissão de token sem senha.

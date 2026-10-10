@@ -7,10 +7,12 @@ const { defaultRepository } = require('../database/repository');
 const { LeadController } = require('../controllers/lead-controller');
 const { ExportController } = require('../controllers/export-controller');
 const { SecureWebhookController } = require('../controllers/secure-webhook-controller');
-const { authenticateContext, generateSessionToken, extractClientIp } = require('../middleware/auth-context');
+const { authenticateContext, extractClientIp } = require('../middleware/auth-context');
 const { parseJsonBody } = require('../middleware/body-parser');
-const { auditService, AUDIT_ACTIONS, SEVERITY } = require('../security/audit-service');
+const { auditService, SEVERITY } = require('../security/audit-service');
+const { globalRateLimiter } = require('../security/rate-limiter');
 const { commercialService } = require('../services/commercial-service');
+const { BILLING_WEBHOOK_SECRET } = require('../config/secrets');
 
 const leadController = new LeadController(defaultRepository);
 const exportController = new ExportController(defaultRepository);
@@ -52,41 +54,17 @@ async function handleApiV1(req, res, parsedUrl) {
   const method = req.method;
   const clientIp = extractClientIp(req);
 
-  // 1. PUBLIC AUTH ROUTE: POST /api/v1/auth/token (Demo & SSO token generation)
-  if (parsedUrl === '/api/v1/auth/token' && method === 'POST') {
+  // 1. PUBLIC AUTH ROUTE: POST /api/v1/auth/login (e-mail + password)
+  // A session token is only ever issued after the password is verified.
+  if (parsedUrl === '/api/v1/auth/login' && method === 'POST') {
+    const rate = globalRateLimiter.check(`login:ip:${clientIp}`, 10, 300000);
+    if (!rate.allowed) {
+      return sendJson(res, 429, { error: `Muitas tentativas de login. Tente novamente em ${Math.ceil(rate.resetMs / 1000)}s.` });
+    }
     try {
       const { body } = await parseJsonBody(req);
-      const tenantId = body.tenant_id || 'tenant-enterprise-demo';
-      const role = body.role || 'admin';
-      const userId = body.user_id || `user-${role}-01`;
-      const name = body.name || `Usuário (${role})`;
-
-      const token = generateSessionToken({
-        tenant_id: tenantId,
-        user_id: userId,
-        role,
-        name,
-        team_id: body.team_id || null
-      });
-
-      auditService.log({
-        tenantId,
-        actorId: userId,
-        actorRole: role,
-        action: AUDIT_ACTIONS.LOGIN_SUCCESS,
-        entityType: 'AUTH',
-        ipAddress: clientIp,
-        severity: SEVERITY.INFO,
-        newValues: { method: 'token_issue', role }
-      });
-
-      return sendJson(res, 200, {
-        success: true,
-        token,
-        tokenType: 'Bearer',
-        expiresIn: 43200,
-        claims: { tenantId, userId, role, name }
-      });
+      const result = await commercialService.login(body, clientIp);
+      return sendJson(res, result.status, result.body);
     } catch (err) {
       return sendJson(res, 400, { error: err.message });
     }
@@ -142,9 +120,8 @@ async function handleApiV1(req, res, parsedUrl) {
     try {
       const { rawBuffer } = await parseJsonBody(req);
       const signature = req.headers['x-signature-256'] || req.headers['x-hub-signature-256'] || '';
-      const signingSecret = process.env.BILLING_WEBHOOK_SECRET || 'billing_secret_nexus_2026';
 
-      const result = await commercialService.processBillingWebhook(rawBuffer, signature, signingSecret, clientIp);
+      const result = await commercialService.processBillingWebhook(rawBuffer, signature, BILLING_WEBHOOK_SECRET, clientIp);
       return sendJson(res, result.status, result);
     } catch (err) {
       return sendJson(res, 400, { error: err.message });
@@ -186,10 +163,22 @@ async function handleApiV1(req, res, parsedUrl) {
 
   const context = authResult.context;
 
-  // POST /api/v1/commercial/payment-settings (Admin only: updates merchant PIX key & gateways)
+  // POST /api/v1/commercial/payment-settings (Platform owner only: updates merchant PIX key & gateways)
+  // These settings are shared by every tenant (they say where subscription payments go), so a
+  // tenant's own admin must not be able to change them. Only the owner tenant's admin can.
   if (parsedUrl === '/api/v1/commercial/payment-settings' && method === 'POST') {
-    if (context.role !== 'admin') {
-      return sendJson(res, 403, { error: 'Apenas administradores podem configurar o recebimento de pagamentos.' });
+    const ownerTenantId = process.env.PLATFORM_OWNER_TENANT_ID || '';
+    if (context.role !== 'admin' || !ownerTenantId || context.tenantId !== ownerTenantId) {
+      auditService.log({
+        tenantId: context.tenantId,
+        actorId: context.userId,
+        actorRole: context.role,
+        action: 'BILLING:SETTINGS_CHANGE_DENIED',
+        entityType: 'PAYMENT_SETTINGS',
+        ipAddress: clientIp,
+        severity: SEVERITY.SECURITY_ALERT
+      });
+      return sendJson(res, 403, { error: 'Apenas o administrador da plataforma pode configurar o recebimento de pagamentos.' });
     }
     try {
       const { body } = await parseJsonBody(req);

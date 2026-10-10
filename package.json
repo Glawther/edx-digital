@@ -4,8 +4,8 @@
   "description": "Nexus CRM - Sistema Comercial Enterprise com IA Gemini, Tríade CID (RBAC) e Google Cloud Firestore",
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js || python -m http.server 3000",
-    "start": "node server.js || python -m http.server 3000",
+    "dev": "node server.js",
+    "start": "node server.js",
     "test": "node --test server/tests/*.test.js",
     "deploy": "npx -y firebase-tools deploy --only hosting"
   },
