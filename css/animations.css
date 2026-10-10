@@ -63,13 +63,6 @@
   }
 }
 
-.skeleton-loading {
-  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-surface-elevated) 50%, var(--bg-surface) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
-
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -77,11 +70,5 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.spin {
-  animation: spin 0.8s linear infinite;
-  display: inline-block;
-  transform-origin: center;
 }
 

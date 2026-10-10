@@ -54,3 +54,20 @@ npm run test:rules
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
 - **Servidor (Render)**: o login do servidor (`/api/v1`) é independente deste. O aplicativo web não depende dele para entrar.
+
+## Termos, privacidade e direitos dos titulares
+
+- **Aceite**: quem cria conta marca que leu os Termos de Uso e a Política de Privacidade. A versão aceita e a data ficam em `users/{uid}` (`termsVersion`, `termsAcceptedAt`). Ao mudar o conteúdo de `termos.html` ou `privacidade.html`, atualize `LEGAL_VERSION` em `js/services/auth-service.js`.
+- **Exportar tudo**: Ferramentas > Minha conta e privacidade > Baixar todos os dados (administradores).
+- **Excluir a conta**: o vendedor apaga o próprio acesso; as oportunidades ficam com a empresa.
+- **Excluir a empresa**: só o dono. Apaga clientes, histórico de atividade, perfis da equipe, convite, a empresa e a conta do dono. Pede a senha e o nome da empresa.
+- **Sessão ociosa**: uma conta real sem uso por 8 horas é desconectada (`IDLE_LIMIT_MS`).
+- **Ao sair**: nada da empresa fica no navegador.
+
+### O que depende de você, fora do sistema
+
+- **Preencher os dados do responsável** em `termos.html` e `privacidade.html` (procure por `PREENCHER`). Não publique com esses campos em aberto.
+- **Contas de login de colaboradores de uma empresa excluída**: o sistema não consegue apagá-las. A política promete removê-las em até 30 dias: faça isso no console do Firebase (Authentication > Usuários).
+- **Contas inativas ou sem pagamento**: os prazos dos termos (aviso de 30 dias, exclusão depois) são cumpridos à mão, por enquanto.
+- **Reembolso em 7 dias e conferência do PIX em até 2 dias úteis**: são compromissos assumidos nos termos.
+- **Revisão por advogado**: os textos foram escritos para descrever o que o sistema faz de verdade, mas não substituem a revisão de um advogado, principalmente nos pontos de limitação de responsabilidade, foro e registros de acesso do Marco Civil.

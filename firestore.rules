@@ -95,10 +95,16 @@ service cloud.firestore {
                .hasOnly(['name', 'role', 'status', 'jobTitle', 'department', 'mustChangePassword', 'updatedAt']))
       );
 
-      allow delete: if signedIn()
-        && request.auth.uid != uid
-        && isOrgAdmin(resource.data.orgId)
-        && orgOwner(resource.data.orgId) != uid;
+      allow delete: if signedIn() && (
+        // o administrador remove outra pessoa da empresa (menos o dono)
+        (request.auth.uid != uid
+          && isOrgAdmin(resource.data.orgId)
+          && orgOwner(resource.data.orgId) != uid)
+        // a própria pessoa exclui a sua conta; o dono só depois de excluir a empresa
+        || (request.auth.uid == uid
+          && (!exists(/databases/$(database)/documents/organizations/$(resource.data.orgId))
+              || orgOwner(resource.data.orgId) != uid))
+      );
     }
 
     function validNewProfile(data) {
@@ -121,7 +127,8 @@ service cloud.firestore {
       allow create: if isOrgAdmin(request.resource.data.orgId);
       allow update: if isOrgAdmin(resource.data.orgId)
         && request.resource.data.orgId == resource.data.orgId;
-      allow delete: if isOrgAdmin(resource.data.orgId);
+      allow delete: if signedIn()
+        && (request.auth.uid == uid || isOrgAdmin(resource.data.orgId));
     }
 
     // ---------------------------------------------------------------- empresas
@@ -143,7 +150,8 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'teamInviteCode', 'updatedAt']);
 
-      allow delete: if false;
+      // Só o dono exclui a empresa (direito de eliminação dos dados)
+      allow delete: if isOrgAdmin(orgId) && resource.data.ownerUid == request.auth.uid;
     }
 
     // ---------------------------------------------------------------- convites
@@ -193,7 +201,10 @@ service cloud.firestore {
       allow create: if isMember(request.resource.data.orgId)
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.keys().hasAll(['action', 'timestamp']);
-      allow update, delete: if false; // o registro não pode ser alterado nem apagado
+      allow update: if false; // o registro não pode ser alterado
+      // Só é apagado pelo dono, ao excluir a empresa inteira
+      allow delete: if isOrgAdmin(resource.data.orgId)
+        && orgOwner(resource.data.orgId) == request.auth.uid;
     }
 
     // Tudo o que não está listado acima fica fechado (inclusive as coleções antigas

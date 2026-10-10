@@ -3,63 +3,152 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Termos de Uso | Nexus CRM Enterprise</title>
-  <meta name="description" content="Termos e condições gerais de contratação e uso do software como serviço (SaaS) Nexus CRM Enterprise.">
+  <title>Termos de Uso | Nexus CRM</title>
+  <meta name="description" content="Condições de uso do Nexus CRM: conta, planos, pagamento, cancelamento, dados e responsabilidades.">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #07090e;
-      --card: #0f1420;
-      --border: rgba(255, 255, 255, 0.08);
-      --primary: #d9f942;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-    body { background: var(--bg); color: var(--text); line-height: 1.7; padding: 40px 5%; }
-    .container { max-width: 900px; margin: 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 50px 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-    h1, h2, h3 { font-family: 'Outfit', sans-serif; color: #fff; margin-bottom: 1rem; }
-    h1 { font-size: 2.4rem; color: var(--primary); }
-    h2 { font-size: 1.4rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    p, li { color: var(--muted); font-size: 0.98rem; margin-bottom: 1rem; }
-    ul { padding-left: 20px; margin-bottom: 1.5rem; }
-    .badge { display: inline-block; background: rgba(217, 249, 66, 0.15); color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem; }
-    .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; font-weight: 600; margin-bottom: 2rem; font-size: 0.95rem; }
-    .back-btn:hover { text-decoration: underline; }
+    :root { --ink: #18212f; --ink-soft: #4a5565; --ink-muted: #6f7a8a; --line: #e4e7ec; --accent: #2447a8; --wash: #f5f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .top { border-bottom: 1px solid var(--line); }
+    .top div { max-width: 760px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 600; color: var(--ink); text-decoration: none; }
+    .top nav a { margin-left: 20px; font-size: 0.92rem; color: var(--ink-soft); text-decoration: none; }
+    .top nav a:hover { color: var(--ink); }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+    h1 { font-size: 2rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .meta { color: var(--ink-muted); font-size: 0.92rem; margin: 0 0 28px; }
+    .summary { background: var(--wash); border-radius: 8px; padding: 18px 20px; margin: 0 0 36px; }
+    .summary p { margin: 0 0 8px; font-weight: 500; }
+    .summary ul { margin: 0; padding-left: 20px; color: var(--ink-soft); }
+    h2 { font-size: 1.15rem; font-weight: 600; margin: 36px 0 8px; }
+    p, li { color: var(--ink-soft); }
+    p { margin: 0 0 12px; }
+    ul { margin: 0 0 12px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--ink); font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.93rem; }
+    th { text-align: left; font-weight: 500; color: var(--ink-muted); font-size: 0.84rem; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); }
+    td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); color: var(--ink-soft); vertical-align: top; }
+    .table-scroll { overflow-x: auto; }
+    mark { background: #fff3c4; color: #5c4400; padding: 1px 4px; border-radius: 3px; }
+    footer { border-top: 1px solid var(--line); }
+    footer div { max-width: 760px; margin: 0 auto; padding: 24px; font-size: 0.88rem; color: var(--ink-muted); }
+    footer a { color: var(--ink-soft); margin-right: 18px; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <a href="/landing" class="back-btn">&larr; Voltar para a Página Principal</a>
-    <span class="badge">CONTRATO DE LICENCIAMENTO SAAS</span>
-    <h1>Termos de Uso do Nexus CRM</h1>
-    <p><strong>Última atualização:</strong> 26 de Setembro de 2026</p>
+  <header class="top"><div>
+    <a class="brand" href="/landing">Nexus CRM</a>
+    <nav><a href="/termos">Termos</a><a href="/privacidade">Privacidade</a><a href="index.html">Entrar</a></nav>
+  </div></header>
+  <main>
 
-    <h2>1. Objeto e Aceitação</h2>
-    <p>Estes Termos de Uso regulam o fornecimento do software de gestão de relacionamento com o cliente (Nexus CRM Enterprise) disponibilizado na modalidade Software as a Service (SaaS). Ao criar uma conta ou contratar qualquer plano, o Contratante declara que leu, compreendeu e concorda com todas as disposições aqui estipuladas.</p>
+    <h1>Termos de Uso</h1>
+    <p class="meta">Versão de 10 de outubro de 2026</p>
 
-    <h2>2. Isolamento de Dados e Multitenancy</h2>
-    <p>O Nexus CRM opera sob arquitetura de Isolamento Lógico Multitenant com Row-Level Security (RLS) e segregação estrita por Tenant ID. Cada Contratante possui soberania total sobre sua base de leads, contatos e métricas comerciais, sendo terminantemente vedado o acesso cruzado de dados entre diferentes organizações.</p>
+    <div class="summary">
+      <p>Em resumo</p>
+      <ul>
+        <li>Você testa por 14 dias sem pagar. Depois, o plano é pago por PIX a cada mês; não há cobrança automática.</li>
+        <li>Os dados que você coloca no CRM são seus. Você pode exportar ou apagar tudo quando quiser.</li>
+        <li>Você responde pelo que faz com a ferramenta, inclusive pelas mensagens que envia aos seus contatos.</li>
+        <li>O serviço é oferecido sem garantia de disponibilidade contínua. Recomendamos exportar seus dados com regularidade.</li>
+      </ul>
+    </div>
 
-    <h2>3. Nível de Serviço (SLA de 99.9%)</h2>
-    <p>Garantimos um índice de disponibilidade mensal de 99.9% (noventa e nove vírgula nove por cento) para as rotas centrais de CRM e sincronização de dados. A arquitetura PWA Offline-First assegura que, em caso de instabilidades de conectividade local, o Contratante possa continuar operando tarefas e visualizando registros armazenados no dispositivo.</p>
+    <h2>1. Quem oferece o serviço</h2>
+    <p>O Nexus CRM é oferecido por <mark>[PREENCHER: razão social ou nome completo, e CNPJ ou CPF]</mark> ("nós"). Estes termos são o contrato entre nós e a pessoa ou empresa que cria uma conta ("você"). Ao criar a conta você declara que leu e aceita estes termos e a <a href="/privacidade">Política de Privacidade</a>. A data e a versão aceita ficam registradas na sua conta.</p>
 
-    <h2>4. Obrigações e Uso Aceitável</h2>
-    <p>O Contratante compromete-se a:</p>
+    <h2>2. O que é o serviço</h2>
+    <p>Um sistema na internet para organizar oportunidades de venda: funil, cadastro de clientes, tarefas, propostas, relatórios e ferramentas de apoio. Podemos acrescentar, alterar ou retirar funcionalidades. Quando uma mudança reduzir de forma relevante o que você contratou, avisaremos com pelo menos 15 dias de antecedência.</p>
+
+    <h2>3. Conta e acesso</h2>
     <ul>
-      <li>Não utilizar os recursos de automação de WhatsApp ou Webhooks para disseminação de SPAM, conteúdo ilegal ou mensagens não consentidas;</li>
-      <li>Manter sob sigilo as credenciais de acesso de seus administradores e consultores comerciais;</li>
-      <li>Respeitar os limites de cotas e usuários definidos no plano contratado (Starter, Professional ou Enterprise).</li>
+      <li>Você precisa ter 18 anos ou mais e capacidade para contratar. Se a conta é de uma empresa, você declara ter poderes para representá-la.</li>
+      <li>Quem cria a empresa no sistema é o administrador dela e decide quem entra na equipe, com qual perfil.</li>
+      <li>Cada pessoa usa o próprio e-mail e a própria senha. Não compartilhe senhas. Avise-nos se desconfiar de acesso indevido.</li>
+      <li>Você responde pelo que for feito com as contas da sua empresa.</li>
     </ul>
 
-    <h2>5. Planos, Cobrança e Cancelamento</h2>
-    <p>As assinaturas são renovadas automaticamente conforme a periodicidade escolhida (mensal ou anual). O cancelamento pode ser efetuado a qualquer momento através do painel de governança, mantendo-se o acesso ativo até o encerramento do ciclo de cobrança já pago. O Contratante poderá exportar sua base de dados completa em conformidade com as regras de Data Loss Prevention (DLP).</p>
+    <h2>4. Período de teste, planos e pagamento</h2>
+    <ul>
+      <li>Toda conta nova tem 14 dias de teste, sem informar forma de pagamento.</li>
+      <li>Os planos, seus limites e preços estão na <a href="/landing#planos">página de planos</a>. O preço vale para o período já pago.</li>
+      <li>O pagamento é por PIX, feito por você a cada período. <strong>Não há renovação nem cobrança automática.</strong> O plano é liberado depois que conferirmos o pagamento, o que pode levar até 2 dias úteis.</li>
+      <li>Se o teste ou o período pago terminar sem novo pagamento, o acesso pode ser limitado ou suspenso. Seus dados continuam disponíveis para exportação pelo prazo indicado na seção 11.</li>
+      <li>Mudanças de preço são avisadas com 30 dias de antecedência e só valem para períodos futuros.</li>
+    </ul>
 
-    <h2>6. Foro e Legislação Aplicável</h2>
-    <p>Estes termos são regidos pelas leis da República Federativa do Brasil, em especial o Marco Civil da Internet (Lei nº 12.965/2014) e a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
-  </div>
+    <h2>5. Cancelamento e reembolso</h2>
+    <ul>
+      <li>Você cancela quando quiser: basta não pagar o período seguinte, ou excluir a conta em Ferramentas, Minha conta e privacidade.</li>
+      <li>Se você se arrepender em até 7 dias depois do primeiro pagamento, devolvemos o valor integral. Peça pelo e-mail de contato.</li>
+      <li>Fora desse caso, períodos já pagos não são reembolsados proporcionalmente, salvo se o serviço ficar indisponível por culpa nossa por mais de 5 dias seguidos, quando devolvemos o valor proporcional aos dias parados.</li>
+    </ul>
+
+    <h2>6. Seus dados</h2>
+    <ul>
+      <li>Tudo o que você cadastra (clientes, oportunidades, anotações, tarefas) pertence a você. Usamos esses dados apenas para prestar o serviço.</li>
+      <li>Você pode exportar seus dados e excluir a conta ou a empresa a qualquer momento, pelo próprio sistema.</li>
+      <li>Ao cadastrar dados de outras pessoas (seus clientes e contatos), <strong>você é o responsável por ter uma base legal para isso</strong> e por atender os pedidos dessas pessoas, conforme a Lei Geral de Proteção de Dados. Nesse caso atuamos como operador, seguindo as suas instruções. Os detalhes estão na seção 10 da Política de Privacidade.</li>
+      <li>O sistema não foi feito para guardar dados sensíveis (saúde, biometria, religião, opinião política, entre outros) nem dados de cartão de crédito. Não os cadastre.</li>
+    </ul>
+
+    <h2>7. Uso aceitável</h2>
+    <p>Você concorda em não usar o serviço para:</p>
+    <ul>
+      <li>enviar mensagens em massa não solicitadas, ou contatar pessoas que pediram para não ser contatadas;</li>
+      <li>guardar ou transmitir conteúdo ilegal, ou dados obtidos de forma ilícita;</li>
+      <li>tentar acessar dados de outras empresas, burlar limites do plano ou sobrecarregar o sistema;</li>
+      <li>copiar, revender ou fazer engenharia reversa do sistema.</li>
+    </ul>
+    <p>As mensagens de WhatsApp são preparadas pelo sistema e enviadas por você, no seu número. Você responde por elas e pelo cumprimento das regras do WhatsApp.</p>
+
+    <h2>8. Inteligência artificial</h2>
+    <p>A análise com IA é opcional e funciona com a sua própria chave do Google Gemini. Quando você pede uma análise, os dados daquela oportunidade são enviados ao Google para gerar a resposta, sob os termos do Google. As sugestões são automáticas, podem conter erros e não substituem a sua avaliação.</p>
+
+    <h2>9. Disponibilidade, suporte e cópias</h2>
+    <ul>
+      <li>Trabalhamos para manter o serviço no ar, mas <strong>não garantimos funcionamento ininterrupto nem um percentual de disponibilidade</strong>. O sistema depende de serviços de terceiros (Google Firebase e outros listados na Política de Privacidade).</li>
+      <li>Pode haver paradas para manutenção. Quando forem programadas, avisamos antes.</li>
+      <li>O suporte é feito pelo e-mail de contato, em dias úteis.</li>
+      <li>Recomendamos que você exporte seus dados periodicamente. A exportação está em Segurança, Cópia de segurança.</li>
+    </ul>
+
+    <h2>10. Propriedade intelectual</h2>
+    <p>O sistema, sua marca e seu código pertencem a nós. Você recebe o direito de usá-lo enquanto a conta estiver ativa, sem exclusividade e sem poder transferi-lo. O conteúdo que você cadastra continua seu.</p>
+
+    <h2>11. Suspensão e encerramento</h2>
+    <ul>
+      <li>Podemos suspender ou encerrar contas que violem estes termos ou a lei. Sempre que possível, avisamos antes e damos prazo para correção.</li>
+      <li>Contas sem plano pago e sem nenhum acesso por 12 meses podem ser excluídas, depois de aviso por e-mail com 30 dias de antecedência.</li>
+      <li>Encerrada a conta por qualquer motivo que não seja exclusão feita por você, seus dados ficam disponíveis para exportação por 30 dias e depois são apagados.</li>
+    </ul>
+
+    <h2>12. Responsabilidade</h2>
+    <ul>
+      <li>Respondemos pelos danos diretos que causarmos, limitados ao valor que você nos pagou nos 12 meses anteriores ao fato.</li>
+      <li>Não respondemos por lucros cessantes, perda de negócios ou outros danos indiretos, nem por falhas de serviços de terceiros, da sua conexão ou dos seus equipamentos.</li>
+      <li>Esses limites não se aplicam em caso de dolo, nem quando a lei não permitir limitá-los, como nas relações de consumo.</li>
+    </ul>
+
+    <h2>13. Mudanças nestes termos</h2>
+    <p>Podemos atualizar estes termos. Mudanças relevantes são avisadas no sistema ou por e-mail com pelo menos 15 dias de antecedência. Se você não concordar, pode cancelar e exportar seus dados antes de a mudança valer. Continuar usando depois disso significa aceitar a nova versão.</p>
+
+    <h2>14. Lei e foro</h2>
+    <p>Estes termos seguem as leis brasileiras. Se você for consumidor, vale o foro do seu domicílio. Nos demais casos, fica eleito o foro de <mark>[PREENCHER: cidade e estado]</mark>.</p>
+
+    <h2>15. Contato</h2>
+    <p><mark>[PREENCHER: razão social ou nome completo, e CNPJ ou CPF]</mark><br>E-mail: <mark>[PREENCHER: e-mail de contato]</mark></p>
+  </main>
+  <footer><div>
+    <a href="/landing">Página inicial</a><a href="/termos">Termos de Uso</a><a href="/privacidade">Política de Privacidade</a>
+  </div></footer>
 </body>
 </html>

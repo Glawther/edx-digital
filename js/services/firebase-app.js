@@ -109,7 +109,8 @@ export function describeAuthError(err) {
     'nexus/no-profile': 'Esta conta ainda não está ligada a uma empresa. Use Criar conta para cadastrar a empresa ou entrar com um convite.',
     'nexus/blocked': 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.',
     'nexus/invalid-invite': 'Código de convite inválido ou desativado. Confira com quem administra o CRM da sua empresa.',
-    'nexus/account-exists': 'Este e-mail já tem uma conta ligada a uma empresa. Use a aba Entrar.'
+    'nexus/account-exists': 'Este e-mail já tem uma conta ligada a uma empresa. Use a aba Entrar.',
+    'nexus/not-owner': 'Só quem criou a empresa pode excluí-la.'
   };
   return messages[code] || (err && err.message) || 'Não foi possível concluir. Tente de novo.';
 }

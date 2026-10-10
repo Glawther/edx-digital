@@ -181,14 +181,6 @@ export function markAllAsRead() {
 }
 
 /**
- * Clears all notifications
- */
-export function clearAllNotifications() {
-  localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([]));
-  notifySubscribers();
-}
-
-/**
  * Schedules a follow-up reminder notification
  * @param {string} leadName - Name of the lead
  * @param {string} dueDate - Date string (YYYY-MM-DD)

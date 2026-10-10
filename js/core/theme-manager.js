@@ -54,21 +54,6 @@ export function updateThemeUI(theme) {
     brandToggle.setAttribute('aria-label', label);
   }
 
-  // 2. Header Switcher Toggle
-  const headerToggle = document.getElementById('btn-header-theme-toggle');
-  if (headerToggle) {
-    headerToggle.setAttribute('data-current-theme', theme);
-    const label = headerToggle.querySelector('.theme-toggle-label');
-    if (label) {
-      label.textContent = theme === 'dark' ? 'Noturno' : 'Claro';
-    }
-  }
-
-  // 3. Header Tools Menu Item
-  const menuThemeLabel = document.getElementById('menu-theme-label');
-  if (menuThemeLabel) {
-    menuThemeLabel.textContent = theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro';
-  }
 }
 
 /**
@@ -86,30 +71,6 @@ export function initTheme() {
       if (window.showToast) {
         window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
       }
-    });
-  }
-
-  // Header pill switch
-  const headerToggle = document.getElementById('btn-header-theme-toggle');
-  if (headerToggle) {
-    headerToggle.addEventListener('click', () => {
-      const newTheme = toggleTheme();
-      if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
-      }
-    });
-  }
-
-  // Tools menu action
-  const menuThemeBtn = document.getElementById('btn-menu-theme');
-  if (menuThemeBtn) {
-    menuThemeBtn.addEventListener('click', () => {
-      const newTheme = toggleTheme();
-      if (window.showToast) {
-        window.showToast(newTheme === 'dark' ? 'Tema escuro ativado' : 'Tema claro ativado', 'info');
-      }
-      const toolsMenu = document.getElementById('header-tools-menu');
-      if (toolsMenu) toolsMenu.style.display = 'none';
     });
   }
 

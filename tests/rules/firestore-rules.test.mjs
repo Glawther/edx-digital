@@ -291,8 +291,47 @@ test('a auditoria só recebe registros do próprio autor e nunca é alterada', a
   assert.equal(await put(world.ana, `audit_logs/log-${RUN}`, entry), OK);
   assert.equal(await put(world.ana, `audit_logs/log-falso-${RUN}`, { ...entry, userId: world.a.owner.uid }), DENIED);
   assert.equal(await patch(world.a.owner, `audit_logs/log-${RUN}`, { action: 'adulterado' }), DENIED);
-  assert.equal(await del(world.a.owner, `audit_logs/log-${RUN}`), DENIED);
+  assert.equal(await del(world.ana, `audit_logs/log-${RUN}`), DENIED);
+  assert.equal(await del(world.b.owner, `audit_logs/log-${RUN}`), DENIED);
   assert.equal(await get(world.ana, `audit_logs/log-${RUN}`), DENIED);     // vendedor não lê a auditoria
   assert.equal(await get(world.a.owner, `audit_logs/log-${RUN}`), OK);
   assert.equal(await get(world.b.owner, `audit_logs/log-${RUN}`), DENIED); // outra empresa também não
+});
+
+// ---------------------------------------------------------------- exclusão de conta e de empresa
+
+test('o vendedor exclui a própria conta, e só a própria', async () => {
+  const carla = await join('carla', world.a);
+  assert.equal(await put(world.a.owner, `user_private/${carla.uid}`, { orgId: world.a.orgId, cpf: '111.444.777-35', phone: '' }), OK);
+  assert.equal(await del(carla, `users/${world.ana.uid}`), DENIED);
+  assert.equal(await del(carla, `user_private/${carla.uid}`), OK);
+  assert.equal(await del(carla, `users/${carla.uid}`), OK);
+  // sem perfil, não alcança mais nada da empresa
+  assert.equal(await get(carla, `organizations/${world.a.orgId}`), DENIED);
+});
+
+test('o dono não some deixando a empresa sem dono; administrador comum não exclui a empresa', async () => {
+  assert.equal(await del(world.a.owner, `users/${world.a.owner.uid}`), DENIED);
+  assert.equal(await patch(world.a.owner, `users/${world.ana.uid}`, { role: 'admin' }), OK);
+  assert.equal(await del(world.ana, `organizations/${world.a.orgId}`), DENIED);
+  assert.equal(await patch(world.a.owner, `users/${world.ana.uid}`, { role: 'employee' }), OK);
+  assert.equal(await del(world.b.owner, `organizations/${world.a.orgId}`), DENIED);
+});
+
+test('o dono exclui a empresa inteira: clientes, auditoria, pessoas, empresa e a própria conta', async () => {
+  const c = await registerCompany('gama');
+  const vend = await join('gil', c);
+  assert.equal(await put(c.owner, `customers/g-${RUN}`, lead(c.orgId, vend)), OK);
+  assert.equal(await put(vend, `audit_logs/g-log-${RUN}`, { action: 'teste', timestamp: 'x', orgId: c.orgId, userId: vend.uid }), OK);
+
+  assert.equal(await del(c.owner, `customers/g-${RUN}`), OK);
+  assert.equal(await del(c.owner, `audit_logs/g-log-${RUN}`), OK);
+  assert.equal(await del(c.owner, `invites/${c.code}`), OK);
+  assert.equal(await del(c.owner, `users/${vend.uid}`), OK);
+  assert.equal(await del(c.owner, `organizations/${c.orgId}`), OK);
+  assert.equal(await del(c.owner, `users/${c.owner.uid}`), OK);
+
+  // nada sobra acessível
+  assert.equal(await get(c.owner, `organizations/${c.orgId}`), DENIED);
+  assert.equal(await get(vend, `customers/g-${RUN}`), DENIED);
 });

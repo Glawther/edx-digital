@@ -161,20 +161,6 @@ export function getLocalAuditLogs(limit = MAX_LOCAL_LOGS) {
 }
 
 /**
- * Gets audit logs filtered by action type
- */
-export function getAuditLogsByAction(actionType, limit = 50) {
-  return getLocalAuditLogs().filter(l => l.action === actionType).slice(0, limit);
-}
-
-/**
- * Gets audit logs filtered by user
- */
-export function getAuditLogsByUser(userId, limit = 50) {
-  return getLocalAuditLogs().filter(l => l.userId === userId).slice(0, limit);
-}
-
-/**
  * Gets audit log statistics
  */
 export function getAuditStats() {
@@ -242,18 +228,6 @@ export function formatAuditAction(action) {
     [AUDIT_ACTIONS.PERMISSION_DENIED]: 'Acesso Negado'
   };
   return labels[action] || `${action}`;
-}
-
-/**
- * Formats severity into a badge-style label
- */
-export function formatSeverityBadge(severity) {
-  const badges = {
-    [AUDIT_SEVERITY.INFO]: { label: 'INFO', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-    [AUDIT_SEVERITY.WARNING]: { label: 'ALERTA', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-    [AUDIT_SEVERITY.CRITICAL]: { label: 'CRÍTICO', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' }
-  };
-  return badges[severity] || badges[AUDIT_SEVERITY.INFO];
 }
 
 // Subscriber pattern for real-time UI updates

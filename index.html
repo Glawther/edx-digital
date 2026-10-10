@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="css/layout.css?v=2.0.0">
   <link rel="stylesheet" href="css/components.css?v=2.0.0">
   <link rel="stylesheet" href="css/animations.css?v=2.0.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.2.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.3.0">
   <!-- Pre-render Theme Application -->
   <script>
     (function() {
@@ -125,6 +125,11 @@
               <input type="password" id="reg-input-password" class="form-input" placeholder="Mínimo de 8 caracteres" minlength="8" required autocomplete="new-password">
             </div>
 
+            <label class="consent-line">
+              <input type="checkbox" id="reg-consent" required>
+              <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+            </label>
+
             <button type="submit" id="btn-submit-register" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
               Criar empresa
             </button>
@@ -158,6 +163,11 @@
               <input type="password" id="join-input-password" class="form-input" placeholder="Mínimo de 8 caracteres" minlength="8" required autocomplete="new-password">
             </div>
 
+            <label class="consent-line">
+              <input type="checkbox" id="join-consent" required>
+              <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+            </label>
+
             <button type="submit" id="btn-submit-join-team" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px;">
               Entrar na equipe
             </button>
@@ -167,6 +177,7 @@
 
       <div class="auth-footer-security">
         <a href="/landing" class="auth-plans-link">Ver recursos e planos</a>
+        <span class="auth-legal-links"><a href="/termos" target="_blank" rel="noopener">Termos</a><a href="/privacidade" target="_blank" rel="noopener">Privacidade</a></span>
       </div>
     </div>
   </div>
@@ -261,14 +272,6 @@
                 <span class="dropdown-item-desc">Chave do Gemini para as análises</span>
               </div>
             </button>
-            
-            <button type="button" class="dropdown-item" id="sidebar-firebase-btn">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Google Cloud Config</span>
-                <span class="dropdown-item-desc">Conexão Firestore e sync</span>
-              </div>
-            </button>
 
             <div class="dropdown-divider" id="tools-divider-company"></div>
 
@@ -334,6 +337,12 @@
 
             <div class="dropdown-divider"></div>
 
+            <button type="button" class="dropdown-item" id="btn-menu-account">
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Minha conta e privacidade</span>
+                <span class="dropdown-item-desc">Seus dados, exportação e exclusão</span>
+              </div>
+            </button>
             <button type="button" class="dropdown-item" id="btn-menu-shortcuts">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -1272,6 +1281,48 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ========================================================================
        MODAL: Troca de Senha Obrigatória no Primeiro Acesso
        ======================================================================== -->
+  <dialog id="account-dialog" class="crm-dialog" style="max-width: 560px; width: 95%;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Minha conta e privacidade</h2>
+      <button type="button" class="dialog-close" id="btn-close-account-dialog" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="dialog-body">
+      <div class="account-block">
+        <h3 class="section-title">Sua conta</h3>
+        <p id="account-summary"></p>
+        <p id="account-terms" class="muted"></p>
+        <p><a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a></p>
+      </div>
+
+      <div class="account-block" id="account-export-block">
+        <h3 class="section-title">Levar os dados</h3>
+        <p>Baixa um arquivo com todos os clientes, oportunidades, tarefas e históricos da empresa.</p>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-account-export">Baixar todos os dados</button>
+      </div>
+
+      <div class="account-block" id="account-delete-block">
+        <h3 class="section-title" id="account-delete-title">Excluir a conta</h3>
+        <p id="account-delete-text"></p>
+        <form id="form-account-delete">
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="account-delete-password">Sua senha, para confirmar</label>
+            <input type="password" id="account-delete-password" class="form-input" required autocomplete="current-password">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="account-delete-phrase" id="account-delete-phrase-label"></label>
+            <input type="text" id="account-delete-phrase" class="form-input" required autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-outline btn-sm btn-danger-outline" id="btn-account-delete">Excluir definitivamente</button>
+        </form>
+      </div>
+
+      <p class="muted" id="account-demo-note" style="display: none;">Você está na demonstração. Os dados de exemplo ficam só neste navegador; para apagá-los, basta sair.</p>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-secondary" id="btn-close-account-footer">Fechar</button>
+    </div>
+  </dialog>
+
   <dialog id="credentials-dialog" class="crm-dialog" style="max-width: 480px;">
     <div class="dialog-header">
       <h2 class="dialog-title" id="credentials-title">Acesso criado</h2>
@@ -1474,172 +1525,6 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <!-- ======================================================================
        DIALOG: CHECKOUT SEGURO & GATEWAY DE PAGAMENTO (PIX & CARTÃO)
        ====================================================================== -->
-  <dialog id="checkout-dialog" class="crm-dialog" style="max-width: 720px; width: 95%;">
-    <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <div>
-          <h2 class="dialog-title" style="margin: 0; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
-            Checkout Seguro Nexus CRM
-          </h2>
-          <span style="font-size: 0.72rem; color: var(--text-secondary);">Ativação Imediata com Garantia de Satisfação de 7 dias</span>
-        </div>
-      </div>
-      <button type="button" class="dialog-close" id="btn-close-checkout-dialog" aria-label="Fechar">&times;</button>
-    </div>
-
-    <div class="dialog-body" id="checkout-content-container" style="padding: 1.5rem;">
-      <div id="checkout-main-grid" class="checkout-layout-grid" style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 1.5rem;">
-        
-        <!-- Coluna Esquerda: Resumo do Pedido -->
-        <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Resumo da Assinatura</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-              <h3 id="checkout-plan-title" style="font-size: 1.3rem; font-weight: 800; color: var(--text-primary); margin: 0;">Nexus Pro</h3>
-              <span id="checkout-plan-tag" style="background: var(--color-primary); color: #000; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;">MENSAL</span>
-            </div>
-
-            <!-- Cycle Toggle -->
-            <div style="background: rgba(0,0,0,0.15); border-radius: 8px; padding: 4px; display: flex; gap: 4px; margin-bottom: 1rem;">
-              <button type="button" id="btn-cycle-monthly" class="btn btn-sm btn-primary" style="flex: 1; justify-content: center; font-size: 0.75rem; padding: 6px;">Mensal</button>
-              <button type="button" id="btn-cycle-yearly" class="btn btn-sm btn-outline" style="flex: 1; justify-content: center; font-size: 0.75rem; padding: 6px;">Anual (-20%)</button>
-            </div>
-
-            <!-- Features list -->
-            <ul id="checkout-features-list" style="font-size: 0.75rem; color: var(--text-secondary); padding-left: 1.2rem; margin-bottom: 1rem; line-height: 1.6;">
-              <li>Até 5.000 leads ativos</li>
-              <li>10 Vendedores com papéis de acesso</li>
-              <li>150 Análises de IA/mês</li>
-              <li>Whitelabel com logo e cores corporativas</li>
-            </ul>
-          </div>
-
-          <!-- Total Due -->
-          <div style="border-top: 1px dashed var(--border-color); padding-top: 0.85rem; margin-top: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-              <span style="font-size: 0.8rem; color: var(--text-secondary);">Subtotal:</span>
-              <span id="checkout-subtotal-price" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">R$ 149,00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">Total a Pagar:</span>
-              <span id="checkout-total-price" style="font-size: 1.4rem; font-weight: 800; color: #10b981;">R$ 149,00</span>
-            </div>
-            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;">Cobrança recorrente. Cancele quando quiser.</div>
-          </div>
-        </div>
-
-        <!-- Coluna Direita: Métodos de Pagamento -->
-        <div>
-          <!-- Payment Method Tabs -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-            <button type="button" id="tab-pay-pix" class="btn btn-primary" style="flex: 1; justify-content: center; font-size: 0.82rem; gap: 0.4rem;">
-              PIX Instantâneo
-            </button>
-            <button type="button" id="tab-pay-card" class="btn btn-outline" style="flex: 1; justify-content: center; font-size: 0.82rem; gap: 0.4rem;">
-              Cartão de Crédito
-            </button>
-          </div>
-
-          <!-- PIX View -->
-          <div id="payment-panel-pix" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.85rem;">
-            <div id="pix-qr-container" style="display: flex; justify-content: center; align-items: center;">
-              <!-- Dynamic QR Code SVG rendered here -->
-            </div>
-            
-            <div style="font-size: 0.78rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
-              <span>Código válido por:</span>
-              <strong id="pix-timer" style="color: #ef4444; font-size: 0.85rem;">10:00</strong>
-            </div>
-
-            <div style="width: 100%; display: flex; gap: 0.5rem;">
-              <input type="text" id="pix-copia-cola-input" readonly class="form-input" style="font-size: 0.72rem; font-family: monospace; background: rgba(0,0,0,0.2);">
-              <button type="button" class="btn btn-outline btn-sm" id="btn-copy-pix" style="white-space: nowrap;">
-                Copiar
-              </button>
-            </div>
-
-            <button type="button" class="btn btn-primary" id="btn-simulate-pix-success" style="width: 100%; justify-content: center; padding: 0.75rem; background: linear-gradient(135deg, #10b981, #059669); font-weight: 700;">
-              Simular Confirmação do PIX (Aprovação Imediata)
-            </button>
-          </div>
-
-          <!-- Credit Card View -->
-          <div id="payment-panel-card" style="display: none; flex-direction: column; gap: 0.85rem;">
-            <form id="form-checkout-card">
-              <div class="form-group" style="margin-bottom: 0.75rem;">
-                <label for="card-input-number" style="font-size: 0.78rem;">Número do Cartão *</label>
-                <div style="position: relative;">
-                  <input type="text" id="card-input-number" class="form-input" placeholder="4242 4242 4242 4242" required maxlength="19">
-                  <span id="card-brand-badge" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; pointer-events: none;"></span>
-                </div>
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0.75rem;">
-                <label for="card-input-name" style="font-size: 0.78rem;">Nome Impresso no Cartão *</label>
-                <input type="text" id="card-input-name" class="form-input" placeholder="Ex: JOAO S SILVA" required>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
-                <div class="form-group">
-                  <label for="card-input-expiry" style="font-size: 0.78rem;">Validade (MM/AA) *</label>
-                  <input type="text" id="card-input-expiry" class="form-input" placeholder="12/28" required maxlength="5">
-                </div>
-                <div class="form-group">
-                  <label for="card-input-cvv" style="font-size: 0.78rem;">CVV *</label>
-                  <input type="text" id="card-input-cvv" class="form-input" placeholder="123" required maxlength="4">
-                </div>
-              </div>
-
-              <button type="button" id="btn-fill-test-card" class="btn btn-outline btn-sm" style="width: 100%; justify-content: center; font-size: 0.72rem; margin-bottom: 0.5rem;">
-                Preencher Dados de Teste (Stripe Sandbox)
-              </button>
-
-              <button type="submit" class="btn btn-primary" id="btn-submit-card-pay" style="width: 100%; justify-content: center; padding: 0.75rem; font-weight: 700;">
-                Pagar e Ativar CRM Imediatamente
-              </button>
-            </form>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- Success Receipt View -->
-      <div id="checkout-success-view" style="display: none; flex-direction: column; align-items: center; text-align: center; padding: 1.5rem 1rem;">
-        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 2rem; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; border: 2px solid #10b981;">
-          ✓
-        </div>
-        <h3 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.25rem;">Pagamento Aprovado com Sucesso!</h3>
-        <p style="font-size: 0.85rem; color: var(--text-secondary); max-width: 440px; margin-bottom: 1.25rem;">
-          Seu plano <strong id="receipt-plan-name" style="color: var(--color-primary);">Nexus Pro</strong> foi ativado. O comprovante foi registrado na trilha de auditoria do sistema.
-        </p>
-
-        <!-- Receipt Box -->
-        <div style="width: 100%; max-width: 450px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; text-align: left; margin-bottom: 1.5rem; font-size: 0.8rem;">
-          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-            <span style="color: var(--text-muted);">Comprovante Nº:</span>
-            <strong id="receipt-invoice-id" style="font-family: monospace;">INV-XXXXX</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
-            <span style="color: var(--text-muted);">Forma de Pagamento:</span>
-            <span id="receipt-payment-method">PIX Instantâneo</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.4rem;">
-            <span style="color: var(--text-muted);">Valor Pago:</span>
-            <strong id="receipt-amount" style="color: #10b981;">R$ 149,00</strong>
-          </div>
-          <div style="display: flex; justify-content: space-between;">
-            <span style="color: var(--text-muted);">Próxima Renovação:</span>
-            <span id="receipt-valid-until">24/10/2026</span>
-          </div>
-        </div>
-
-        <button type="button" class="btn btn-primary" id="btn-checkout-finish" style="padding: 0.75rem 2.5rem; font-weight: 700;">
-          Acessar Meus Recursos Agora
-        </button>
-      </div>
-
-    </div>
-  </dialog>
 
   <!-- ======================================================================
        DIALOG: ASSISTENTE DE VENDAS & ABORDAGEM WHATSAPP (COM IA GEMINI)
@@ -1870,7 +1755,7 @@ Carla Menezes, LogiTech Brasil, +55 21 97777-2222, 90000, carla@logitech.com.br"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.2.0"></script>
+  <script type="module" src="js/app.js?v=3.3.0"></script>
 
 </body>
 </html>

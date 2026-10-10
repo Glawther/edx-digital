@@ -3,93 +3,176 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Política de Privacidade & LGPD | Nexus CRM Enterprise</title>
-  <meta name="description" content="Política de Privacidade, Proteção de Dados (LGPD/GDPR) e Diretrizes de Segurança Criptográfica do Nexus CRM.">
+  <title>Política de Privacidade | Nexus CRM</title>
+  <meta name="description" content="Como o Nexus CRM trata dados pessoais: quais dados, para quê, onde ficam, por quanto tempo e como exercer seus direitos.">
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #07090e;
-      --card: #0f1420;
-      --border: rgba(255, 255, 255, 0.08);
-      --primary: #d9f942;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-    body { background: var(--bg); color: var(--text); line-height: 1.7; padding: 40px 5%; }
-    .container { max-width: 900px; margin: 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 50px 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-    h1, h2, h3 { font-family: 'Outfit', sans-serif; color: #fff; margin-bottom: 1rem; }
-    h1 { font-size: 2.4rem; color: var(--primary); }
-    h2 { font-size: 1.4rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-    p, li { color: var(--muted); font-size: 0.98rem; margin-bottom: 1rem; }
-    ul { padding-left: 20px; margin-bottom: 1.5rem; }
-    .badge { display: inline-block; background: rgba(217, 249, 66, 0.15); color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem; }
-    .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; font-weight: 600; margin-bottom: 2rem; font-size: 0.95rem; }
-    .back-btn:hover { text-decoration: underline; }
-    .sec-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin: 20px 0; }
-    .sec-card h4 { color: #fff; margin-bottom: 8px; font-size: 1.1rem; }
+    :root { --ink: #18212f; --ink-soft: #4a5565; --ink-muted: #6f7a8a; --line: #e4e7ec; --accent: #2447a8; --wash: #f5f6f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .top { border-bottom: 1px solid var(--line); }
+    .top div { max-width: 760px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 600; color: var(--ink); text-decoration: none; }
+    .top nav a { margin-left: 20px; font-size: 0.92rem; color: var(--ink-soft); text-decoration: none; }
+    .top nav a:hover { color: var(--ink); }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 72px; }
+    h1 { font-size: 2rem; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 8px; }
+    .meta { color: var(--ink-muted); font-size: 0.92rem; margin: 0 0 28px; }
+    .summary { background: var(--wash); border-radius: 8px; padding: 18px 20px; margin: 0 0 36px; }
+    .summary p { margin: 0 0 8px; font-weight: 500; }
+    .summary ul { margin: 0; padding-left: 20px; color: var(--ink-soft); }
+    h2 { font-size: 1.15rem; font-weight: 600; margin: 36px 0 8px; }
+    p, li { color: var(--ink-soft); }
+    p { margin: 0 0 12px; }
+    ul { margin: 0 0 12px; padding-left: 20px; }
+    li { margin-bottom: 6px; }
+    strong { color: var(--ink); font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; font-size: 0.93rem; }
+    th { text-align: left; font-weight: 500; color: var(--ink-muted); font-size: 0.84rem; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); }
+    td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); color: var(--ink-soft); vertical-align: top; }
+    .table-scroll { overflow-x: auto; }
+    mark { background: #fff3c4; color: #5c4400; padding: 1px 4px; border-radius: 3px; }
+    footer { border-top: 1px solid var(--line); }
+    footer div { max-width: 760px; margin: 0 auto; padding: 24px; font-size: 0.88rem; color: var(--ink-muted); }
+    footer a { color: var(--ink-soft); margin-right: 18px; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <a href="/landing" class="back-btn">&larr; Voltar para a Página Principal</a>
-    <span class="badge">CONFORMIDADE LGPD (LEI Nº 13.709/2018) & GDPR</span>
-    <h1>Política de Privacidade e Proteção de Dados</h1>
-    <p><strong>Última atualização:</strong> 26 de Setembro de 2026</p>
+  <header class="top"><div>
+    <a class="brand" href="/landing">Nexus CRM</a>
+    <nav><a href="/termos">Termos</a><a href="/privacidade">Privacidade</a><a href="index.html">Entrar</a></nav>
+  </div></header>
+  <main>
 
-    <h2>1. Compromisso com a Privacidade e Segurança</h2>
-    <p>O Nexus CRM Enterprise tem o compromisso inegociável de proteger os dados pessoais e corporativos tratados através de nossa plataforma. Esta Política estabelece com transparência como coletamos, processamos, armazenamos e salvaguardamos suas informações, em total conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais (LGPD - Lei nº 13.709/2018)</strong> e o <strong>Regulamento Geral sobre a Proteção de Dados da União Europeia (GDPR - Regulamento UE 2016/679)</strong>.</p>
+    <h1>Política de Privacidade</h1>
+    <p class="meta">Versão de 10 de outubro de 2026</p>
 
-    <h2>2. Papéis no Tratamento de Dados (Controlador vs. Operador)</h2>
+    <div class="summary">
+      <p>Em resumo</p>
+      <ul>
+        <li>Usamos seus dados para fazer o CRM funcionar. Não vendemos dados e não usamos publicidade nem rastreadores.</li>
+        <li>Os dados dos seus clientes são seus: você decide o que cadastrar, e nós apenas guardamos e processamos para você.</li>
+        <li>Os dados ficam em serviços do Google (Firebase), que podem estar fora do Brasil.</li>
+        <li>Você exporta e apaga tudo pelo próprio sistema, quando quiser.</li>
+      </ul>
+    </div>
+
+    <h2>1. Quem é responsável</h2>
+    <p>O Nexus CRM é oferecido por <mark>[PREENCHER: razão social ou nome completo, e CNPJ ou CPF]</mark>. Há dois papéis diferentes, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018):</p>
     <ul>
-      <li><strong>Nexus CRM como Operador:</strong> Em relação aos dados dos clientes, leads e contatos inseridos na plataforma pelo Contratante, o Nexus CRM atua exclusivamente como <em>Operador</em> de dados, processando-os estritamente sob as instruções e autorização da organização contratante.</li>
-      <li><strong>Nexus CRM como Controlador:</strong> Em relação aos dados cadastrais da empresa contratante (e-mail corporativo do administrador, CNPJ, dados de faturamento e logs de auditoria técnica), atuamos como <em>Controlador</em> para fins de execução contratual e cumprimento de dever legal.</li>
+      <li><strong>Somos controlador</strong> dos dados da sua conta: os que você nos dá para criar e usar o acesso.</li>
+      <li><strong>Somos operador</strong> dos dados que você cadastra no CRM sobre outras pessoas (clientes, contatos, colaboradores). Nesse caso o controlador é você ou a sua empresa, e nós tratamos esses dados seguindo as suas instruções (seção 10).</li>
     </ul>
 
-    <h2>3. Medidas Técnicas de Segurança Criptográfica (Zero Trust)</h2>
-    <p>Nossa infraestrutura foi concebida sob os preceitos de <em>Privacy by Design</em> e <em>Privacy by Default</em>, implementando salvaguardas que superam os padrões bancários e corporativos internacionais:</p>
-
-    <div class="sec-card">
-      <h4>🔒 Criptografia em Repouso (AES-256-GCM com AAD)</h4>
-      <p>Todos os campos confidenciais e dados sensíveis de contato são cifrados com o algoritmo AES-256-GCM. Cada registro utiliza dados autenticados adicionais (AAD) atrelados ao identificador exclusivo do locatário (Tenant ID), impedindo ataques de injeção de texto cifrado entre organizações.</p>
+    <h2>2. Quais dados tratamos</h2>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Dado</th><th>De onde vem</th><th>Para quê</th></tr></thead>
+      <tbody>
+        <tr><td>Nome, e-mail, senha, empresa, perfil de acesso</td><td>Você, ao criar a conta, ou o administrador da sua empresa</td><td>Criar e proteger o acesso. A senha é guardada pelo serviço de autenticação do Google em formato que não permite leitura.</td></tr>
+        <tr><td>Data e versão do aceite dos termos</td><td>Registro automático no cadastro</td><td>Comprovar o aceite</td></tr>
+        <tr><td>CPF e telefone de colaboradores (opcionais)</td><td>O administrador da empresa</td><td>Cadastro interno da equipe. Só administradores da própria empresa veem.</td></tr>
+        <tr><td>Clientes, oportunidades, anotações, tarefas, propostas</td><td>Você e sua equipe; importações; formulários que você ligar ao CRM</td><td>É o conteúdo do CRM. Tratamos como operador.</td></tr>
+        <tr><td>Histórico de atividade: quem fez o quê e quando, tipo de navegador e tamanho de tela</td><td>Registro automático durante o uso</td><td>Segurança e auditoria pela sua empresa</td></tr>
+        <tr><td>Registros de acesso: data, hora e endereço IP</td><td>Coletados pelos provedores de infraestrutura</td><td>Segurança e cumprimento do Marco Civil da Internet</td></tr>
+        <tr><td>Comprovante de pagamento e dados de contato para cobrança</td><td>Você, ao pagar um plano</td><td>Liberar o plano e cumprir obrigações fiscais. Não recebemos nem guardamos dados de cartão.</td></tr>
+      </tbody>
+    </table>
     </div>
 
-    <div class="sec-card">
-      <h4>🛡️ Isolamento Lógico Multitenant (Row-Level Security)</h4>
-      <p>Políticas ativas no banco de dados garantem que nenhuma query possa acessar registros fora do tenant autenticado. Sessões cruzadas ou transbordamento de dados são matematicamente bloqueados no nível de persistência.</p>
-    </div>
-
-    <div class="sec-card">
-      <h4>🔑 Proteção de Credenciais com Scrypt</h4>
-      <p>Senhas de usuários e chaves de acesso são derivadas por funções de memória pesada (Scrypt), tornando inviável qualquer tentativa de ataque por força bruta ou dicionário acelerado por hardware especializado (GPU/ASIC).</p>
-    </div>
-
-    <div class="sec-card">
-      <h4>📜 Trilha de Auditoria Criptográfica com Hash Chaining</h4>
-      <p>Todos os eventos de criação, alteração, exportação de relatórios ou exclusão geram registros de auditoria assinados com SHA-256 e encadeados de forma imutável, impossibilitando adulterações retrospectivas de logs.</p>
-    </div>
-
-    <h2>4. Direitos dos Titulares de Dados (Art. 18 da LGPD)</h2>
-    <p>O titular dos dados pessoais tratados através da plataforma tem direito a requerer a qualquer momento:</p>
+    <h2>3. Bases legais</h2>
     <ul>
-      <li>Confirmação da existência de tratamento e acesso rápido aos dados;</li>
-      <li>Correção de dados incompletos, inexatos ou desatualizados;</li>
-      <li>Anonimização, bloqueio ou eliminação de dados desnecessários ou tratados em desconformidade com a legislação;</li>
-      <li>Portabilidade de seus dados a outro fornecedor de serviço mediante exportação padronizada;</li>
-      <li>Revogação do consentimento concedido previamente.</li>
+      <li><strong>Execução de contrato</strong>: dados da conta, do uso do sistema e do pagamento.</li>
+      <li><strong>Obrigação legal</strong>: registros de acesso (Marco Civil da Internet) e documentos fiscais.</li>
+      <li><strong>Legítimo interesse</strong>: histórico de atividade e medidas de segurança contra uso indevido.</li>
+    </ul>
+    <p>Para os dados que você cadastra sobre terceiros, a base legal é definida por você, que é o controlador.</p>
+
+    <h2>4. Onde os dados ficam e quem nos ajuda</h2>
+    <p>Usamos os fornecedores abaixo (suboperadores). Eles tratam dados apenas para nos prestar o serviço descrito.</p>
+    <div class="table-scroll">
+    <table>
+      <thead><tr><th>Fornecedor</th><th>O que faz</th><th>Onde</th></tr></thead>
+      <tbody>
+        <tr><td>Google (Firebase Authentication, Firestore e Hosting)</td><td>Login, banco de dados e hospedagem do sistema</td><td>Centros de dados do Google, que podem estar fora do Brasil</td></tr>
+        <tr><td>Render</td><td>Servidor que recebe os leads enviados por formulários e apoia a cobrança</td><td>Estados Unidos</td></tr>
+        <tr><td>Google Fonts</td><td>Entrega a fonte usada nas telas; o seu navegador se conecta ao Google para baixá-la</td><td>Global</td></tr>
+        <tr><td>Google Gemini (só se você ativar a IA com a sua chave)</td><td>Gera as análises de oportunidade. Recebe os dados da oportunidade analisada.</td><td>Global</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Como alguns desses serviços ficam fora do Brasil, há transferência internacional de dados. Ela ocorre com fornecedores que oferecem garantias contratuais de proteção de dados, como prevê o art. 33 da LGPD. Se incluirmos ou trocarmos um fornecedor, atualizaremos esta lista antes.</p>
+    <p>Quando você abre uma conversa no WhatsApp a partir do CRM, a mensagem é enviada por você, pelo seu aplicativo. Não enviamos dados ao WhatsApp por conta própria.</p>
+
+    <h2>5. O que fica guardado no seu navegador</h2>
+    <p>Não usamos cookies de publicidade nem ferramentas de rastreamento ou de análise de audiência. O sistema guarda no armazenamento do seu navegador apenas o necessário para funcionar:</p>
+    <ul>
+      <li>a sua sessão de login e a preferência de tema;</li>
+      <li>a chave do Gemini e o token de recebimento de leads, se você os configurar;</li>
+      <li>os dados de exemplo da demonstração, que nunca saem do seu navegador;</li>
+      <li>uma cópia dos arquivos do sistema, para abrir mais rápido.</li>
+    </ul>
+    <p>Ao sair de uma conta, os dados da empresa são removidos desse armazenamento.</p>
+
+    <h2>6. Com quem compartilhamos</h2>
+    <p>Não vendemos nem alugamos dados. Compartilhamos apenas com os fornecedores da seção 4 e com autoridades, quando houver ordem legal válida.</p>
+
+    <h2>7. Por quanto tempo guardamos</h2>
+    <ul>
+      <li><strong>Dados da conta e conteúdo do CRM</strong>: enquanto a conta existir.</li>
+      <li><strong>Quando você exclui a conta ou a empresa pelo sistema</strong>: os dados são apagados do banco de dados na hora. Cópias residuais nos sistemas dos fornecedores são eliminadas nos prazos deles.</li>
+      <li><strong>Contas de login de colaboradores de uma empresa excluída</strong>: ficam sem acesso a qualquer dado e são removidas em até 30 dias, ou antes, a pedido.</li>
+      <li><strong>Conta encerrada por falta de pagamento ou inatividade</strong>: dados disponíveis para exportação por 30 dias e depois apagados.</li>
+      <li><strong>Registros de acesso</strong>: mantidos pelos provedores de infraestrutura, pelos prazos deles. <strong>Documentos fiscais</strong>: pelo prazo da legislação tributária.</li>
+      <li><strong>Leads recebidos por formulário</strong>: ficam no servidor de recebimento até entrarem no seu CRM.</li>
     </ul>
 
-    <h2>5. Armazenamento Local e Arquitetura Offline-First</h2>
-    <p>O Nexus CRM utiliza tecnologias de PWA (IndexedDB criptografado e Cache Storage seguro) no dispositivo do usuário para permitir produtividade mesmo offline. Nenhum dado corporativo sincronizado localmente é compartilhado com terceiros ou redes externas não autenticadas.</p>
+    <h2>8. Segurança</h2>
+    <ul>
+      <li>Toda a comunicação com o sistema é feita por conexão criptografada (HTTPS).</li>
+      <li>O acesso exige e-mail e senha. As regras que separam uma empresa da outra, e o vendedor do administrador, são aplicadas no servidor.</li>
+      <li>Os dados em repouso são criptografados pelo provedor de nuvem.</li>
+      <li>A sessão é encerrada depois de 8 horas sem uso.</li>
+      <li>Há um histórico de atividade que a sua empresa pode consultar e exportar.</li>
+    </ul>
+    <p>Nenhum sistema é imune a falhas. Se houver um incidente de segurança que possa trazer risco ou dano relevante, avisaremos as pessoas afetadas e a Autoridade Nacional de Proteção de Dados nos prazos legais. Quando o incidente envolver dados que tratamos como operador, avisaremos a empresa controladora em até 2 dias úteis depois de tomarmos conhecimento.</p>
 
-    <h2>6. Contato do Encarregado de Dados (DPO)</h2>
-    <p>Para dúvidas, requisições de titulares de dados ou esclarecimentos sobre nossas práticas de cibersegurança e governança, entre em contato diretamente com o nosso Encarregado pelo Tratamento de Dados Pessoais (DPO):</p>
-    <p><strong>Encarregado (DPO):</strong> Equipe de Segurança e Governança Nexus CRM<br>
-    <strong>E-mail direto:</strong> <a href="mailto:dpo@nexuscrm.com.br" style="color: var(--primary);">dpo@nexuscrm.com.br</a><br>
-    <strong>Prazo de atendimento:</strong> Até 48 horas úteis para chamados de titulares de dados.</p>
-  </div>
+    <h2>9. Seus direitos</h2>
+    <p>Você pode pedir confirmação do tratamento, acesso, correção, portabilidade, eliminação, informação sobre compartilhamento e revisão de decisões, conforme o art. 18 da LGPD.</p>
+    <ul>
+      <li><strong>Dados da sua conta</strong>: corrija e exclua pelo próprio sistema (Ferramentas, Minha conta e privacidade) ou escreva para o e-mail de contato. Respondemos em até 15 dias.</li>
+      <li><strong>Dados que uma empresa cadastrou sobre você</strong> (por exemplo, você é cliente de alguém que usa o Nexus CRM): procure essa empresa, que é a controladora. Se nos escrever, encaminhamos o pedido a ela.</li>
+    </ul>
+    <p>Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
+
+    <h2>10. Quando tratamos dados em nome da sua empresa</h2>
+    <p>Para os dados que você cadastra sobre terceiros, valem estes compromissos, que integram os Termos de Uso:</p>
+    <ul>
+      <li><strong>Instruções</strong>: tratamos esses dados só para prestar o serviço, conforme o que você faz no sistema e estes documentos.</li>
+      <li><strong>Sigilo</strong>: o acesso de quem trabalha conosco é limitado ao necessário para manter o serviço e dar suporte.</li>
+      <li><strong>Suboperadores</strong>: usamos os fornecedores da seção 4, sob obrigações de proteção de dados.</li>
+      <li><strong>Apoio</strong>: ajudamos você a atender pedidos de titulares e de autoridades, com as ferramentas de exportação e exclusão do sistema e por e-mail.</li>
+      <li><strong>Incidentes</strong>: avisamos você no prazo da seção 8.</li>
+      <li><strong>Fim do contrato</strong>: você exporta os dados e eles são apagados nos prazos da seção 7.</li>
+    </ul>
+    <p>Cabe a você ter base legal para os dados que cadastra, informar os titulares e não inserir dados sensíveis.</p>
+
+    <h2>11. Crianças e adolescentes</h2>
+    <p>O serviço é voltado a empresas e profissionais. Não é destinado a menores de 18 anos.</p>
+
+    <h2>12. Mudanças nesta política</h2>
+    <p>Quando esta política mudar de forma relevante, avisaremos no sistema ou por e-mail antes de a mudança valer. A versão vigente fica sempre nesta página.</p>
+
+    <h2>13. Contato e encarregado</h2>
+    <p>Pedidos e dúvidas sobre dados pessoais: <mark>[PREENCHER: e-mail de contato]</mark><br>Responsável: <mark>[PREENCHER: razão social ou nome completo, e CNPJ ou CPF]</mark></p>
+  </main>
+  <footer><div>
+    <a href="/landing">Página inicial</a><a href="/termos">Termos de Uso</a><a href="/privacidade">Política de Privacidade</a>
+  </div></footer>
 </body>
 </html>

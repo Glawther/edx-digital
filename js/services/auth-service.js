@@ -30,6 +30,14 @@ export const SESSION_KINDS = {
 const ROLE_STORAGE_KEY = 'nexus_crm_user_role';
 const SESSION_STORAGE_KEY = 'nexus_crm_session_active';
 const INVITE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ACTIVITY_KEY = 'nexus_crm_last_activity';
+
+// Version of the Terms of Use and Privacy Policy a person accepts when creating an account.
+// Change it whenever termos.html or privacidade.html change in substance.
+export const LEGAL_VERSION = '2026-10-10';
+
+// A signed-in account left untouched for this long is signed out
+export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
@@ -116,6 +124,7 @@ async function applyFirebaseUser(fbUser) {
     role: currentRole,
     orgId: profile.orgId,
     mustChangePassword: !!profile.mustChangePassword,
+    isOwner: org.ownerUid === fbUser.uid,
     photoURL: null
   };
   sessionKind = SESSION_KINDS.CLOUD;
@@ -208,6 +217,8 @@ export async function registerCompany({ name, email, company, password, plan = '
     name: name.trim(),
     email: cleanEmail,
     status: 'active',
+    termsVersion: LEGAL_VERSION,
+    termsAcceptedAt: now,
     createdAt: now
   });
   await fsMod.setDoc(fsMod.doc(db, 'invites', inviteCode), {
@@ -219,6 +230,7 @@ export async function registerCompany({ name, email, company, password, plan = '
   });
   await fsMod.updateDoc(fsMod.doc(db, 'organizations', orgId), { teamInviteCode: inviteCode, updatedAt: now });
   await authMod.updateProfile(cred.user, { displayName: name.trim() }).catch(() => {});
+  authMod.sendEmailVerification(cred.user).catch(() => {});
 
   return applyFirebaseUser(cred.user);
 }
@@ -246,8 +258,11 @@ export async function joinCompany({ inviteCode, name, email, password }) {
     email: cleanEmail,
     status: 'active',
     inviteCode: code,
+    termsVersion: LEGAL_VERSION,
+    termsAcceptedAt: new Date().toISOString(),
     createdAt: new Date().toISOString()
   });
+  authMod.sendEmailVerification(cred.user).catch(() => {});
   await authMod.updateProfile(cred.user, { displayName: name.trim() }).catch(() => {});
 
   return applyFirebaseUser(cred.user);
@@ -301,6 +316,119 @@ export async function regenerateTeamInviteCode() {
   await fsMod.updateDoc(fsMod.doc(db, 'organizations', org.id), { teamInviteCode: newCode, updatedAt: now });
   saveOrganization({ ...org, teamInviteCode: newCode }, { skipSync: true });
   return newCode;
+}
+
+// ==========================================================================
+// Leaving: deleting an account or a whole company
+// ==========================================================================
+
+/**
+ * Asks for the password again before anything irreversible
+ */
+async function confirmPassword(password) {
+  const { auth, authMod } = await getFirebase();
+  const user = auth.currentUser;
+  if (!user) throw authError('auth/requires-recent-login');
+  await authMod.reauthenticateWithCredential(user, authMod.EmailAuthProvider.credential(user.email, password));
+  return user;
+}
+
+async function deleteDocsWhere(collectionName, orgId) {
+  const { db, fsMod } = await getFirebase();
+  const snap = await fsMod.getDocs(fsMod.query(fsMod.collection(db, collectionName), fsMod.where('orgId', '==', orgId)));
+  let batch = fsMod.writeBatch(db);
+  let pending = 0;
+  for (const docSnap of snap.docs) {
+    batch.delete(docSnap.ref);
+    pending += 1;
+    if (pending === 400) {
+      await batch.commit();
+      batch = fsMod.writeBatch(db);
+      pending = 0;
+    }
+  }
+  if (pending > 0) await batch.commit();
+  return snap.size;
+}
+
+/**
+ * A salesperson (or an administrator who is not the owner) deletes their own account.
+ * The company's leads stay with the company.
+ */
+export async function deleteOwnAccount(password) {
+  if (sessionKind !== SESSION_KINDS.CLOUD) throw authError('permission-denied');
+  const fbUser = await confirmPassword(password);
+  const { db, authMod, fsMod } = await getFirebase();
+
+  await fsMod.deleteDoc(fsMod.doc(db, 'user_private', fbUser.uid)).catch(() => {});
+  await fsMod.deleteDoc(fsMod.doc(db, 'users', fbUser.uid));
+  await authMod.deleteUser(fbUser);
+
+  clearSession();
+  clearSavedOrganization();
+  notifyRoleListeners();
+  notifyListeners();
+}
+
+/**
+ * The owner deletes the company: every lead, the activity history, the team's profiles,
+ * the invite code, the company record and finally the owner's own account.
+ * The sign-in accounts of other team members cannot be removed from here; without a
+ * profile they open nothing, and they are removed on request.
+ */
+export async function deleteCompany(password) {
+  if (sessionKind !== SESSION_KINDS.CLOUD || !isAdmin()) throw authError('permission-denied');
+  const fbUser = await confirmPassword(password);
+  const { db, authMod, fsMod } = await getFirebase();
+  const org = getSavedOrganization();
+  const orgId = currentUser.orgId;
+
+  const orgSnap = await fsMod.getDoc(fsMod.doc(db, 'organizations', orgId));
+  if (!orgSnap.exists() || orgSnap.data().ownerUid !== fbUser.uid) {
+    throw authError('nexus/not-owner');
+  }
+
+  await deleteDocsWhere('customers', orgId);
+  await deleteDocsWhere('audit_logs', orgId);
+  await deleteDocsWhere('user_private', orgId);
+  const inviteCode = orgSnap.data().teamInviteCode || org.teamInviteCode;
+  if (inviteCode) await fsMod.deleteDoc(fsMod.doc(db, 'invites', inviteCode)).catch(() => {});
+
+  // Team profiles first (the owner's own goes last, after the company record)
+  const team = await fsMod.getDocs(fsMod.query(fsMod.collection(db, 'users'), fsMod.where('orgId', '==', orgId)));
+  for (const member of team.docs) {
+    if (member.id !== fbUser.uid) await fsMod.deleteDoc(member.ref);
+  }
+  await fsMod.deleteDoc(fsMod.doc(db, 'organizations', orgId));
+  await fsMod.deleteDoc(fsMod.doc(db, 'users', fbUser.uid));
+  await authMod.deleteUser(fbUser);
+
+  clearSession();
+  clearSavedOrganization();
+  notifyRoleListeners();
+  notifyListeners();
+}
+
+/**
+ * True when the signed-in person owns the company (the only one who can delete it)
+ */
+export function isCompanyOwner() {
+  return sessionKind === SESSION_KINDS.CLOUD && !!currentUser && currentUser.isOwner === true;
+}
+
+// ==========================================================================
+// Idle sign-out
+// ==========================================================================
+
+export function markActivity() {
+  if (sessionKind !== SESSION_KINDS.CLOUD) return;
+  try { localStorage.setItem(ACTIVITY_KEY, String(Date.now())); } catch { /* storage unavailable */ }
+}
+
+export function isIdleTooLong() {
+  if (sessionKind !== SESSION_KINDS.CLOUD) return false;
+  const last = Number(localStorage.getItem(ACTIVITY_KEY)) || 0;
+  return last > 0 && Date.now() - last > IDLE_LIMIT_MS;
 }
 
 function randomCode(length) {
@@ -384,10 +512,6 @@ export function isSessionActive() {
   return sessionKind !== SESSION_KINDS.NONE;
 }
 
-export function getSessionKind() {
-  return sessionKind;
-}
-
 export function isDemoSession() {
   return sessionKind === SESSION_KINDS.DEMO;
 }
@@ -418,15 +542,6 @@ export function onAuthChange(callback) {
   return () => {
     const idx = listeners.indexOf(callback);
     if (idx !== -1) listeners.splice(idx, 1);
-  };
-}
-
-export function onRoleChange(callback) {
-  roleListeners.push(callback);
-  callback(currentRole);
-  return () => {
-    const idx = roleListeners.indexOf(callback);
-    if (idx !== -1) roleListeners.splice(idx, 1);
   };
 }
 
