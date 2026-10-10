@@ -9,8 +9,9 @@
     "test": "node --test \"server/tests/*.test.js\" \"tests/unit/*.test.mjs\"",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-edx-digital",
     "test:rules": "node scripts/test-rules.mjs",
-    "deploy": "npm run build && firebase deploy --only firestore,hosting",
-    "build": "node scripts/build.mjs"
+    "deploy": "npm run build && firebase deploy --only firestore:rules,hosting",
+    "build": "node scripts/build.mjs",
+    "deploy:indexes": "firebase deploy --only firestore:indexes"
   },
   "keywords": [
     "crm",
