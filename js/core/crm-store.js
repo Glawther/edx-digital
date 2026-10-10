@@ -19,12 +19,12 @@ export const PRIORITIES = [
 ];
 
 export const LOSS_REASONS = [
-  { id: 'price', label: 'Preço / Orçamento insuficiente' },
-  { id: 'competitor', label: 'Optou pelo Concorrente' },
-  { id: 'timing', label: 'Timing / Projeto adiado' },
-  { id: 'features', label: 'Falta de recursos / Produto' },
-  { id: 'ghosting', label: 'Parou de responder (Ghosting)' },
-  { id: 'cancelled', label: 'Iniciativa cancelada pelo cliente' },
+  { id: 'price', label: 'Preço ou orçamento' },
+  { id: 'competitor', label: 'Fechou com um concorrente' },
+  { id: 'timing', label: 'Projeto adiado' },
+  { id: 'features', label: 'O produto não atendia' },
+  { id: 'ghosting', label: 'Parou de responder' },
+  { id: 'cancelled', label: 'O cliente desistiu da compra' },
   { id: 'other', label: 'Outro motivo' }
 ];
 
@@ -50,7 +50,7 @@ export const TASK_TYPES = [
   { id: 'call', label: 'Ligação', icon: '' },
   { id: 'meeting', label: 'Reunião', icon: '' },
   { id: 'whatsapp', label: 'WhatsApp', icon: '' },
-  { id: 'followup', label: 'Follow-up', icon: '' }
+  { id: 'followup', label: 'Retorno', icon: '' }
 ];
 
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';

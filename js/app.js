@@ -204,7 +204,7 @@ async function initApp() {
       renderKanban(state.filteredCustomers, state.metrics, state.permissions);
       renderTable(state.filteredCustomers, state.permissions);
       renderTasksView(state.tasks, state.taskFilter, state.allCustomers);
-      renderDetailedMetrics(state.metrics, state.allCustomers, state.permissions);
+      renderDetailedMetrics(state.metrics, state.visibleCustomers, state.permissions);
       renderSecurityView(state);
       renderConnectionStatus(state.storageMode);
       updateNavCounters(state);
@@ -351,11 +351,11 @@ function applyRoleUIRestrictions(permissions) {
   if (dividerCompany) dividerCompany.style.display = isAdmin ? 'block' : 'none';
 
   // Oculta área de faturamento e configuração de PIX para funcionários
-  const subBtn = document.getElementById('sidebar-subscription-btn');
-  if (subBtn) subBtn.style.display = isAdmin ? 'flex' : 'none';
 
   const adminSettingsSection = document.getElementById('chk-admin-settings-section');
-  if (adminSettingsSection) adminSettingsSection.style.display = isAdmin ? 'block' : 'none';
+  // Where subscription payments go is the platform operator's setting, not each customer's
+  const isPlatformOwner = localStorage.getItem('nexus_platform_owner') === '1';
+  if (adminSettingsSection) adminSettingsSection.style.display = (isAdmin && isPlatformOwner) ? 'block' : 'none';
 
   // 3. Configurações de Nuvem & IA (Gemini / Firebase)
   if (permissions.canAccessCloudConfig) {
@@ -1117,7 +1117,7 @@ function setupDialogEvents() {
   const openNewLead = () => {
     if (!customerDialog) return;
     document.getElementById('dialog-customer-id').value = '';
-    document.getElementById('customer-dialog-title').textContent = 'Nova Oportunidade / Lead';
+    document.getElementById('customer-dialog-title').textContent = 'Nova oportunidade';
     customerForm.reset();
     document.getElementById('input-deal-stage').value = 'lead';
     document.getElementById('input-deal-priority').value = 'medium';
@@ -1184,7 +1184,7 @@ function setupDialogEvents() {
       try {
         await storage.saveCustomer(customerPayload);
         customerDialog.close();
-        showToast(id ? "Oportunidade atualizada com sucesso!" : "Novo lead adicionado com sucesso!", "success");
+        showToast(id ? "Oportunidade atualizada." : "Oportunidade criada.", "success");
 
         // Audit & Notification
         if (id) {
@@ -1211,7 +1211,7 @@ window.handleOpenEditCustomer = function(customerId) {
   if (!customer || !customerDialog) return;
 
   document.getElementById('dialog-customer-id').value = customer.id;
-  document.getElementById('customer-dialog-title').textContent = 'Editar Oportunidade';
+  document.getElementById('customer-dialog-title').textContent = 'Editar oportunidade';
   document.getElementById('input-customer-name').value = customer.name || '';
   document.getElementById('input-customer-company').value = customer.company || '';
   document.getElementById('input-customer-role').value = customer.role || '';
@@ -1599,20 +1599,26 @@ function setupProposalModalEvents() {
 
     activeProposalCustomerId = customerId;
 
-    const propNum = `PROP-${new Date().getFullYear()}-${customer.id.replace(/\D/g, '').slice(-4) || '1042'}`;
-    const today = new Date().toLocaleDateString('pt-BR');
+    // The proposal goes out in the name of the company using the CRM
+    const org = getSavedOrganization();
+    const issuer = org.legalName || org.name || 'Sua empresa';
+    const user = getCurrentUser();
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
-    document.getElementById('prop-number').textContent = propNum;
-    document.getElementById('prop-date').textContent = today;
-    document.getElementById('prop-client-name').textContent = customer.name || '-';
-    document.getElementById('prop-client-company').textContent = customer.company || 'Não informado';
-    document.getElementById('prop-client-role').textContent = customer.role || 'Responsável Comercial';
-    document.getElementById('prop-client-email').textContent = customer.email || 'Não informado';
-    document.getElementById('prop-client-phone').textContent = customer.phone || 'Não informado';
-    document.getElementById('prop-assigned-name').textContent = customer.assignedTo?.name || 'Lucas Mendes (Consultor)';
-    document.getElementById('prop-assigned-email').textContent = customer.assignedTo?.email || 'lucas.vendas@nexuscrm.com';
-    document.getElementById('prop-price-display').textContent = formatBRL(customer.dealValue);
-    document.getElementById('prop-sign-client').textContent = customer.company || customer.name || 'Cliente Contratante';
+    set('prop-issuer-name', issuer);
+    set('prop-issuer-details', org.cnpj ? `CNPJ ${org.cnpj}` : '');
+    set('prop-number', `Proposta ${new Date().getFullYear()}-${(customer.id.replace(/\D/g, '').slice(-4) || '0001')}`);
+    set('prop-date', new Date().toLocaleDateString('pt-BR'));
+    set('prop-client-name', customer.name || '');
+    set('prop-client-role', customer.role ? `, ${customer.role}` : '');
+    set('prop-client-company', customer.company || '');
+    set('prop-client-contact', [customer.email, customer.phone].filter(Boolean).join(', '));
+    set('prop-scope-text', customer.notes || 'Escreva nas anotações da oportunidade o que está sendo proposto: esse texto aparece aqui.');
+    set('prop-price-display', formatBRL(customer.dealValue));
+    set('prop-assigned-name', (customer.assignedTo?.name || user?.name || '').replace(/\s*\(.*\)$/, ''));
+    set('prop-assigned-email', customer.assignedTo?.email || user?.email || '');
+    set('prop-sign-client', customer.company || customer.name || 'Cliente');
+    set('prop-sign-issuer', issuer);
 
     if (dialog) dialog.showModal();
   };
@@ -1628,20 +1634,21 @@ function setupProposalModalEvents() {
       if (!activeProposalCustomerId) return;
       const customer = storage.getCustomer(activeProposalCustomerId);
       if (!customer || !customer.phone) {
-        showToast("Este cliente não possui telefone para envio via WhatsApp.", "error");
+        showToast("Este cliente não tem telefone cadastrado.", "error");
         return;
       }
 
-      const msg = `Olá *${customer.name}*! Segue a Proposta Comercial formal da *Nexus CRM* para a *${customer.company || 'sua empresa'}* no valor de *${formatBRL(customer.dealValue)}*.\n\nPara validar o aceite e dar início à implantação, basta responder com seu 'De Acordo'. Estamos à sua disposição!`;
+      const orgName = getSavedOrganization().name || 'nossa empresa';
+      const msg = `Olá, ${customer.name}. Preparamos a proposta da ${orgName}${customer.company ? ` para a ${customer.company}` : ''}, no valor de ${formatBRL(customer.dealValue)}. Vou enviar o documento em seguida. Qualquer dúvida, é só responder aqui.`;
       const link = getWhatsAppLink(customer.phone, msg);
       if (link) {
         await storage.addActivity(customer.id, {
           type: 'whatsapp',
-          title: 'Proposta Comercial Enviada via WhatsApp',
-          text: `Proposta formal de ${formatBRL(customer.dealValue)} enviada para ${customer.phone}.`
+          title: 'Proposta avisada pelo WhatsApp',
+          text: `Mensagem sobre a proposta de ${formatBRL(customer.dealValue)} enviada para ${customer.phone}.`
         });
         window.open(link, '_blank');
-        showToast("Proposta enviada para o WhatsApp!", "success");
+        showToast("WhatsApp aberto com a mensagem. Anexe o PDF da proposta na conversa.", "success");
       }
     });
   }
@@ -2957,54 +2964,30 @@ function setupBillingEvents() {
     const state = crmStore?.getState();
     const totalLeads = state?.allCustomers?.length || 0;
 
-    // Plan name & status
-    const planNames = { starter: 'Starter', pro: 'Nexus Pro', enterprise: 'Enterprise' };
-    const planNameEl = document.getElementById('billing-plan-name');
-    const planBadgeEl = document.getElementById('billing-plan-badge');
-    if (planNameEl) {
-      const statusLabel = org.planStatus === 'trial' ? ' (Período de Teste)' : '';
-      planNameEl.textContent = (planNames[org.plan] || 'Nexus Pro') + statusLabel;
-    }
-    if (planBadgeEl) {
-      if (org.planStatus === 'trial') {
-        planBadgeEl.textContent = `ATIVO • ${org.trialDaysLeft || 14} DIAS RESTANTES`;
-        planBadgeEl.style.background = '#f59e0b';
-      } else {
-        planBadgeEl.textContent = 'ATIVO';
-        planBadgeEl.style.background = '#10b981';
-      }
-    }
+    const planNames = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
+    const plan = PLANS[org.plan] || PLANS.pro;
+    const onTrial = org.planStatus === 'trial';
+    const unlimited = org.plan === 'enterprise';
+    const limit = (n) => (unlimited ? 'sem limite' : n.toLocaleString('pt-BR'));
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
-    // AI Usage
-    const aiCount = document.getElementById('billing-ai-count');
-    const aiBar = document.getElementById('billing-ai-bar');
+    set('billing-plan-name', planNames[org.plan] || 'Professional');
+    set('billing-plan-badge', onTrial ? `Período de teste: ${org.trialDaysLeft ?? 14} dias restantes` : 'Assinatura ativa');
+
     const used = metrics.used || 0;
-    const quota = metrics.quota || 150;
-    const pct = Math.min(100, Math.round((used / quota) * 100));
-    if (aiCount) aiCount.textContent = `${used} / ${quota} chamadas este mês (${pct}%)`;
-    if (aiBar) aiBar.style.width = `${pct}%`;
+    const quota = plan.aiQuotaMonth;
+    set('billing-ai-count', `${used} de ${limit(quota)}`);
+    const aiBar = document.getElementById('billing-ai-bar');
+    if (aiBar) aiBar.style.width = `${Math.min(100, Math.round((used / quota) * 100))}%`;
 
-    // Resource counts
-    const leadsCount = document.getElementById('billing-leads-count');
-    const usersCount = document.getElementById('billing-users-count');
-    if (leadsCount) leadsCount.textContent = `${totalLeads} / ${(org.maxLeads || 5000).toLocaleString('pt-BR')}`;
-    if (usersCount) usersCount.textContent = `${employees.length + 1} / ${org.maxUsers || 10}`;
+    set('billing-leads-count', `${totalLeads} de ${limit(plan.maxLeads)}`);
+    set('billing-users-count', `${employees.length + 1} de ${limit(plan.maxUsers)}`);
 
-    // Highlight current plan button
-    const planBtns = document.querySelectorAll('.btn-plan-select');
-    planBtns.forEach(btn => {
-      const plan = btn.dataset.plan;
-      if (plan === org.plan) {
-        btn.textContent = 'Plano Atual';
-        btn.classList.remove('btn-outline');
-        btn.classList.add('btn-primary');
-        btn.disabled = true;
-      } else {
-        btn.textContent = `Escolher ${planNames[plan] || plan}`;
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-outline');
-        btn.disabled = false;
-      }
+    // During the trial every plan can still be subscribed to, including the current one
+    document.querySelectorAll('.btn-plan-select').forEach(btn => {
+      const isCurrent = btn.dataset.plan === org.plan;
+      btn.disabled = isCurrent && !onTrial;
+      btn.textContent = isCurrent && !onTrial ? 'Plano atual' : `Assinar ${planNames[btn.dataset.plan] || btn.dataset.plan}`;
     });
   }
 
@@ -3406,55 +3389,49 @@ function setupAuditTrailView() {
     const stats = getAuditStats();
     const logs = getLocalAuditLogs(100);
 
-    // Update stat cards
     const statTotal = document.getElementById('audit-stat-total');
     const statToday = document.getElementById('audit-stat-today');
     const statWarnings = document.getElementById('audit-stat-warnings');
-    const statCritical = document.getElementById('audit-stat-critical');
 
     if (statTotal) statTotal.textContent = stats.totalLogs;
     if (statToday) statToday.textContent = stats.todayLogs;
-    if (statWarnings) statWarnings.textContent = stats.warningCount;
-    if (statCritical) statCritical.textContent = stats.criticalCount;
+    if (statWarnings) statWarnings.textContent = (stats.warningCount || 0) + (stats.criticalCount || 0);
 
-    // Render audit log table
     const tbody = document.getElementById('audit-table-body');
     if (!tbody) return;
 
     if (logs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-        Nenhum registro de auditoria encontrado.
-      </td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" class="table-empty">Nada registrado ainda.</td></tr>`;
       return;
     }
 
+    // Internal field names are turned into words; technical fields are left out
+    const detailLabels = {
+      name: 'nome', company: 'empresa', dealValue: 'valor', stage: 'etapa', customerId: 'oportunidade',
+      fromRole: 'de', toRole: 'para', role: 'perfil', status: 'situação', plan: 'plano', type: 'tipo',
+      leadName: 'lead', source: 'origem', value: 'valor', empId: 'colaborador', cpf: 'CPF', reason: 'motivo'
+    };
+    const hiddenDetails = ['userAgent', 'screenSize', 'method', 'action'];
+    const methodLabels = {
+      session_resume: 'sessão retomada', email_password: 'e-mail e senha', demo: 'demonstração',
+      invite_code: 'código de convite', webhook_api: 'recebido por webhook'
+    };
+
     tbody.innerHTML = logs.slice(0, 50).map(log => {
       const date = new Date(log.timestamp);
-      const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const badge = formatSeverityBadge(log.severity);
-      const detailStr = log.details ? Object.entries(log.details)
-        .filter(([k]) => !['userAgent', 'screenSize'].includes(k))
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(', ')
-        .substring(0, 80) : '';
+      const when = `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      const details = log.details || {};
+      const parts = Object.entries(details)
+        .filter(([k, v]) => !hiddenDetails.includes(k) && v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${detailLabels[k] || k}: ${v}`);
+      if (details.method && methodLabels[details.method]) parts.unshift(methodLabels[details.method]);
+      const needsAttention = log.severity === 'warning' || log.severity === 'critical';
 
       return `<tr>
-        <td style="white-space: nowrap;">
-          <div style="font-weight: 600; font-size: 0.82rem;">${dateStr}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">${timeStr}</div>
-        </td>
-        <td style="font-size: 0.82rem;">${formatAuditAction(log.action)}</td>
-        <td>
-          <span class="audit-severity-badge" style="background: ${badge.bg}; color: ${badge.color};">${badge.label}</span>
-        </td>
-        <td>
-          <div style="font-size: 0.82rem; font-weight: 500;">${escapeHtml(log.userName || '')}</div>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(log.userRole || '')}</div>
-        </td>
-        <td style="font-size: 0.75rem; color: var(--text-secondary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(detailStr) || '—'}
-        </td>
+        <td class="nowrap muted">${when}</td>
+        <td>${formatAuditAction(log.action)}${needsAttention ? ' <span class="status-text blocked">(atenção)</span>' : ''}</td>
+        <td>${escapeHtml(log.userName || '')}<div class="cell-sub">${log.userRole === 'admin' ? 'Administrador' : 'Vendedor'}</div></td>
+        <td class="muted">${escapeHtml(parts.join(', ').substring(0, 120))}</td>
       </tr>`;
     }).join('');
   }
@@ -3469,7 +3446,7 @@ function setupAuditTrailView() {
       link.href = URL.createObjectURL(blob);
       link.download = `nexus_audit_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
-      showToast('Relatório de auditoria exportado!', 'success');
+      showToast('Histórico exportado.', 'success');
       logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'audit_csv' });
     });
   }
@@ -3695,8 +3672,12 @@ function setupCheckoutModalEvents() {
 
   async function refreshSubscriptionInfo() {
     const token = localStorage.getItem('nexus_jwt_token');
-    let planName = 'PROFESSIONAL';
-    let daysRemaining = 7;
+    const org = getSavedOrganization();
+    let planName = ({ starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' })[org.plan] || 'Professional';
+    let daysRemaining = org.trialDaysLeft ?? 14;
+    const onTrial = org.planStatus === 'trial';
+    if (currentPlanBadge) currentPlanBadge.textContent = planName;
+    if (trialDaysBadge) trialDaysBadge.textContent = onTrial ? `Período de teste: ${daysRemaining} dias restantes` : 'Assinatura ativa';
 
     try {
       if (token) {
@@ -3707,10 +3688,10 @@ function setupCheckoutModalEvents() {
         if (res.ok) {
           const data = await res.json();
           if (data.data) {
-            planName = (data.data.planName || data.data.plan || 'PROFESSIONAL').toUpperCase();
+            planName = data.data.planName || data.data.plan || planName;
             daysRemaining = data.data.trialDaysRemaining ?? 7;
             if (currentPlanBadge) currentPlanBadge.textContent = planName;
-            if (trialDaysBadge) trialDaysBadge.textContent = `${daysRemaining} dias de teste`;
+            if (trialDaysBadge) trialDaysBadge.textContent = `Período de teste: ${daysRemaining} dias restantes`;
             if (quotaUsers && data.data.quotas) quotaUsers.textContent = `${data.data.quotas.users.used} / ${data.data.quotas.users.limit}`;
             if (quotaLeads && data.data.quotas) quotaLeads.textContent = `${data.data.quotas.leads.used} / ${data.data.quotas.leads.limit.toLocaleString()}`;
           }
@@ -3721,7 +3702,9 @@ function setupCheckoutModalEvents() {
     }
 
     if (trialPillText) {
-      trialPillText.textContent = `Teste: ${daysRemaining} dias restantes`;
+      trialPillText.textContent = onTrial ? `Teste: ${daysRemaining} dias restantes` : '';
+      const pill = trialPillText.closest('button, a, div');
+      if (pill) pill.style.display = onTrial ? '' : 'none';
     }
   }
 
@@ -3767,12 +3750,13 @@ function setupCheckoutModalEvents() {
         }
       }
 
-      showToast('Configurações de recebimento e nuvem salvas com sucesso!', 'success');
+      showToast('Recebimento salvo.', 'success');
       loadCheckoutData(activeSelectedPlan);
     });
   }
 
   window.openCheckoutModal = function(plan = 'pro') {
+    if (!isSessionActive()) return;
     if (modal) {
       modal.showModal();
       window.selectCheckoutPlan(plan);
@@ -3782,12 +3766,16 @@ function setupCheckoutModalEvents() {
 
   window.selectCheckoutPlan = function(plan) {
     document.querySelectorAll('.checkout-plan-card').forEach(card => {
-      const isSelected = card.dataset.plan === plan;
-      card.classList.toggle('active', isSelected);
-      card.style.border = isSelected ? '2px solid var(--accent)' : '1px solid rgba(255,255,255,0.1)';
-      card.style.background = isSelected ? 'var(--accent-soft)' : 'rgba(255,255,255,0.02)';
+      card.classList.toggle('active', card.dataset.plan === plan);
     });
     loadCheckoutData(plan);
+  };
+
+  // One way to subscribe: plan buttons and links from the plans page all land here
+  window.openCheckout = function(plan = 'pro') {
+    const billingDialog = document.getElementById('billing-dialog');
+    if (billingDialog && billingDialog.open) billingDialog.close();
+    window.openCheckoutModal(plan);
   };
 
   if (btnCloseModal) btnCloseModal.addEventListener('click', () => modal?.close());
@@ -3797,9 +3785,9 @@ function setupCheckoutModalEvents() {
     btnCopyPix.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(pixInput.value);
-        showToast('Código PIX Copia e Cola copiado com sucesso! Abra seu banco para pagar.', 'success');
+        showToast('Código PIX copiado. Cole no aplicativo do seu banco.', 'success');
         btnCopyPix.textContent = 'Copiado!';
-        setTimeout(() => { btnCopyPix.textContent = 'Copiar PIX'; }, 3000);
+        setTimeout(() => { btnCopyPix.textContent = 'Copiar'; }, 3000);
       } catch {
         pixInput.select();
         document.execCommand('copy');

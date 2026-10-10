@@ -8,11 +8,15 @@ import { getEmployees, maskCPF } from '../services/employee-service.js';
 import { isDemoSession, isCloudSession, getCurrentUser } from '../services/auth-service.js';
 
 export function formatBRL(amount) {
+  const value = Number(amount) || 0;
+  // Whole amounts stay short; an amount with cents keeps them (it used to be rounded away)
+  const hasCents = Math.round(value * 100) % 100 !== 0;
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-    maximumFractionDigits: 0
-  }).format(amount || 0);
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: hasCents ? 2 : 0
+  }).format(value);
 }
 
 export function escapeHtml(str) {
@@ -264,11 +268,16 @@ export function renderTable(customers, permissions = {}) {
   const tbody = document.getElementById('customer-table-body');
   if (!tbody) return;
 
+  const countEl = document.getElementById('customers-count-label');
+  if (countEl) {
+    countEl.textContent = customers.length === 1 ? '1 cliente' : `${customers.length} clientes`;
+  }
+
   if (customers.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted); background: var(--bg-surface);">
-          Nenhum cliente ou lead encontrado com os filtros atuais.
+        <td colspan="6" class="table-empty">
+          Nenhum cliente aqui ainda. Use "Nova oportunidade" para cadastrar o primeiro, ou limpe a busca.
         </td>
       </tr>
     `;
@@ -276,89 +285,42 @@ export function renderTable(customers, permissions = {}) {
   }
 
   tbody.innerHTML = customers.map(customer => {
-    const initials = (customer.name || 'C')
-      .split(' ')
-      .map(n => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
-
     const stageObj = STAGES.find(s => s.id === customer.stage) || STAGES[0];
     const priorityLabel = { high: 'Alta', medium: 'Média', low: 'Baixa' }[customer.priority] || 'Média';
+    const closeDate = customer.expectedCloseDate
+      ? new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      : '';
 
     return `
       <tr>
         <td>
-          <div class="customer-cell">
-            <div class="customer-avatar">${initials}</div>
-            <div>
-              <div class="customer-name" onclick="window.handleOpenLeadDetails('${customer.id}')" style="cursor: pointer;" title="Ver histórico">${escapeHtml(customer.name)}</div>
-              <div class="customer-subtext">${escapeHtml(customer.company || 'Sem empresa')}</div>
-            </div>
+          <button type="button" class="cell-title" onclick="window.handleOpenLeadDetails('${customer.id}')">${escapeHtml(customer.name)}</button>
+          <div class="cell-sub">${escapeHtml(customer.company || 'Sem empresa')}</div>
+        </td>
+        <td>
+          <div>${escapeHtml(customer.email || 'Sem e-mail')}</div>
+          <div class="cell-sub">
+            ${escapeHtml(customer.phone || 'Sem telefone')}
+            ${customer.phone ? `<button type="button" class="link-btn" onclick="window.handleOpenWhatsAppModal('${customer.id}')">WhatsApp</button>` : ''}
           </div>
         </td>
+        <td>${customer.assignedTo ? escapeHtml(customer.assignedTo.name.replace(/\s*\(.*\)$/, '')) : '<span class="muted">Ninguém</span>'}</td>
+        <td class="num">
+          <div class="cell-value">${formatBRL(customer.dealValue)}</div>
+          ${closeDate ? `<div class="cell-sub">fecha em ${closeDate}</div>` : ''}
+        </td>
         <td>
-          <div style="font-weight: 500;">${escapeHtml(customer.email || '-')}</div>
-          <div class="customer-subtext" style="display: flex; align-items: center; gap: 0.4rem; margin-top: 2px;">
-            <span>${escapeHtml(customer.phone || '-')}</span>
-            ${customer.phone ? `
-              <button type="button" class="btn-wa" onclick="window.handleOpenWhatsAppModal('${customer.id}')" title="Mensagens rápidas no WhatsApp" style="padding: 1px 5px; font-size: 0.68rem;">
-                Whats
-              </button>
-            ` : ''}
+          <span class="stage-text"><span class="stage-dot" style="background: ${stageObj.color}"></span>${stageObj.name}</span>
+          <div class="cell-sub">Prioridade ${priorityLabel.toLowerCase()}</div>
+        </td>
+        <td>
+          <div class="row-actions">
+            <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails('${customer.id}')">Histórico</button>
+            <button type="button" class="link-btn" onclick="window.handleOpenProposalModal('${customer.id}')">Proposta</button>
+            <button type="button" class="link-btn" onclick="window.handleAnalyzeWithAI('${customer.id}')" title="Análise da oportunidade com IA">Analisar</button>
+            <button type="button" class="link-btn" onclick="window.handleOpenEditCustomer('${customer.id}')">Editar</button>
+            ${permissions && permissions.canDelete === false ? '' : `<button type="button" class="link-btn danger" onclick="window.handleDeleteCustomer('${customer.id}')">Excluir</button>`}
           </div>
-        </td>
-        <td>
-          ${customer.assignedTo ? `
-            <span class="salesperson-badge" title="${escapeHtml(customer.assignedTo.email)}">
-              ${escapeHtml(customer.assignedTo.name.split(' ')[0])}
-            </span>
-          ` : '<span class="salesperson-badge">Sem atribuição</span>'}
-        </td>
-        <td>
-          <span style="font-weight: 700; color: var(--color-won); font-family: var(--font-heading);">
-            ${formatBRL(customer.dealValue)}
-          </span>
-          ${customer.expectedCloseDate ? `
-            <div style="font-size: 0.7rem; color: var(--text-muted);">
-              Prev: ${new Date(customer.expectedCloseDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-            </div>
-          ` : ''}
-        </td>
-        <td>
-          <span class="stage-badge" style="background: ${stageObj.bg}; color: ${stageObj.color}; border: 1px solid ${stageObj.color}30;">
-            <span style="width: 6px; height: 6px; border-radius: 50%; background: ${stageObj.color}"></span>
-            ${stageObj.name}
-          </span>
-        </td>
-        <td>
-          <span class="priority-badge ${customer.priority || 'medium'}">${priorityLabel}</span>
-        </td>
-        <td>
-          ${(customer.tags || []).slice(0, 3).map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join(' ')}
-        </td>
-        <td style="text-align: right;">
-          <button class="btn btn-outline btn-sm" onclick="window.handleOpenLeadDetails('${customer.id}')" style="margin-right: 0.35rem;" title="Histórico e Linha do Tempo">
-            Histórico
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="window.handleAnalyzeWithAI('${customer.id}')" style="margin-right: 0.35rem; color: #2563eb; border-color: #cbd5e1;" title="Análise com Gemini AI">
-            IA
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="window.handleOpenProposalModal('${customer.id}')" style="margin-right: 0.35rem;" title="Gerar Proposta Comercial Executiva (PDF / Impressão)">
-            Proposta
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="window.handleOpenEditCustomer('${customer.id}')" style="margin-right: 0.35rem;">
-            Editar
-          </button>
-          ${permissions && permissions.canDelete === false ? `
-            <button class="btn btn-outline btn-sm disabled" disabled title="Só administradores podem excluir" style="opacity: 0.35; cursor: not-allowed;">
-              Excluir
-            </button>
-          ` : `
-            <button class="btn btn-danger-ghost btn-sm" onclick="window.handleDeleteCustomer('${customer.id}')">
-              Excluir
-            </button>
-          `}
         </td>
       </tr>
     `;
@@ -390,153 +352,162 @@ export function renderTasksView(tasks, filter, customers) {
   });
 
   if (filtered.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
-        Nenhuma atividade encontrada com o filtro selecionado.
-      </div>
-    `;
+    const emptyText = {
+      pending: 'Nenhuma tarefa pendente.',
+      today: 'Nada marcado para hoje.',
+      completed: 'Nenhuma tarefa concluída ainda.',
+      all: 'Nenhuma tarefa cadastrada. Use o formulário ao lado para agendar a primeira.'
+    }[filter] || 'Nenhuma tarefa.';
+    container.innerHTML = `<p class="empty-note" style="padding: 1.5rem 0;">${emptyText}</p>`;
     return;
   }
 
   container.innerHTML = filtered.map(task => {
     const isOverdue = !task.completed && task.dueDate && task.dueDate < todayStr;
+    const isToday = !task.completed && task.dueDate === todayStr;
     const typeObj = TASK_TYPES.find(t => t.id === task.type) || TASK_TYPES[0];
+    const dateText = task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'sem data';
 
     return `
       <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}" data-customer-id="${task.customerId}">
         <div class="task-left">
-          <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+          <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
                  onchange="window.handleToggleTask('${task.customerId}', '${task.id}')">
           <div>
             <div class="task-title">${escapeHtml(task.title)}</div>
             <div class="task-customer-link">
-              Lead: <strong style="color: var(--text-primary); cursor: pointer;" onclick="window.handleOpenLeadDetails('${task.customerId}')">${escapeHtml(task.customerName)}</strong>
-              ${task.customerCompany ? ` • ${escapeHtml(task.customerCompany)}` : ''}
+              ${typeObj.label} com
+              <button type="button" class="link-btn" onclick="window.handleOpenLeadDetails('${task.customerId}')">${escapeHtml(task.customerName)}</button>${task.customerCompany ? `, ${escapeHtml(task.customerCompany)}` : ''}
             </div>
           </div>
         </div>
-
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span class="task-type-pill">${typeObj.icon} ${typeObj.label}</span>
-          <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}" title="${isOverdue ? 'Atividade Atrasada!' : 'Data de vencimento'}">
-            ${task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
-            ${isOverdue ? ' (Atrasada)' : ''}
-          </span>
-        </div>
+        <span class="task-due-date ${isOverdue ? 'is-overdue' : ''}">
+          ${isOverdue ? `Atrasada desde ${dateText}` : isToday ? 'Hoje' : dateText}
+        </span>
       </div>
     `;
   }).join('');
 }
 
 /**
- * Renders Detailed Metrics (Forecast & Loss Reasons)
+ * Renders the reports view. Every number comes from the leads the person can see;
+ * nothing here is a fixed target or an invented rate.
  */
-export function renderDetailedMetrics(metrics, allCustomers = [], permissions = {}) {
-  const forecastEl = document.getElementById('metrics-forecast-value');
-  const rottingEl = document.getElementById('metrics-rotting-value');
-  const lossContainer = document.getElementById('metrics-loss-reasons');
+export function renderDetailedMetrics(metrics, customers = [], permissions = {}) {
+  const container = document.getElementById('metrics-content');
+  if (!container) return;
 
-  if (forecastEl) forecastEl.textContent = formatBRL(metrics.currentMonthForecast);
-  if (rottingEl) rottingEl.textContent = `${metrics.rottingCount} oportunidade(s)`;
-
-  // Commercial Target (Meta Q4)
-  const targetGoal = 250000;
-  const wonVal = metrics.wonTotal || 0;
-  const targetPct = Math.min(100, Math.round((wonVal / targetGoal) * 100));
-  const remaining = Math.max(0, targetGoal - wonVal);
-
-  const targetBadge = document.getElementById('target-percentage-badge');
-  const targetRealized = document.getElementById('target-realized-value');
-  const targetFill = document.getElementById('target-progress-fill');
-  const targetRem = document.getElementById('target-remaining-label');
-
-  if (targetBadge) {
-    targetBadge.textContent = `${targetPct}% Atingido`;
-    targetBadge.style.background = targetPct >= 70 ? 'var(--color-won-bg)' : 'var(--color-proposal-bg)';
-    targetBadge.style.color = targetPct >= 70 ? 'var(--color-won)' : 'var(--color-proposal)';
-  }
-  if (targetRealized) targetRealized.textContent = formatBRL(wonVal);
-  if (targetFill) targetFill.style.width = `${targetPct}%`;
-  if (targetRem) {
-    targetRem.textContent = remaining > 0 
-      ? `Faltam ${formatBRL(remaining)} para a meta máxima`
-      : `Parabéns! Meta comercial batida com sucesso!`;
+  if (customers.length === 0) {
+    container.innerHTML = `<section class="settings-section"><p class="empty-note" style="margin: 0;">Ainda não há oportunidades para gerar relatórios. Cadastre a primeira em "Nova oportunidade".</p></section>`;
+    return;
   }
 
-  // Gamification & Commissions (5% rate)
-  const leaderboardEl = document.getElementById('commissions-leaderboard');
-  if (leaderboardEl) {
-    const wonCustomers = (allCustomers || []).filter(c => c.stage === 'won');
-    const lucasWon = wonCustomers.filter(c => c.assignedTo?.email?.includes('lucas') || c.assignedTo?.name?.includes('Lucas'))
-      .reduce((acc, c) => acc + (Number(c.dealValue) || 0), 0);
-    const marianaWon = wonCustomers.filter(c => c.assignedTo?.email?.includes('mariana') || c.assignedTo?.name?.includes('Mariana'))
-      .reduce((acc, c) => acc + (Number(c.dealValue) || 0), 0);
-
-    const commissionRate = 0.05; // 5%
-    const lucasComm = lucasWon * commissionRate;
-    const marianaComm = marianaWon * commissionRate;
-
-    leaderboardEl.innerHTML = `
-      <div class="commission-row">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.1rem;"></span>
-          <div>
-            <div style="font-weight: 600; font-size: 0.82rem;">Mariana Costa (Consultora)</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">${formatBRL(marianaWon)} faturados</div>
-          </div>
+  // Value per stage, bars relative to the largest stage
+  const stageRows = STAGES.filter(st => st.id !== 'lost');
+  const maxStage = Math.max(1, ...stageRows.map(st => metrics.stageSums[st.id] || 0));
+  const funnelHtml = stageRows.map(st => {
+    const value = metrics.stageSums[st.id] || 0;
+    const count = metrics.stageCounts[st.id] || 0;
+    const pct = Math.round((value / maxStage) * 100);
+    return `
+      <div class="bar-row">
+        <div class="bar-row-head">
+          <span>${st.name}</span>
+          <span class="bar-row-figures">${count} ${count === 1 ? 'oportunidade' : 'oportunidades'}<strong>${formatBRL(value)}</strong></span>
         </div>
-        <div style="text-align: right;">
-          <span style="font-weight: 700; color: #16a34a; font-size: 0.88rem;">${formatBRL(marianaComm)}</span>
-          <div style="font-size: 0.68rem; color: var(--text-muted);">Comissão (5%)</div>
-        </div>
-      </div>
-
-      <div class="commission-row">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <span style="font-size: 1.1rem;"></span>
-          <div>
-            <div style="font-weight: 600; font-size: 0.82rem;">Lucas Mendes (Consultor)</div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">${formatBRL(lucasWon)} faturados</div>
-          </div>
-        </div>
-        <div style="text-align: right;">
-          <span style="font-weight: 700; color: #16a34a; font-size: 0.88rem;">${formatBRL(lucasComm)}</span>
-          <div style="font-size: 0.68rem; color: var(--text-muted);">Comissão (5%)</div>
-        </div>
+        <div class="bar-track"><div class="bar-fill ${st.id === 'won' ? 'won' : ''}" style="width: ${pct}%"></div></div>
       </div>
     `;
-  }
+  }).join('');
 
-  if (lossContainer && metrics.lossReasonCounts) {
-    const reasons = Object.entries(metrics.lossReasonCounts)
-      .map(([id, data]) => ({ id, ...data }))
-      .filter(r => r.count > 0)
-      .sort((a, b) => b.count - a.count);
-
-    if (reasons.length === 0) {
-      lossContainer.innerHTML = `
-        <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 1.5rem 0;">
-          Nenhuma perda registrada até o momento.
-        </div>
-      `;
-    } else {
-      const totalLost = metrics.lostCount || 1;
-      lossContainer.innerHTML = reasons.map(r => {
+  // Loss reasons
+  const reasons = Object.entries(metrics.lossReasonCounts || {})
+    .map(([id, data]) => ({ id, ...data }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const totalLost = metrics.lostCount || 1;
+  const lossHtml = reasons.length === 0
+    ? '<p class="empty-note">Nenhuma oportunidade perdida.</p>'
+    : reasons.map(r => {
         const pct = Math.round((r.count / totalLost) * 100);
         return `
-          <div>
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
-              <span style="font-weight: 500; color: var(--text-primary);">${r.label}</span>
-              <span style="font-weight: 600; color: #dc2626;">${r.count} (${pct}%)</span>
+          <div class="bar-row">
+            <div class="bar-row-head">
+              <span>${escapeHtml(r.label)}</span>
+              <span class="bar-row-figures">${r.count} de ${metrics.lostCount}<strong>${formatBRL(r.totalValue)}</strong></span>
             </div>
-            <div style="width: 100%; height: 6px; background: var(--bg-surface-elevated); border-radius: 3px; overflow: hidden;">
-              <div style="height: 100%; width: ${pct}%; background: #dc2626; border-radius: 3px;"></div>
-            </div>
+            <div class="bar-track"><div class="bar-fill lost" style="width: ${pct}%"></div></div>
           </div>
         `;
       }).join('');
-    }
-  }
+
+  // Per salesperson (only meaningful when the person sees more than their own leads)
+  const byPerson = {};
+  customers.forEach(c => {
+    const key = c.assignedTo?.email || c.assignedTo?.id || 'none';
+    const name = c.assignedTo?.name ? c.assignedTo.name.replace(/\s*\(.*\)$/, '') : 'Sem responsável';
+    const row = byPerson[key] || (byPerson[key] = { name, openCount: 0, openValue: 0, wonCount: 0, wonValue: 0, lostCount: 0 });
+    const value = Number(c.dealValue) || 0;
+    if (c.stage === 'won') { row.wonCount += 1; row.wonValue += value; }
+    else if (c.stage === 'lost') { row.lostCount += 1; }
+    else { row.openCount += 1; row.openValue += value; }
+  });
+  const people = Object.values(byPerson).sort((a, b) => b.wonValue - a.wonValue || b.openValue - a.openValue);
+  const peopleHtml = permissions.isAdmin && people.length > 0 ? `
+    <section class="settings-section">
+      <div class="settings-section-head">
+        <div>
+          <h2>Por vendedor</h2>
+          <p>Oportunidades atribuídas a cada pessoa.</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="plain-table">
+          <thead><tr><th>Vendedor</th><th class="num">Em aberto</th><th class="num">Valor em aberto</th><th class="num">Ganhas</th><th class="num">Valor ganho</th><th class="num">Perdidas</th></tr></thead>
+          <tbody>
+            ${people.map(row => `
+              <tr>
+                <td>${escapeHtml(row.name)}</td>
+                <td class="num">${row.openCount}</td>
+                <td class="num">${formatBRL(row.openValue)}</td>
+                <td class="num">${row.wonCount}</td>
+                <td class="num">${formatBRL(row.wonValue)}</td>
+                <td class="num">${row.lostCount}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ` : '';
+
+  container.innerHTML = `
+    <div class="figure-pair">
+      <div class="figure-box">
+        <div class="figure-label">Previsto para fechar este mês</div>
+        <div class="figure-value">${formatBRL(metrics.currentMonthForecast)}</div>
+        <div class="figure-note">Soma das oportunidades em aberto com data de fechamento neste mês.</div>
+      </div>
+      <div class="figure-box">
+        <div class="figure-label">Paradas há 3 dias ou mais</div>
+        <div class="figure-value">${metrics.rottingCount}</div>
+        <div class="figure-note">Oportunidades em aberto sem nenhuma atualização nesse período.</div>
+      </div>
+    </div>
+
+    <div class="report-columns">
+      <section class="settings-section">
+        <div class="settings-section-head"><div><h2>Valor por etapa do funil</h2><p>Quanto há em cada etapa agora.</p></div></div>
+        <div class="bar-list">${funnelHtml}</div>
+      </section>
+      <section class="settings-section">
+        <div class="settings-section-head"><div><h2>Motivos de perda</h2><p>O que foi registrado ao marcar uma oportunidade como perdida.</p></div></div>
+        <div class="bar-list">${lossHtml}</div>
+      </section>
+    </div>
+
+    ${peopleHtml}
+  `;
 }
 
 /**
@@ -551,7 +522,7 @@ export function renderLeadTimeline(customer) {
   if (nameEl) nameEl.textContent = customer.name;
   if (metaEl) {
     const stageObj = STAGES.find(s => s.id === customer.stage) || STAGES[0];
-    metaEl.textContent = `${customer.company || 'Sem empresa'} • ${formatBRL(customer.dealValue)} • Estágio: ${stageObj.name}`;
+    metaEl.textContent = `${customer.company || 'Sem empresa'}, ${formatBRL(customer.dealValue)}, em ${stageObj.name}`;
   }
 
   const activities = (customer.activities || []).slice().reverse();
@@ -578,7 +549,7 @@ export function renderLeadTimeline(customer) {
         <div class="timeline-dot ${dotClass}"></div>
         <div class="timeline-item-header">
           <span class="timeline-item-title">${escapeHtml(act.title || 'Interação')}</span>
-          <span class="timeline-item-date">${dateFormatted} • ${escapeHtml(act.author || 'Você')}</span>
+          <span class="timeline-item-date">${dateFormatted}, ${escapeHtml(act.author || 'Você')}</span>
         </div>
         <div class="timeline-item-text">${escapeHtml(act.text || '')}</div>
       </div>
