@@ -3,6 +3,7 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
+import { weekDays, weekTitle, tasksByDay, googleCalendarUrl } from '../core/agenda.js';
 import { goalProgress, recurringRevenue } from '../core/pipeline-rules.js';
 import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
 import { REPORT_PERIODS, periodReport, sellerReportRows } from '../core/report.js';
@@ -369,6 +370,11 @@ export function renderTasksView(tasks, filter, customers) {
     `).join('');
   }
 
+  if (filter === 'week') {
+    renderWeek(container, tasks);
+    return;
+  }
+
   // Filter tasks
   const todayStr = localDateString();
   const filtered = tasks.filter(t => {
@@ -416,6 +422,50 @@ export function renderTasksView(tasks, filter, customers) {
       </div>
     `;
   }).join('');
+}
+
+// Which week the agenda shows, counted from the current one
+let weekOffset = 0;
+export function moveWeek(step) {
+  weekOffset = step === 0 ? 0 : weekOffset + step;
+}
+
+function renderWeek(container, tasks) {
+  const days = weekDays(new Date(), weekOffset);
+  const byDay = tasksByDay(tasks, days);
+  const today = localDateString();
+  const item = (task) => {
+    const late = !task.completed && task.dueDate < today;
+    const calendar = task.completed ? '' : googleCalendarUrl(task);
+    return `
+      <div class="week-task ${task.completed ? 'completed' : ''} ${late ? 'is-late' : ''}">
+        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
+               data-change="handleToggleTask" data-a="${escapeHtml(task.customerId)}" data-b="${escapeHtml(task.id)}">
+        <div class="week-task-main">
+          <span class="week-task-title">${task.dueTime ? `<span class="week-task-time">${escapeHtml(task.dueTime)}</span> ` : ''}${escapeHtml(task.title)}</span>
+          <button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(task.customerId)}">${escapeHtml(task.customerName)}</button>
+          ${calendar ? `<a class="link-btn week-task-calendar" href="${escapeHtml(calendar)}" target="_blank" rel="noopener noreferrer">Pôr no Google Agenda</a>` : ''}
+        </div>
+      </div>`;
+  };
+  const pending = tasks.filter(task => !task.completed && task.dueDate).length;
+  container.innerHTML = `
+    <div class="week-head">
+      <div class="week-nav">
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="-1" aria-label="Semana anterior">Anterior</button>
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="0" ${weekOffset === 0 ? 'disabled' : ''}>Esta semana</button>
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="1" aria-label="Semana seguinte">Seguinte</button>
+      </div>
+      <strong class="week-title">${weekTitle(days)}</strong>
+      <button type="button" class="link-btn" data-click="handleExportAgenda" ${pending === 0 ? 'disabled' : ''} title="Arquivo que o Google Agenda, o Outlook e o calendário do celular importam">Baixar a agenda (.ics)</button>
+    </div>
+    <div class="week-grid">
+      ${days.map(day => `
+        <div class="week-day ${day.isToday ? 'is-today' : ''}">
+          <div class="week-day-head">${day.weekday}<span>${day.label}</span></div>
+          ${byDay[day.date].length === 0 ? '<p class="week-empty">Nada marcado</p>' : byDay[day.date].map(item).join('')}
+        </div>`).join('')}
+    </div>`;
 }
 
 const REPORT_PERIOD_KEY = 'edx_report_period';

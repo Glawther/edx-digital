@@ -3,6 +3,7 @@
  * Wires the screens to the store, the storage and the services
  */
 
+import { tasksToIcs } from './core/agenda.js';
 import { setupOwnerPanel } from './ui/owner-panel.js';
 import { setupErrorReporting } from './services/error-report.js';
 import { applyWhitelabelStyles, getSavedOrganization } from './core/config.js';
@@ -27,6 +28,7 @@ import {
   renderConnectionStatus,
   renderDetailedMetrics,
   renderToday,
+  moveWeek,
   setTodayOwner,
   exportSellerReport,
   renderFocusPills,
@@ -86,6 +88,19 @@ async function initApp() {
       // from the "Hoje" screen: the funnel showing only what one of its lists holds
       openFunnelFocus: (focus) => { window.handleFocus(focus); window.navigateToView('pipeline'); },
       openView: (view) => window.navigateToView(view),
+      handleWeek: (step) => { moveWeek(Number(step) || 0); crmStore.emitChange(); },
+      handleExportAgenda: () => {
+        const text = tasksToIcs(crmStore.getState().tasks);
+        const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'edx-digital-agenda.ics';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showToast('Agenda baixada. Abra o arquivo, ou importe-o no seu calendário.', 'success');
+      },
       handleTodayOwner: (ownerId) => { setTodayOwner(ownerId || ''); crmStore.emitChange(); },
       handleExportSellerReport: () => {
         try {

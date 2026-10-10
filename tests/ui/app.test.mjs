@@ -478,3 +478,28 @@ test('busca: encontra pelo que está no histórico e mostra o trecho', async (t)
   await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
   assert.deepEqual(problems, []);
 });
+test('agenda da semana: tarefas no dia certo, link para o Google Agenda, troca de semana e arquivo .ics', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.click('.nav-item[data-view="tasks"]');
+  await page.click('[data-task-filter="week"]');
+  await page.locator('.week-grid').waitFor();
+  assert.equal(await page.locator('.week-day').count(), 7);
+  assert.equal(await page.locator('.week-day.is-today').count(), 1);
+  const todayTasks = page.locator('.week-day.is-today .week-task');
+  assert.ok(await todayTasks.count() >= 1, 'a demonstração tem tarefas para hoje');
+  assert.match(await todayTasks.first().locator('.week-task-calendar').getAttribute('href'), /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+
+  const title = await page.textContent('.week-title');
+  await page.click('[data-click="handleWeek"][data-a="1"]');
+  await page.waitForFunction(before => document.querySelector('.week-title').textContent !== before, title);
+  assert.equal(await page.locator('.week-day.is-today').count(), 0);
+  await page.click('[data-click="handleWeek"][data-a="0"]');
+  await page.waitForFunction(before => document.querySelector('.week-title').textContent === before, title);
+
+  const download = page.waitForEvent('download');
+  await page.click('[data-click="handleExportAgenda"]');
+  assert.equal((await download).suggestedFilename(), 'edx-digital-agenda.ics');
+  assert.deepEqual(problems, []);
+});
