@@ -1,22 +1,21 @@
 /**
  * Nexus CRM - Application Orchestrator
- * Enterprise Grade CRM with AI, Cloud Firestore, WhatsApp Templates, Tasks & Timeline
+ * Wires the screens to the store, the storage and the services
  */
 
 import { storage } from './core/storage-manager.js';
-import { crmStore, STAGES, PRIORITIES, LOSS_REASONS, SALES_TEAM } from './core/crm-store.js';
-import { 
-  renderKPIs, 
-  renderKanban, 
-  renderTable, 
+import { crmStore, STAGES, LOSS_REASONS, SALES_TEAM } from './core/crm-store.js';
+import {
+  renderKPIs,
+  renderKanban,
+  renderTable,
   renderTasksView,
   renderDetailedMetrics,
   renderLeadTimeline,
-  renderConnectionStatus, 
+  renderConnectionStatus,
   renderAuthBadge,
   renderSecurityView,
   showToast,
-  WA_TEMPLATES,
   getWhatsAppLink,
   formatBRL,
   escapeHtml
@@ -28,13 +27,12 @@ import {
   getAiUsageMetrics 
 } from './core/config.js';
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from './services/gemini-service.js';
-import { 
-  initAuth, 
+import {
+  initAuth,
   onAuthChange,
   setUserRole,
   getCurrentRole,
   isAdmin,
-  isEmployee,
   USER_ROLES,
   getCurrentUser,
   isSessionActive,
@@ -46,13 +44,17 @@ import {
   joinCompany,
   sendPasswordReset,
   changeOwnPassword,
-  logoutToPortal
+  logoutToPortal,
+  deleteOwnAccount,
+  deleteCompany,
+  isCompanyOwner,
+  markActivity,
+  isIdleTooLong
 } from './services/auth-service.js';
 import { describeAuthError } from './services/firebase-app.js';
-import { 
-  exportCustomersToCSV, 
-  exportAuditLogsToCSV, 
-  exportBackupToJSON 
+import {
+  exportCustomersToCSV,
+  exportAuditLogsToCSV
 } from './services/export-service.js';
 import { 
   formatCPF, 
@@ -69,11 +71,9 @@ import {
   startEmployeeSync,
   stopEmployeeSync
 } from './services/employee-service.js';
-import { 
-  initTheme, 
-  toggleTheme, 
-  setTheme, 
-  getSavedTheme 
+import {
+  initTheme,
+  toggleTheme
 } from './core/theme-manager.js';
 import {
   logAudit,
@@ -83,7 +83,6 @@ import {
   getLocalAuditLogs,
   getAuditStats,
   formatAuditAction,
-  formatSeverityBadge,
   exportAuditToCSV,
   onAuditLog
 } from './services/audit-service.js';
@@ -96,7 +95,6 @@ import {
 import {
   requestNotificationPermission,
   getNotificationPermission,
-  sendPushNotification,
   getInAppNotifications,
   getUnreadCount,
   markAsRead,
@@ -108,16 +106,9 @@ import {
   NOTIFICATION_TYPES
 } from './services/notification-service.js';
 import {
-  PLANS,
-  generatePixQRCodeSVG,
-  generatePixPayload,
-  validateCreditCard,
-  detectCardBrand,
-  processPayment,
-  getInvoices
+  PLANS
 } from './services/billing-service.js';
 import {
-  cleanPhoneNumber,
   buildWhatsAppLink,
   generateAIOutreachMessages,
   recordWhatsAppContact,
@@ -125,7 +116,6 @@ import {
 } from './services/whatsapp-service.js';
 import {
   getWebhookConfig,
-  saveWebhookConfig,
   regenerateWebhookToken,
   pollWebhookInbox,
   sendTestWebhookLead
@@ -162,7 +152,6 @@ async function initApp() {
     setupNavigation();
     setupFilterEvents();
     setupDialogEvents();
-    setupFirebaseConfigModal();
     setupGeminiModals();
     setupExportEvents();
     setupTasksEvents();
@@ -181,12 +170,13 @@ async function initApp() {
     applyWhitelabelStyles();
     setupWhitelabelEvents();
     setupBillingEvents();
-    setupLegacyCheckoutDialogEvents();
     setupCheckoutModalEvents();
     setupTeamInviteEvents();
     setupAuditTrailView();
     setupNotificationCenter();
     setupWebhookModalEvents();
+    setupAccountDialog();
+    setupIdleSignOut();
 
     // Periodic poll for Webhook incoming leads (every 15s)
     setInterval(async () => {
@@ -231,6 +221,9 @@ async function initApp() {
 
     // Restore the session first (signed-in account, demo, or none): which data is loaded depends on it
     await initAuth();
+    if (isIdleTooLong()) {
+      await logoutToPortal();
+    }
     await enterSession({ resumed: true });
   } catch (err) {
     console.error("Erro crítico na inicialização do Nexus CRM:", err);
@@ -257,6 +250,7 @@ async function enterSession({ resumed = false } = {}) {
   }
 
   window.hideAuthPortal();
+  markActivity();
   const result = await storage.init();
   await startEmployeeSync().catch((err) => console.warn('Team list could not start:', err));
   initAuditFirestore(isCloudSession() ? getFirestoreDb() : null);
@@ -278,6 +272,121 @@ async function enterSession({ resumed = false } = {}) {
     if (spanName) spanName.textContent = user.name;
     if (firstAccessDialog && !firstAccessDialog.open) firstAccessDialog.showModal();
   }
+}
+
+// ==========================================================================
+// Account, data export and deletion
+// ==========================================================================
+function setupAccountDialog() {
+  const dialog = document.getElementById('account-dialog');
+  const form = document.getElementById('form-account-delete');
+  if (!dialog || !form) return;
+
+  const close = () => { form.reset(); dialog.close(); };
+  document.getElementById('btn-close-account-dialog')?.addEventListener('click', close);
+  document.getElementById('btn-close-account-footer')?.addEventListener('click', close);
+
+  // What has to be typed to confirm: the company name for the owner, the word EXCLUIR otherwise
+  const confirmationPhrase = () => (isCompanyOwner() ? (getSavedOrganization().name || '').trim() : 'EXCLUIR');
+
+  document.getElementById('btn-menu-account')?.addEventListener('click', () => {
+    const toolsMenu = document.getElementById('header-tools-menu');
+    if (toolsMenu) toolsMenu.style.display = 'none';
+
+    const user = getCurrentUser();
+    const org = getSavedOrganization();
+    const cloud = isCloudSession();
+    const owner = isCompanyOwner();
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    const show = (id, visible) => { const el = document.getElementById(id); if (el) el.style.display = visible ? '' : 'none'; };
+
+    set('account-summary', user ? `${user.name}, ${user.email}. ${isAdmin() ? 'Administrador' : 'Vendedor'} em ${org.name}.` : '');
+    show('account-terms', cloud);
+    show('account-export-block', isAdmin());
+    show('account-delete-block', cloud);
+    show('account-demo-note', !cloud);
+
+    if (cloud) {
+      set('account-delete-title', owner ? 'Excluir a empresa e todos os dados' : 'Excluir a minha conta');
+      set('account-delete-text', owner
+        ? 'Apaga para sempre todos os clientes, oportunidades, históricos, a equipe e a sua conta. Não dá para desfazer. Baixe os dados antes, se precisar deles.'
+        : 'Apaga o seu acesso e os seus dados de cadastro. As oportunidades que você atendia continuam com a empresa. Não dá para desfazer.');
+      set('account-delete-phrase-label', owner ? `Digite o nome da empresa: ${confirmationPhrase()}` : 'Digite EXCLUIR');
+    }
+    dialog.showModal();
+  });
+
+  document.getElementById('btn-account-export')?.addEventListener('click', () => {
+    if (typeof window.handleDownloadBackup === 'function') window.handleDownloadBackup();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('account-delete-password').value;
+    const typed = document.getElementById('account-delete-phrase').value.trim();
+    if (typed !== confirmationPhrase()) {
+      showToast('O texto de confirmação não confere.', 'error');
+      return;
+    }
+
+    const button = document.getElementById('btn-account-delete');
+    button.disabled = true;
+    button.textContent = 'Excluindo...';
+    try {
+      if (isCompanyOwner()) {
+        await deleteCompany(password);
+      } else {
+        await deleteOwnAccount(password);
+      }
+      clearCompanyDataFromBrowser();
+      close();
+      await enterSession();
+      showToast('Conta excluída. Os dados foram apagados.', 'info');
+    } catch (err) {
+      showToast(describeAuthError(err), 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Excluir definitivamente';
+    }
+  });
+}
+
+// A signed-in account left untouched for hours is signed out, so an unattended
+// computer does not keep the company's data open.
+function setupIdleSignOut() {
+  let lastMark = 0;
+  const onActivity = () => {
+    const now = Date.now();
+    if (now - lastMark > 60000) {
+      lastMark = now;
+      markActivity();
+    }
+  };
+  ['click', 'keydown', 'pointerdown'].forEach(evt => document.addEventListener(evt, onActivity, { passive: true }));
+
+  const check = async () => {
+    if (!isCloudSession() || !isIdleTooLong()) return;
+    await logoutToPortal();
+    clearCompanyDataFromBrowser();
+    await enterSession();
+    showToast('Você ficou muito tempo sem usar o CRM e a sessão foi encerrada. Entre de novo.', 'info');
+  };
+  setInterval(check, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+}
+
+// Nothing that belongs to a company stays in this browser after its session ends.
+// Kept on purpose: theme, the Gemini key and the webhook token (device settings),
+// and the demo's sample data.
+function clearCompanyDataFromBrowser() {
+  [
+    'nexus_crm_audit_logs',
+    'nexus_crm_notifications',
+    'nexus_crm_ai_usage_metrics',
+    'nexus_crm_last_activity',
+    'nexus_jwt_token',
+    'nexus_tenant_id'
+  ].forEach(key => localStorage.removeItem(key));
 }
 
 /**
@@ -312,7 +421,6 @@ if (document.readyState === 'loading') {
 
 function applyRoleUIRestrictions(permissions) {
   const geminiBtn = document.getElementById('sidebar-gemini-btn');
-  const firebaseBtn = document.getElementById('sidebar-firebase-btn');
   const exportBtn = document.getElementById('btn-export-csv');
 
   const isAdmin = !!permissions.isAdmin;
@@ -364,20 +472,11 @@ function applyRoleUIRestrictions(permissions) {
       geminiBtn.title = 'Configuração da Chave Gemini AI';
       geminiBtn.disabled = false;
     }
-    if (firebaseBtn) {
-      firebaseBtn.style.opacity = '1';
-      firebaseBtn.title = 'Configuração do Google Cloud';
-      firebaseBtn.disabled = false;
-    }
   } else {
     // Restrito para Funcionários pela Confidencialidade (Tríade CID)
     if (geminiBtn) {
       geminiBtn.style.opacity = '0.4';
       geminiBtn.title = 'Só administradores configuram a IA';
-    }
-    if (firebaseBtn) {
-      firebaseBtn.style.opacity = '0.4';
-      firebaseBtn.title = 'Só administradores';
     }
   }
 
@@ -1253,13 +1352,6 @@ window.handleDeleteCustomer = async function(customerId) {
 // ==========================================================================
 // Firebase Configuration Dialog
 // ==========================================================================
-function setupFirebaseConfigModal() {
-  // The database connection is no longer configurable from the app: every account uses the
-  // product's own database, reached only after sign-in.
-  const sidebarFirebaseBtn = document.getElementById('sidebar-firebase-btn');
-  if (sidebarFirebaseBtn) sidebarFirebaseBtn.style.display = 'none';
-}
-
 // ==========================================================================
 // Gemini AI Modals & Handlers
 // ==========================================================================
@@ -1796,7 +1888,6 @@ function setupAuthPortalEvents() {
   const btnQuickEmployee = document.getElementById('btn-quick-login-employee');
   const formLogin = document.getElementById('form-auth-login');
   const formRegister = document.getElementById('form-auth-register');
-  const btnGooglePortal = document.getElementById('btn-login-google-portal');
 
   window.showAuthPortal = function() {
     if (portalScreen) portalScreen.style.display = 'flex';
@@ -1812,10 +1903,7 @@ function setupAuthPortalEvents() {
     const wasCloud = isCloudSession();
     await logAudit(AUDIT_ACTIONS.USER_LOGOUT, { reason: 'user_action' });
     await logoutToPortal();
-    if (wasCloud) {
-      // Nothing from a real account stays behind in this browser
-      localStorage.removeItem('nexus_crm_audit_logs');
-    }
+    if (wasCloud) clearCompanyDataFromBrowser();
     await enterSession();
     showToast("Você saiu.", "info");
   };
@@ -2543,16 +2631,9 @@ function setupHeaderToolsMenu() {
   }
 
   const btnSidebarGemini = document.getElementById('sidebar-gemini-btn');
-  const btnSidebarFirebase = document.getElementById('sidebar-firebase-btn');
 
   if (btnSidebarGemini) {
     btnSidebarGemini.addEventListener('click', () => {
-      closeMenu();
-    });
-  }
-
-  if (btnSidebarFirebase) {
-    btnSidebarFirebase.addEventListener('click', () => {
       closeMenu();
     });
   }
@@ -2880,13 +2961,6 @@ function setupEmployeeManagementEvents() {
     if (emp) window.openEmployeeModal(emp);
   };
 
-  window.handleCopyEmployeeCredentials = function(empId) {
-    const emp = getEmployees().find(e => e.id === empId);
-    if (!emp) return;
-    navigator.clipboard.writeText(generateCredentialsShareText(emp));
-    showToast(`Endereço e login de ${emp.name} copiados.`, 'success');
-  };
-
   window.handleResetEmployeePassword = async function(empId) {
     const emp = getEmployees().find(e => e.id === empId);
     if (!emp) return;
@@ -2949,9 +3023,6 @@ function setupEmployeeManagementEvents() {
 // Billing & Subscription Events
 // ==========================================================================
 function setupBillingEvents() {
-  window.openSubscriptionModal = function() {
-    if (window.openCheckoutModal) window.openCheckoutModal();
-  };
   const dialog = document.getElementById('billing-dialog');
   const btnOpen = document.getElementById('btn-menu-billing');
   const btnClose = document.getElementById('btn-close-billing-dialog');
@@ -3018,312 +3089,6 @@ function setupBillingEvents() {
 // ==========================================================================
 // Checkout & Payment Gateway Events (PIX Instantâneo & Cartão de Crédito)
 // ==========================================================================
-function setupLegacyCheckoutDialogEvents() {
-  const dialog = document.getElementById('checkout-dialog');
-  const btnClose = document.getElementById('btn-close-checkout-dialog');
-  const mainGrid = document.getElementById('checkout-main-grid');
-  const successView = document.getElementById('checkout-success-view');
-
-  const planTitle = document.getElementById('checkout-plan-title');
-  const planTag = document.getElementById('checkout-plan-tag');
-  const subtotalPrice = document.getElementById('checkout-subtotal-price');
-  const totalPrice = document.getElementById('checkout-total-price');
-  const featuresList = document.getElementById('checkout-features-list');
-
-  const btnCycleMonthly = document.getElementById('btn-cycle-monthly');
-  const btnCycleYearly = document.getElementById('btn-cycle-yearly');
-
-  const tabPix = document.getElementById('tab-pay-pix');
-  const tabCard = document.getElementById('tab-pay-card');
-  const panelPix = document.getElementById('payment-panel-pix');
-  const panelCard = document.getElementById('payment-panel-card');
-
-  const qrContainer = document.getElementById('pix-qr-container');
-  const pixCopiaCola = document.getElementById('pix-copia-cola-input');
-  const btnCopyPix = document.getElementById('btn-copy-pix');
-  const pixTimerEl = document.getElementById('pix-timer');
-  const btnSimulatePix = document.getElementById('btn-simulate-pix-success');
-
-  const formCard = document.getElementById('form-checkout-card');
-  const cardInputNumber = document.getElementById('card-input-number');
-  const cardInputName = document.getElementById('card-input-name');
-  const cardInputExpiry = document.getElementById('card-input-expiry');
-  const cardInputCvv = document.getElementById('card-input-cvv');
-  const cardBrandBadge = document.getElementById('card-brand-badge');
-  const btnFillTestCard = document.getElementById('btn-fill-test-card');
-  const btnSubmitCard = document.getElementById('btn-submit-card-pay');
-
-  const receiptPlanName = document.getElementById('receipt-plan-name');
-  const receiptInvoiceId = document.getElementById('receipt-invoice-id');
-  const receiptMethod = document.getElementById('receipt-payment-method');
-  const receiptAmount = document.getElementById('receipt-amount');
-  const receiptValidUntil = document.getElementById('receipt-valid-until');
-  const btnFinish = document.getElementById('btn-checkout-finish');
-
-  let selectedPlan = 'pro';
-  let selectedCycle = 'monthly';
-  let currentMethod = 'pix';
-  let pixInterval = null;
-
-  function updateCheckoutUI() {
-    const plan = PLANS[selectedPlan] || PLANS.pro;
-    const price = selectedCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
-    const formattedPrice = `R$ ${price.toFixed(2).replace('.', ',')}`;
-
-    if (planTitle) planTitle.textContent = plan.name;
-    if (planTag) planTag.textContent = selectedCycle === 'yearly' ? 'ANUAL (-20%)' : 'MENSAL';
-    if (subtotalPrice) subtotalPrice.textContent = formattedPrice;
-    if (totalPrice) totalPrice.textContent = formattedPrice;
-
-    if (featuresList) {
-      featuresList.innerHTML = plan.features.map(f => `<li>${f}</li>`).join('');
-    }
-
-    if (btnCycleMonthly && btnCycleYearly) {
-      btnCycleMonthly.className = selectedCycle === 'monthly' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
-      btnCycleYearly.className = selectedCycle === 'yearly' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline';
-    }
-
-    // Generate dynamic PIX
-    const pixPayload = generatePixPayload(selectedPlan, selectedCycle);
-    if (pixCopiaCola) pixCopiaCola.value = pixPayload;
-    if (qrContainer) {
-      qrContainer.innerHTML = generatePixQRCodeSVG(pixPayload);
-    }
-
-    // Reset timer
-    startPixTimer();
-
-    // Reset views
-    if (mainGrid) mainGrid.style.display = 'grid';
-    if (successView) successView.style.display = 'none';
-
-    // Update submit button text
-    if (btnSubmitCard) {
-      btnSubmitCard.textContent = `Pagar ${formattedPrice} e Ativar CRM`;
-    }
-  }
-
-  function startPixTimer() {
-    if (pixInterval) clearInterval(pixInterval);
-    let totalSeconds = 600;
-    function tick() {
-      const min = Math.floor(totalSeconds / 60);
-      const sec = totalSeconds % 60;
-      if (pixTimerEl) {
-        pixTimerEl.textContent = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-      }
-      if (totalSeconds <= 0) {
-        clearInterval(pixInterval);
-        if (pixTimerEl) pixTimerEl.textContent = 'Expirado';
-      }
-      totalSeconds--;
-    }
-    tick();
-    pixInterval = setInterval(tick, 1000);
-  }
-
-  window.openCheckout = function(planId = 'pro') {
-    selectedPlan = planId;
-    updateCheckoutUI();
-    const billingDialog = document.getElementById('billing-dialog');
-    if (billingDialog && billingDialog.open) billingDialog.close();
-    if (dialog) dialog.showModal();
-  };
-
-  if (btnClose) {
-    btnClose.addEventListener('click', () => {
-      if (pixInterval) clearInterval(pixInterval);
-      dialog?.close();
-    });
-  }
-
-  // Cycle toggle
-  if (btnCycleMonthly) {
-    btnCycleMonthly.addEventListener('click', () => {
-      selectedCycle = 'monthly';
-      updateCheckoutUI();
-    });
-  }
-
-  if (btnCycleYearly) {
-    btnCycleYearly.addEventListener('click', () => {
-      selectedCycle = 'yearly';
-      updateCheckoutUI();
-    });
-  }
-
-  // Tab switching
-  if (tabPix && tabCard) {
-    tabPix.addEventListener('click', () => {
-      currentMethod = 'pix';
-      tabPix.className = 'btn btn-primary';
-      tabCard.className = 'btn btn-outline';
-      if (panelPix) panelPix.style.display = 'flex';
-      if (panelCard) panelCard.style.display = 'none';
-    });
-
-    tabCard.addEventListener('click', () => {
-      currentMethod = 'credit_card';
-      tabCard.className = 'btn btn-primary';
-      tabPix.className = 'btn btn-outline';
-      if (panelPix) panelPix.style.display = 'none';
-      if (panelCard) panelCard.style.display = 'flex';
-    });
-  }
-
-  // Copy PIX
-  if (btnCopyPix && pixCopiaCola) {
-    btnCopyPix.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(pixCopiaCola.value);
-        showToast('Código PIX Copia e Cola copiado!', 'success');
-      } catch {
-        pixCopiaCola.select();
-        document.execCommand('copy');
-        showToast('Código PIX selecionado/copiado!', 'success');
-      }
-    });
-  }
-
-  // Card input mask & Brand detection
-  if (cardInputNumber) {
-    cardInputNumber.addEventListener('input', () => {
-      let val = cardInputNumber.value.replace(/\D/g, '');
-      val = val.substring(0, 16);
-      const parts = val.match(/.{1,4}/g);
-      cardInputNumber.value = parts ? parts.join(' ') : '';
-      if (cardBrandBadge) {
-        cardBrandBadge.textContent = detectCardBrand(val);
-      }
-    });
-  }
-
-  if (cardInputExpiry) {
-    cardInputExpiry.addEventListener('input', () => {
-      let val = cardInputExpiry.value.replace(/\D/g, '');
-      if (val.length >= 2) {
-        val = val.substring(0, 2) + '/' + val.substring(2, 4);
-      }
-      cardInputExpiry.value = val.substring(0, 5);
-    });
-  }
-
-  // Quick fill sandbox card
-  if (btnFillTestCard) {
-    btnFillTestCard.addEventListener('click', () => {
-      if (cardInputNumber) cardInputNumber.value = '4242 4242 4242 4242';
-      if (cardInputName) cardInputName.value = 'CARLOS A SILVA';
-      if (cardInputExpiry) cardInputExpiry.value = '12/28';
-      if (cardInputCvv) cardInputCvv.value = '888';
-      if (cardBrandBadge) cardBrandBadge.textContent = 'Visa ';
-      showToast('Dados de teste do Stripe carregados!', 'info');
-    });
-  }
-
-  // Process PIX simulation
-  if (btnSimulatePix) {
-    btnSimulatePix.addEventListener('click', async () => {
-      btnSimulatePix.disabled = true;
-      btnSimulatePix.textContent = 'Confirmando PIX com o Banco Central...';
-
-      const user = getCurrentUser();
-      const res = await processPayment({
-        planId: selectedPlan,
-        cycle: selectedCycle,
-        method: 'pix',
-        customerInfo: { name: user?.name, email: user?.email }
-      });
-
-      btnSimulatePix.disabled = false;
-      btnSimulatePix.textContent = 'Simular Confirmação do PIX (Aprovação Imediata)';
-
-      if (res.success) {
-        displayReceipt(res.invoice);
-      } else {
-        showToast(res.error || 'Erro no processamento do Pix.', 'error');
-      }
-    });
-  }
-
-  // Process Card payment
-  if (formCard) {
-    formCard.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (btnSubmitCard) {
-        btnSubmitCard.disabled = true;
-        btnSubmitCard.textContent = 'Processando com a operadora...';
-      }
-
-      const user = getCurrentUser();
-      const res = await processPayment({
-        planId: selectedPlan,
-        cycle: selectedCycle,
-        method: 'credit_card',
-        cardData: {
-          number: cardInputNumber.value,
-          name: cardInputName.value,
-          expiry: cardInputExpiry.value,
-          cvv: cardInputCvv.value
-        },
-        customerInfo: { name: user?.name, email: user?.email }
-      });
-
-      if (btnSubmitCard) {
-        btnSubmitCard.disabled = false;
-        const plan = PLANS[selectedPlan] || PLANS.pro;
-        const price = selectedCycle === 'yearly' ? plan.priceYearly : plan.priceMonthly;
-        btnSubmitCard.textContent = `Pagar R$ ${price.toFixed(2).replace('.', ',')} e Ativar CRM`;
-      }
-
-      if (res.success) {
-        displayReceipt(res.invoice);
-      } else {
-        showToast(res.error || 'Cartão recusado pela operadora.', 'error');
-      }
-    });
-  }
-
-  function displayReceipt(inv) {
-    if (pixInterval) clearInterval(pixInterval);
-    if (mainGrid) mainGrid.style.display = 'none';
-    if (successView) successView.style.display = 'flex';
-
-    if (receiptPlanName) receiptPlanName.textContent = inv.planName;
-    if (receiptInvoiceId) receiptInvoiceId.textContent = inv.id;
-    if (receiptMethod) receiptMethod.textContent = inv.method + (inv.cardLast4 ? ` (•••• ${inv.cardLast4})` : '');
-    if (receiptAmount) receiptAmount.textContent = `R$ ${inv.amount.toFixed(2).replace('.', ',')}`;
-    if (receiptValidUntil) {
-      receiptValidUntil.textContent = new Date(inv.validUntil).toLocaleDateString('pt-BR');
-    }
-
-    showToast(`Parabéns! Plano ${inv.planName} ativado com sucesso!`, 'success');
-  }
-
-  if (btnFinish) {
-    btnFinish.addEventListener('click', () => {
-      dialog?.close();
-      if (crmStore) crmStore.emitChange();
-    });
-  }
-
-  // Handle checkout deep-linking via URL hash from Landing Page
-  function handleCheckoutHash() {
-    const hash = window.location.hash;
-    if (hash === '#checkout-starter') {
-      window.openCheckout('starter');
-    } else if (hash === '#checkout-pro' || hash === '#checkout') {
-      window.openCheckout('pro');
-    } else if (hash === '#checkout-enterprise') {
-      window.openCheckout('enterprise');
-    }
-  }
-  window.addEventListener('hashchange', handleCheckoutHash);
-  setTimeout(handleCheckoutHash, 200);
-  setTimeout(handleCheckoutHash, 800);
-  setTimeout(handleCheckoutHash, 1800);
-}
-
 // ==========================================================================
 // Team Invite System Events
 // ==========================================================================

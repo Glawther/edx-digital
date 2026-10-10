@@ -327,15 +327,6 @@ h1, h2, h3, h4 {
   display: block;
 }
 
-.kpi-badge,
-.kpi-badge.positive {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: inherit;
-  font-weight: 500;
-}
-
 /* --------------------------------------------------------------------------
    Pipeline toolbar
    -------------------------------------------------------------------------- */
@@ -518,16 +509,6 @@ h1, h2, h3, h4 {
   padding: 1px 6px;
 }
 
-.salesperson-badge,
-.deal-rotting-badge,
-.lead-task-badge {
-  background: none;
-  border: 0;
-  padding: 0;
-  font-weight: 500;
-  font-size: 0.8rem;
-}
-
 .card-footer {
   flex-direction: row;
   align-items: center;
@@ -557,8 +538,7 @@ h1, h2, h3, h4 {
 }
 
 /* Card actions stay quiet until the card is hovered or focused */
-.action-btn,
-.action-btn.ai-btn {
+.action-btn {
   width: 26px;
   height: 26px;
   background: transparent;
@@ -571,8 +551,7 @@ h1, h2, h3, h4 {
   color: var(--text-secondary);
 }
 
-.action-btn:hover,
-.action-btn.ai-btn:hover {
+.action-btn:hover {
   background: var(--bg-surface-elevated);
   border-color: var(--border-subtle);
   color: var(--text-primary);
@@ -612,17 +591,6 @@ h1, h2, h3, h4 {
 }
 
 .btn-primary:hover {
-  box-shadow: none;
-  transform: none;
-}
-
-.btn-gemini {
-  background: var(--accent);
-  box-shadow: none;
-}
-
-.btn-gemini:hover {
-  background: var(--accent-hover);
   box-shadow: none;
   transform: none;
 }
@@ -689,10 +657,6 @@ h1, h2, h3, h4 {
 .auth-portal-header {
   text-align: left;
   margin-bottom: 1.5rem;
-}
-
-.auth-brand-badge {
-  display: none;
 }
 
 .auth-portal-title {
@@ -1185,7 +1149,21 @@ button.plan-option:hover { border-color: var(--accent-line); }
   .crm-table { min-width: 720px; }
   .plain-table { min-width: 520px; }
   .settings-section .plain-table td:first-child { min-width: 170px; }
-  .search-shortcut, .search-kbd, kbd { display: none; }
+  kbd { display: none; }
   .sidebar-user-actions { display: flex !important; }
   .employee-profile-cell { min-width: 170px; }
 }
+
+
+/* Consent, legal links and the account dialog */
+.consent-line { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.4; cursor: pointer; }
+.consent-line input { margin-top: 0.2rem; flex: none; }
+.consent-line a, .account-block a { color: var(--accent); }
+.auth-legal-links { display: inline-flex; gap: 0.9rem; float: right; font-size: 0.8rem; }
+.auth-legal-links a { color: var(--text-muted); text-decoration: none; }
+.auth-legal-links a:hover { color: var(--text-primary); }
+.account-block { padding: 0 0 1.1rem; margin-bottom: 1.1rem; border-bottom: 1px solid var(--border-subtle); }
+.account-block:last-of-type { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.account-block p { font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; margin: 0.35rem 0 0.75rem; }
+.btn-danger-outline { color: var(--color-lost, #b42318); border-color: var(--color-lost, #b42318); }
+.btn-danger-outline:hover { background: var(--color-lost, #b42318); color: #fff; }

@@ -3,7 +3,7 @@
  * Keeps the app's own files available offline.
  */
 
-const CACHE_NAME = 'nexus-crm-v3.2.0';
+const CACHE_NAME = 'nexus-crm-v3.3.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -37,23 +37,7 @@ const STATIC_ASSETS = [
   '/js/services/webhook-service.js',
   '/js/services/firebase-service.js',
   '/js/services/gemini-service.js',
-  '/js/services/export-service.js',
-  '/js/config.js',
-  '/js/theme-manager.js',
-  '/js/auth-service.js',
-  '/js/employee-service.js',
-  '/js/billing-service.js',
-  '/js/audit-service.js',
-  '/js/notification-service.js',
-  '/js/team-invite-service.js',
-  '/js/whatsapp-service.js',
-  '/js/webhook-service.js',
-  '/js/crm-store.js',
-  '/js/storage-manager.js',
-  '/js/firebase-service.js',
-  '/js/gemini-service.js',
-  '/js/export-service.js',
-  '/js/ui-renderer.js'
+  '/js/services/export-service.js'
 ];
 
 // Install: Cache core application assets safely without failing if one asset 404s

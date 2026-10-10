@@ -54,3 +54,29 @@ npm run test:rules
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
 - **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
 - **Servidor (Render)**: o login do servidor (`/api/v1`) é independente deste. O aplicativo web não depende dele para entrar.
+
+## Termos, privacidade e direitos dos titulares
+
+- **Aceite**: quem cria conta marca que leu os Termos de Uso e a Política de Privacidade. A versão aceita e a data ficam em `users/{uid}` (`termsVersion`, `termsAcceptedAt`). Ao mudar o conteúdo de `termos.html` ou `privacidade.html`, atualize `LEGAL_VERSION` em `js/services/auth-service.js`.
+- **Exportar tudo**: Ferramentas > Minha conta e privacidade > Baixar todos os dados (administradores).
+- **Excluir a conta**: o vendedor apaga o próprio acesso; as oportunidades ficam com a empresa.
+- **Excluir a empresa**: só o dono. Apaga clientes, histórico de atividade, perfis da equipe, convite, a empresa e a conta do dono. Pede a senha e o nome da empresa.
+- **Sessão ociosa**: uma conta real sem uso por 8 horas é desconectada (`IDLE_LIMIT_MS`).
+- **Ao sair**: nada da empresa fica no navegador.
+
+### O que depende de você, fora do sistema
+
+Os termos assumem estes compromissos, e o sistema não os cumpre sozinho:
+
+- **CPF nos termos**: o Decreto 7.962/2013 pede nome, CPF ou CNPJ e endereço do fornecedor em local visível. Hoje os termos trazem nome, cidade e e-mail, e dizem que o CPF é informado a pedido. Para ficar completo, inclua o CPF (ou, melhor, um CNPJ) e um endereço.
+- **Arrependimento**: devolver por PIX, em até 10 dias, o valor de quem desistir em até 7 dias de cada contratação.
+- **Conferência do PIX**: liberar o plano em até 2 dias úteis (hoje, alterando `plan` e `planStatus` da empresa no console do Firebase).
+- **Abatimento**: devolver o proporcional quando o serviço parar por falha nossa.
+- **Resposta a pedidos de titulares**: em até 15 dias. Reclamações em geral: em até 5 dias úteis.
+- **Contas de login de colaboradores de uma empresa excluída**: apagar em até 30 dias, no console do Firebase (Authentication > Usuários). O sistema não consegue fazer isso.
+- **Contas inativas**: avisar por e-mail 30 dias antes de excluir.
+- **Incidente de segurança**: avisar o cliente em até 2 dias úteis; avaliar comunicação à ANPD e aos titulares.
+- **Registro das operações de tratamento** (LGPD, art. 37): mantenha um registro simples (uma planilha serve para agente de pequeno porte) com quais dados trata, para quê, onde ficam e por quanto tempo. A Política de Privacidade já traz esse conteúdo e pode servir de base.
+- **Mudou termos ou política?** Atualize a data nas páginas e `LEGAL_VERSION`, e avise os clientes com 15 dias de antecedência.
+
+Os textos descrevem o que o sistema faz de verdade e foram revisados com atenção ao CDC, à LGPD e ao Decreto 7.962/2013, mas não substituem a orientação de um advogado inscrito na OAB.

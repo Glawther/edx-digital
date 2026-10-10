@@ -3,7 +3,7 @@
  * Generates deal insights, win probability, sales strategies and proposal drafts.
  */
 
-import { recordAiUsage, getAiUsageMetrics, getSavedOrganization } from '../core/config.js';
+import { recordAiUsage } from '../core/config.js';
 
 const GEMINI_KEY_STORAGE = 'nexus_crm_gemini_api_key';
 
