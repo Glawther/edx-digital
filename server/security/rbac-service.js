@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Role-Based Access Control (RBAC) Engine
+ * EDX Digital - Role-Based Access Control (RBAC) Engine
  * Standard: ISO 27001 Principle of Least Privilege (PoLP)
  * Hierarchy: Admin > Gerente > Vendedor
  */

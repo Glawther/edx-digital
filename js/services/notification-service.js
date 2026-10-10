@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Push Notification Service (PWA)
+ * EDX Digital - Push Notification Service (PWA)
  * Handles browser push notifications, in-app notification center,
  * and follow-up reminders via the Service Worker.
  */
@@ -79,7 +79,7 @@ export function sendPushNotification(title, options = {}) {
     vibrate: [200, 100, 200],
     requireInteraction: false,
     silent: false,
-    tag: options.tag || 'nexus-crm-' + Date.now(),
+    tag: options.tag || 'edx-digital-' + Date.now(),
     ...options
   };
 
@@ -234,7 +234,7 @@ export function notifyDealEvent(type, leadName, dealValue = 0) {
     }
   };
 
-  const msg = messages[type] || { title: 'Nexus CRM', body: `Atualização: ${leadName}` };
+  const msg = messages[type] || { title: 'EDX Digital', body: `Atualização: ${leadName}` };
   sendPushNotification(msg.title, {
     body: msg.body,
     tag: `deal-${type}-${Date.now()}`,

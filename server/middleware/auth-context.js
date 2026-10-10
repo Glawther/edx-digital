@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Authentication & Security Context Middleware
+ * EDX Digital - Authentication & Security Context Middleware
  * Enforces Zero Trust request identification and tenant resolution
  */
 

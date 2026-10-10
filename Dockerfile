@@ -1,4 +1,4 @@
-# Nexus CRM Enterprise - Production Hardened Dockerfile
+# EDX Digital - Production Hardened Dockerfile
 # Base LTS Alpine com usuário não-root e isolamento de privilégios
 
 FROM node:20-alpine AS base

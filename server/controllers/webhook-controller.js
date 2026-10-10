@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Webhook Controller
+ * EDX Digital - Webhook Controller
  * Handles inbound lead ingestion, status acknowledgments and retrieval.
  */
 
@@ -65,7 +65,7 @@ async function handleIngestLead(req, res) {
       res.writeHead(201, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({
         success: true,
-        message: 'Lead recebido com sucesso no Nexus CRM',
+        message: 'Lead recebido com sucesso no EDX Digital',
         lead: withoutInbox(newLead)
       }));
     } catch (err) {

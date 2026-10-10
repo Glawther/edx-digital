@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Google Cloud Firestore Service Layer
+ * EDX Digital - Google Cloud Firestore Service Layer
  * Uses official Firebase Modular SDK v11
  *
  * Every read and write here is scoped to the signed-in person's company. The security

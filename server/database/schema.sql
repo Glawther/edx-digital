@@ -1,5 +1,5 @@
 -- ============================================================================
--- Nexus CRM Enterprise - Zero Trust Multi-Tenant Database Schema
+-- EDX Digital - Zero Trust Multi-Tenant Database Schema
 -- Standard: ISO 27001 / SOC 2 Type II / LGPD / GDPR / OWASP ASVS 4.0
 -- Database: PostgreSQL 14+ with Row-Level Security (RLS)
 -- ============================================================================

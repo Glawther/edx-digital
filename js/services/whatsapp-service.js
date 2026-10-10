@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - WhatsApp Integration & AI Outreach Assistant
+ * EDX Digital - WhatsApp Integration & AI Outreach Assistant
  * Generates high-converting sales messages and provides direct wa.me links.
  */
 
@@ -69,7 +69,7 @@ export function buildWhatsAppLink(phone, message = '') {
  */
 export async function generateAIOutreachMessages(lead, context = {}) {
   const cleanPhone = cleanPhoneNumber(lead.phone || lead.whatsapp);
-  const companyName = context.companyName || 'Nexus CRM';
+  const companyName = context.companyName || 'EDX Digital';
   const userName = context.userName || 'Consultor Comercial';
   
   // Fast local fallbacks

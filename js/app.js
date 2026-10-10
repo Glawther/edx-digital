@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Application Orchestrator
+ * EDX Digital - Application Orchestrator
  * Wires the screens to the store, the storage and the services
  */
 
@@ -235,7 +235,7 @@ async function initApp() {
     }
     await enterSession({ resumed: true });
   } catch (err) {
-    console.error("Erro crítico na inicialização do Nexus CRM:", err);
+    console.error("Erro crítico na inicialização do EDX Digital:", err);
     // Assegurar que o container do aplicativo permaneça visível
     const appContainer = document.getElementById('app-container');
     if (appContainer) appContainer.style.display = '';
@@ -1645,7 +1645,7 @@ function setupWhitelabelEvents() {
   const previewIcon = document.getElementById('whitelabel-preview-icon');
 
   function updatePreview(name, logo, color) {
-    if (previewName) previewName.textContent = name || 'Nexus CRM';
+    if (previewName) previewName.textContent = name || 'EDX Digital';
     if (previewIcon) {
       if (color) previewIcon.style.background = color;
       if (logo) {
@@ -1727,7 +1727,7 @@ function setupWhitelabelEvents() {
     btnReset.addEventListener('click', () => {
       const defaultOrg = {
         name: 'Empresa Exemplo',
-        legalName: 'Nexus Soluções Comerciais e Tecnologia Ltda',
+        legalName: 'EDX Digital',
         logoUrl: '',
         brandColor: '#3b82f6'
       };
@@ -1747,7 +1747,7 @@ function setupWhitelabelEvents() {
       const org = getSavedOrganization();
       const updated = {
         ...org,
-        name: inputName?.value.trim() || 'Nexus CRM',
+        name: inputName?.value.trim() || 'EDX Digital',
         legalName: inputLegal?.value.trim() || '',
         logoUrl: inputLogo?.value.trim() || '',
         brandColor: inputColor?.value || '#3b82f6'
@@ -1792,7 +1792,7 @@ function setupBackupEvents() {
       const downloadAnchor = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `nexus_crm_backup_${timestamp}.json`);
+      downloadAnchor.setAttribute("download", `edx_digital_backup_${timestamp}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -2725,9 +2725,9 @@ function setupPWA() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').then((reg) => {
-        console.log('[Nexus PWA] Service Worker registrado com sucesso no escopo:', reg.scope);
+        console.log('[EDX Digital PWA] Service Worker registrado com sucesso no escopo:', reg.scope);
       }).catch((err) => {
-        console.warn('[Nexus PWA] Falha ao registrar Service Worker:', err);
+        console.warn('[EDX Digital PWA] Falha ao registrar Service Worker:', err);
       });
     });
   }
@@ -2749,7 +2749,7 @@ function setupPWA() {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
-        showToast("Nexus CRM instalado com sucesso no seu sistema!", "success");
+        showToast("EDX Digital instalado com sucesso no seu sistema!", "success");
       }
       deferredPrompt = null;
       btnInstall.style.display = 'none';
@@ -2758,7 +2758,7 @@ function setupPWA() {
 
   window.addEventListener('appinstalled', () => {
     if (btnInstall) btnInstall.style.display = 'none';
-    showToast("Nexus CRM configurado como aplicativo nativo!", "success");
+    showToast("EDX Digital configurado como aplicativo nativo!", "success");
   });
 }
 
@@ -3383,7 +3383,7 @@ function setupAuditTrailView() {
       const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `nexus_audit_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = `edx_digital_audit_${new Date().toISOString().split('T')[0]}.csv`;
       link.click();
       showToast('Histórico exportado.', 'success');
       logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'audit_csv' });

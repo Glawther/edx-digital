@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - High-Performance Sliding Window Rate Limiter
+ * EDX Digital - High-Performance Sliding Window Rate Limiter
  * Protection: DDoS, Credential Stuffing, Scraping, Resource Exhaustion
  * Scopes: Client IP and Tenant ID dual-enforcement
  */

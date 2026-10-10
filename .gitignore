@@ -1,4 +1,4 @@
-# Nexus CRM - Git Ignore
+# EDX Digital - Git Ignore
 .env
 .env.local
 *.log

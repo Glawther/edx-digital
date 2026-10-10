@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Multi-Gateway & 7-Day Trial Billing Tests
+ * EDX Digital - Multi-Gateway & 7-Day Trial Billing Tests
  * Tests: PIX EMVCo Generation, Asaas/Stripe/Kiwify Normalization & Subscription Quota Query
  */
 
@@ -22,8 +22,8 @@ test('💳 [BILLING GATEWAY] Unified Multi-Gateway & Subscription Quotas', async
 
   await t.test('1. Deve gerar payload PIX padrão BR Code (EMVCo) válido com CRC16', () => {
     const pixPayload = gateway.generatePixPayload({
-      pixKey: 'pix@nexuscrm.com.br',
-      recipientName: 'NEXUS CRM SAAS',
+      pixKey: 'pix@example.com',
+      recipientName: 'EDX DIGITAL SAAS',
       recipientCity: 'SAO PAULO',
       amount: 197.00,
       txId: 'TEST-TXID-1234'
@@ -59,7 +59,7 @@ test('💳 [BILLING GATEWAY] Unified Multi-Gateway & Subscription Quotas', async
         customer: 'cus_123',
         externalReference: 'tenant-asaas-01',
         value: 497.00,
-        description: 'Assinatura Plano Enterprise Nexus CRM'
+        description: 'Assinatura Plano Enterprise EDX Digital'
       }
     };
 
@@ -97,7 +97,7 @@ test('💳 [BILLING GATEWAY] Unified Multi-Gateway & Subscription Quotas', async
       order_status: 'paid',
       order_amount: 9700,
       custom_fields: { tenant_id: 'tenant-kiwify-03' },
-      Product: { name: 'Nexus CRM Plano Starter Mensal' }
+      Product: { name: 'EDX Digital Plano Starter Mensal' }
     };
 
     const normalized = gateway.normalizeWebhookPayload(kiwifyPayload);

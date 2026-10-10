@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Zero Trust API v1 Router
+ * EDX Digital - Zero Trust API v1 Router
  * Standard: RESTful API, Strict HTTP status codes, ISO 27001 Audit
  */
 
@@ -23,7 +23,7 @@ const webhookController = new SecureWebhookController(defaultRepository);
     if (!existing) {
       const demoTenant = {
         id: 'tenant-enterprise-demo',
-        name: 'Nexus Enterprise Global',
+        name: 'EDX Digital',
         slug: 'nexus-enterprise',
         plan: 'enterprise',
         status: 'active',

@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Plans
+ * EDX Digital - Plans
  * The single source for plan names, prices and limits shown in the app.
  * Keep it in step with the plans section of landing.html.
  */

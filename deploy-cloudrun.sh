@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Nexus CRM Enterprise - Script Bash de Deploy no Google Cloud Run
+# EDX Digital - Script Bash de Deploy no Google Cloud Run
 # ==============================================================================
 set -e
 
@@ -9,7 +9,7 @@ REGION="${2:-southamerica-east1}"
 SERVICE_NAME="${3:-nexus-crm-api}"
 
 echo "=========================================================="
-echo "🚀 Iniciando Deploy do Nexus CRM no Google Cloud Run..."
+echo "🚀 Iniciando Deploy do EDX Digital no Google Cloud Run..."
 echo "📡 Projeto: $PROJECT_ID | Região: $REGION"
 echo "=========================================================="
 

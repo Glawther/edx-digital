@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - UI Renderer & DOM Templates
+ * EDX Digital - UI Renderer & DOM Templates
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
@@ -33,7 +33,7 @@ export const WA_TEMPLATES = [
   {
     id: 'intro',
     title: 'Apresentação Comercial',
-    getText: (c) => `Olá ${c.name || ''}, tudo bem? Sou da equipe comercial do Nexus CRM. Recebi seu contato e gostaria de entender seus principais desafios comerciais hoje na ${c.company || 'sua empresa'}.`
+    getText: (c) => `Olá ${c.name || ''}, tudo bem? Sou da equipe comercial do EDX Digital. Recebi seu contato e gostaria de entender seus principais desafios comerciais hoje na ${c.company || 'sua empresa'}.`
   },
   {
     id: 'proposal',
@@ -48,7 +48,7 @@ export const WA_TEMPLATES = [
   {
     id: 'meeting',
     title: 'Agendamento de Reunião',
-    getText: (c) => `Olá ${c.name || ''}, tudo bem? Gostaria de agendar uma breve conversa de 15 minutos esta semana para demonstrar como o Nexus CRM pode otimizar a operação da ${c.company || 'sua empresa'}. Qual melhor dia para você?`
+    getText: (c) => `Olá ${c.name || ''}, tudo bem? Gostaria de agendar uma breve conversa de 15 minutos esta semana para demonstrar como o EDX Digital pode otimizar a operação da ${c.company || 'sua empresa'}. Qual melhor dia para você?`
   }
 ];
 
@@ -57,7 +57,7 @@ export function getWhatsAppLink(phone, message) {
   const digits = String(phone).replace(/\D/g, '');
   if (digits.length < 8) return null;
   const fullNumber = digits.length <= 11 ? `55${digits}` : digits;
-  const greeting = encodeURIComponent(message || 'Olá, gostaria de falar sobre nossa oportunidade no Nexus CRM.');
+  const greeting = encodeURIComponent(message || 'Olá, gostaria de falar sobre nossa oportunidade no EDX Digital.');
   return `https://wa.me/${fullNumber}?text=${greeting}`;
 }
 

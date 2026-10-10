@@ -1,6 +1,6 @@
-# 📘 Manual de Produção & Comercialização — Nexus CRM Enterprise
+# 📘 Manual de Produção & Comercialização — EDX Digital
 
-Este guia reúne o passo a passo operacional para colocar o **Nexus CRM Enterprise** no ar com domínio próprio, recebimento de pagamentos via PIX/Cartão e inteligência artificial ativada.
+Este guia reúne o passo a passo operacional para colocar o **EDX Digital** no ar com domínio próprio, recebimento de pagamentos via PIX/Cartão e inteligência artificial ativada.
 
 ---
 

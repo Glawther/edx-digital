@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Sign-in and roles
+ * EDX Digital - Sign-in and roles
  *
  * Two kinds of session:
  *  - "cloud": a real account (Firebase Authentication). The role and the company come from the
@@ -500,8 +500,8 @@ function startDemoSession(role) {
 
 function demoUserFor(role) {
   return role === USER_ROLES.ADMIN
-    ? { uid: 'admin-user-01', name: 'Paula Andrade', email: 'admin@nexuscrm.com', role, photoURL: null }
-    : { uid: 'employee-user-02', name: 'Lucas Mendes', email: 'lucas.vendas@nexuscrm.com', role, photoURL: null };
+    ? { uid: 'admin-user-01', name: 'Paula Andrade', email: 'admin@example.com', role, photoURL: null }
+    : { uid: 'employee-user-02', name: 'Lucas Mendes', email: 'lucas.vendas@example.com', role, photoURL: null };
 }
 
 export function loginAsDemoRole(role) {

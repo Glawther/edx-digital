@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Multi-Tenant Repository & Context Enforcement
+ * EDX Digital - Multi-Tenant Repository & Context Enforcement
  * Architecture: Zero Trust Repository Layer (Defense-in-Depth)
  * Guarantees: Automatic Tenant Injection, RLS Compatibility, Strict Parameterization
  */

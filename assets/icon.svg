@@ -20,7 +20,7 @@
   <!-- Outer Decorative Ring -->
   <circle cx="256" cy="256" r="190" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="4" stroke-dasharray="12 12" />
   
-  <!-- Nexus Central Monogram Shield with Shadow -->
+  <!-- EDX Digital Central Monogram Shield with Shadow -->
   <g filter="url(#shadow)">
     <!-- Interlocking Hexagonal Nodes -->
     <polygon points="256,96 384,170 384,318 256,392 128,318 128,170" fill="none" stroke="url(#accentGrad)" stroke-width="20" stroke-linejoin="round" />

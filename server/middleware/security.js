@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Security & CORS Middleware
+ * EDX Digital - Security & CORS Middleware
  * Enforces OWASP standards and prevents Path Traversal attacks.
  */
 

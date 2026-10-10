@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Team invite code
+ * EDX Digital - Team invite code
  *
  * Each company has one invite code. Whoever has it can create their own account as a
  * salesperson of that company ("Criar conta" > "Tenho um convite"). The administrator can

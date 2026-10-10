@@ -1,5 +1,5 @@
 /**
- * Nexus CRM - Central State Store & Metrics Calculator
+ * EDX Digital - Central State Store & Metrics Calculator
  * Enterprise Multi-Module State with Forecast, Loss Reasons & Activity Tracking
  */
 
@@ -56,9 +56,9 @@ export const TASK_TYPES = [
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';
 
 export const SALES_TEAM = [
-  { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@nexuscrm.com', role: 'employee' },
-  { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@nexuscrm.com', role: 'employee' },
-  { id: 'admin-user-01', name: 'Paula Andrade', email: 'admin@nexuscrm.com', role: 'admin' }
+  { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com', role: 'employee' },
+  { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@example.com', role: 'employee' },
+  { id: 'admin-user-01', name: 'Paula Andrade', email: 'admin@example.com', role: 'admin' }
 ];
 
 class CRMStore {
@@ -183,7 +183,7 @@ class CRMStore {
         }
 
         // 3. Leads gerais do sistema (atribuídos ao Admin ou equipe geral para triagem / pool comum)
-        if (assignedEmail === 'admin@nexuscrm.com' || assignedName.includes('administrador') || !assignedEmail) {
+        if (assignedEmail === 'admin@example.com' || assignedName.includes('administrador') || !assignedEmail) {
           return true;
         }
 

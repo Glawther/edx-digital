@@ -1,5 +1,5 @@
 /**
- * Nexus CRM Enterprise - Unified Multi-Gateway Billing Adapter
+ * EDX Digital - Unified Multi-Gateway Billing Adapter
  * Supported Gateways: Asaas (PIX/Boleto/Cartão Brasil), Stripe (Global), Kiwify (Infoprodutos/SaaS)
  * Security: Strict HMAC-SHA256 signature verification, Idempotency & EMVCo PIX payload generation
  */
@@ -12,8 +12,8 @@ class BillingGatewayAdapter {
     this.apiKey = config.apiKey || process.env.BILLING_API_KEY || '';
     this.mercadoPagoToken = config.mercadoPagoToken || process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
     this.asaasApiKey = config.asaasApiKey || process.env.ASAAS_API_KEY || '';
-    this.pixKey = config.pixKey || process.env.PIX_KEY || 'contato@nexuscrm.com.br';
-    this.pixName = config.pixName || process.env.PIX_MERCHANT_NAME || 'NEXUS CRM ENTERPRISE';
+    this.pixKey = config.pixKey || process.env.PIX_KEY || 'contato@example.com';
+    this.pixName = config.pixName || process.env.PIX_MERCHANT_NAME || 'EDX DIGITAL';
     this.pixCity = config.pixCity || process.env.PIX_CITY || 'SAO PAULO';
     this.supportWhatsapp = config.supportWhatsapp || process.env.SUPPORT_WHATSAPP || '5511999999999';
     this.checkoutUrls = {
@@ -29,8 +29,8 @@ class BillingGatewayAdapter {
    * Generates standard BR Code PIX (EMVCo) compatible string for 1-click PIX payments
    */
   generatePixPayload({ pixKey, recipientName, recipientCity, amount, txId }) {
-    const cleanKey = pixKey || this.pixKey || 'contato@nexuscrm.com.br';
-    const cleanName = (recipientName || this.pixName || 'NEXUS CRM ENTERPRISE').substring(0, 25).toUpperCase();
+    const cleanKey = pixKey || this.pixKey || 'contato@example.com';
+    const cleanName = (recipientName || this.pixName || 'EDX DIGITAL').substring(0, 25).toUpperCase();
     const cleanCity = (recipientCity || this.pixCity || 'SAO PAULO').substring(0, 15).toUpperCase();
     const cleanAmount = Number(amount || 0).toFixed(2);
     const cleanTxId = (txId || crypto.randomBytes(8).toString('hex')).substring(0, 25);
@@ -86,7 +86,7 @@ class BillingGatewayAdapter {
     const phone = (customPhone || this.supportWhatsapp || '5511999999999').replace(/\D/g, '');
     const cleanPhone = phone.startsWith('55') ? phone : `55${phone}`;
     const text = encodeURIComponent(
-      `Olá! Acabei de realizar o pagamento PIX da assinatura do Nexus CRM 🚀\n\n` +
+      `Olá! Acabei de realizar o pagamento PIX da assinatura do EDX Digital 🚀\n\n` +
       `📌 Detalhes da Assinatura:\n` +
       `• Plano: ${plan.toUpperCase()}\n` +
       `• Valor: R$ ${Number(amount).toFixed(2).replace('.', ',')}\n` +
@@ -112,12 +112,12 @@ class BillingGatewayAdapter {
         },
         body: JSON.stringify({
           transaction_amount: Number(amount),
-          description: `Nexus CRM - Assinatura Plano ${plan.toUpperCase()}`,
+          description: `EDX Digital - Assinatura Plano ${plan.toUpperCase()}`,
           payment_method_id: 'pix',
           payer: {
-            email: customer?.email || 'cliente@nexuscrm.com.br',
+            email: customer?.email || 'cliente@example.com',
             first_name: customer?.name?.split(' ')[0] || 'Cliente',
-            last_name: customer?.name?.split(' ').slice(1).join(' ') || 'Nexus'
+            last_name: customer?.name?.split(' ').slice(1).join(' ') || 'EDX Digital'
           },
           external_reference: tenantId
         })
@@ -206,7 +206,7 @@ class BillingGatewayAdapter {
   }
 
   /**
-   * Normalizes incoming gateway webhooks into standard Nexus CRM billing events
+   * Normalizes incoming gateway webhooks into standard EDX Digital billing events
    */
   normalizeWebhookPayload(rawPayload, headers = {}) {
     let payload = rawPayload;
@@ -304,7 +304,7 @@ class BillingGatewayAdapter {
       };
     }
 
-    // 5. Standard Nexus Direct Format
+    // 5. Standard EDX Digital Direct Format
     return payload;
   }
 }

@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Regras de acesso do Nexus CRM.
+// Regras de acesso do EDX Digital.
 //
 // Princípio: ninguém lê nem grava nada sem estar autenticado, e cada pessoa só alcança os
 // dados da empresa a que pertence. O perfil (users/{uid}) diz qual é a empresa e o papel;
