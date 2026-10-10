@@ -106,6 +106,7 @@ export function describeAuthError(err) {
     'auth/requires-recent-login': 'Por segurança, saia e entre de novo antes de trocar a senha.',
     'auth/operation-not-allowed': 'O login por e-mail e senha ainda não foi ativado no Firebase deste projeto.',
     'permission-denied': 'Você não tem permissão para fazer isso.',
+    'edx/verify-email': 'Confirme o seu e-mail para continuar.',
     'edx/no-profile': 'Esta conta ainda não está ligada a uma empresa. Use Criar conta para cadastrar a empresa ou entrar com um convite.',
     'edx/blocked': 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.',
     'edx/invalid-invite': 'Código de convite inválido ou desativado. Confira com quem administra o CRM da sua empresa.',

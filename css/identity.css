@@ -1545,3 +1545,8 @@ button.today-row:focus-visible { outline: 2px solid var(--accent); outline-offse
 .tour-skip { font-size: 0.82rem; color: var(--text-muted); }
 body.tour-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .tour-spot, .tour-card { transition: none; } }
+
+/* Sign-up: waiting for the e-mail to be confirmed */
+.verify-note { margin-bottom: 0.9rem; }
+.verify-note strong { display: block; margin-bottom: 0.2rem; color: var(--text-primary); }
+.verify-note p { margin: 0 0 0.4rem; }
