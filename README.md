@@ -24,7 +24,8 @@ server/
 tests/
   unit/                  lógica do aplicativo (importação, relatório, lembretes, escape)
   rules/                 regras do banco, contra o emulador
-  ui/                    o aplicativo aberto num navegador de verdade
+  ui/                    o aplicativo aberto num navegador de verdade, na demonstração
+  e2e/                   uma conta de verdade, do cadastro ao bloqueio, contra os emuladores
 server/tests/            cobrança, caixa de entrada e o que o servidor expõe
 scripts/build.mjs        gera dist/, a versão compactada que é publicada
 scripts/screens.mjs      salva imagens das telas da demonstração, para conferir uma mudança
@@ -52,7 +53,11 @@ npm run test:rules
 npm run test:ui
 ```
 
-O primeiro roda a lógica do aplicativo e do servidor, sem rede. O segundo sobe o emulador do Firebase e confere as regras do banco. O terceiro abre a demonstração do aplicativo no Edge ou no Chrome instalado na máquina e usa as telas como uma pessoa usaria (se nenhum dos dois existir, os testes são pulados).
+```bash
+npm run test:e2e
+```
+
+O primeiro roda a lógica do aplicativo e do servidor, sem rede. O segundo sobe o emulador do Firebase e confere as regras do banco. O terceiro abre a demonstração do aplicativo no Edge ou no Chrome instalado na máquina e usa as telas como uma pessoa usaria (se nenhum dos dois existir, os testes são pulados). O quarto faz o caminho de uma conta de verdade contra os emuladores: cadastro com confirmação de e-mail, convite, o que cada um enxerga e bloqueio.
 
 O HTML não carrega código: nada de `onclick` nem de `<script>` com conteúdo. Um elemento diz qual ação dispara (`data-click="..."`) e `js/ui/actions.js` chama. O build recusa uma página que fuja disso, porque a política de segurança a bloquearia.
 

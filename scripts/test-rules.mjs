@@ -1,7 +1,10 @@
 /**
- * EDX Digital - Runs the database rules tests against the local Firebase emulators.
+ * EDX Digital - Runs tests that need the local Firebase emulators.
  *
- * Starts the emulators, waits until they answer, runs tests/rules with this same Node and
+ *   node scripts/test-rules.mjs                      the database rules (tests/rules)
+ *   node scripts/test-rules.mjs tests/e2e/x.test.mjs any other test files, one at a time
+ *
+ * Starts the emulators, waits until they answer, runs the tests with this same Node and
  * shuts everything down. (The standalone Firebase CLI ships its own `node`, which cannot run
  * `node --test`, so `firebase emulators:exec "node --test ..."` is not reliable.)
  */
@@ -49,6 +52,9 @@ if (await allOpen()) {
   }
 }
 
-const tests = spawnSync(process.execPath, ['--test', 'tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs'], { stdio: 'inherit' });
+const given = process.argv.slice(2);
+const files = given.length > 0 ? given : ['tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs'];
+// files given by hand share accounts between their tests: they run in order
+const tests = spawnSync(process.execPath, ['--test', ...(given.length > 0 ? ['--test-concurrency=1'] : []), ...files], { stdio: 'inherit' });
 stop(emulators);
 process.exit(tests.status === 0 ? 0 : 1);
