@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.19.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.19.0">
-  <link rel="stylesheet" href="css/components.css?v=3.19.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.19.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.19.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.20.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.20.0">
+  <link rel="stylesheet" href="css/components.css?v=3.20.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.20.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.20.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.19.0"></script>
+  <script src="js/theme-boot.js?v=3.20.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -920,6 +920,16 @@
         <input type="time" id="lead-task-time" class="form-input" aria-label="Horário (opcional)">
         <button type="submit" class="btn btn-outline btn-sm">Agendar</button>
       </form>
+
+      <div id="lead-attachments-block" hidden>
+        <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Anexos</h3>
+        <div id="lead-details-attachments"></div>
+        <div class="attachment-add">
+          <input type="file" id="lead-attachment-input" hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-label="Arquivo para anexar">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-add-attachment">Anexar arquivo</button>
+          <span class="attachment-hint">PDF, imagem, Word, Excel, CSV ou texto, até 10 MB cada.</span>
+        </div>
+      </div>
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
       <form id="contact-log-form" class="contact-log-form">
@@ -1908,7 +1918,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.19.0"></script>
+  <script type="module" src="js/app.js?v=3.20.0"></script>
 
 </body>
 </html>

@@ -7,6 +7,7 @@
  * Tests: tests/unit/normalize.test.mjs
  */
 
+import { cleanAttachments } from './attachments.js';
 import { cleanItems } from './proposal-items.js';
 import { isSafeId } from './html.js';
 
@@ -83,6 +84,7 @@ export function normalizeCustomer(raw) {
     recurring: data.recurring === true,
     pipelineId: typeof data.pipelineId === 'string' && /^(default|p_[a-z0-9]{4,16})$/.test(data.pipelineId) ? data.pipelineId : 'default',
     items: cleanItems(data.items),
+    attachments: cleanAttachments(data.attachments),
     expectedCloseDate: typeof data.expectedCloseDate === 'string' && /^\d{4}-\d{2}-\d{2}/.test(data.expectedCloseDate) ? data.expectedCloseDate : '',
     tags: list(data.tags).filter(tag => typeof tag === 'string' && tag.trim()).map(tag => tag.slice(0, 60)).slice(0, 30),
     tasks: list(data.tasks).map(normalizeTask).filter(Boolean),

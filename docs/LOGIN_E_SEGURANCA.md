@@ -74,6 +74,17 @@ Além de separar as empresas, as regras recusam o que poderia prejudicar outra p
 - **Teste gratuito por e-mail**: a data em que o teste termina fica em `trial_claims/{e-mail}`, criada uma vez e nunca alterada. Uma empresa só é aceita com essa mesma data, então excluir a empresa e registrar outra com o mesmo e-mail não dá 14 dias novos. Um e-mail diferente recebe outro teste; isso as regras não têm como impedir.
 - **Senhas**: no cadastro e na troca, o aplicativo recusa senhas curtas, as mais comuns, só de números e iguais ao nome ou ao e-mail (`passwordProblem` em `js/core/attention.js`).
 
+## Arquivos anexados
+
+Os anexos das oportunidades ficam no Firebase Storage, em `orgs/{empresa}/customers/{oportunidade}/`, e as regras estão em `storage.rules`:
+
+- quem alcança um arquivo é quem alcança a oportunidade no banco (o administrador da empresa ou o vendedor responsável); a regra confere o perfil e a oportunidade no Firestore;
+- só entram PDF, imagem (PNG, JPG, WEBP), Word, Excel, CSV e texto, até 10 MB, e sempre marcados para download: nenhum arquivo é aberto como página;
+- o endereço usa um identificador sorteado, nunca o nome do arquivo; ninguém lista pastas nem troca um arquivo por outro;
+- quando a oportunidade (ou a empresa) é excluída, a função `dailyEmails` apaga os arquivos dela na manhã seguinte.
+
+Os testes ficam em `tests/rules/storage-rules.test.mjs` e rodam com `npm run test:rules`.
+
 ## Erros das telas
 
 Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/errors`) e o relato vira uma linha de erro no registro das funções, no console do Firebase. Vão a mensagem, o trecho do código, a tela aberta e a versão; nada da pessoa, da empresa ou dos clientes, e o servidor ainda apaga o que tiver formato de e-mail ou de número longo. São no máximo 5 relatos por visita e 10 por minuto por endereço.

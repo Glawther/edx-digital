@@ -95,7 +95,7 @@ service cloud.firestore {
         && optText(data, 'expectedCloseDate', 40) && optText(data, 'lossDetails', 2000)
         && optText(data, 'pipelineId', 40)
         && optList(data, 'tags', 30) && optList(data, 'tasks', 500) && optList(data, 'activities', 2000)
-        && optList(data, 'items', 30)
+        && optList(data, 'items', 30) && optList(data, 'attachments', 10)
         && (!('assignedTo' in data) || data.assignedTo == null || data.assignedTo is map)
         && (!('custom' in data) || data.custom is map);
     }

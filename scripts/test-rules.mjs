@@ -1,7 +1,7 @@
 /**
  * EDX Digital - Runs tests that need the local Firebase emulators.
  *
- *   node scripts/test-rules.mjs                      the database rules (tests/rules)
+ *   node scripts/test-rules.mjs                      the database and file rules (tests/rules)
  *   node scripts/test-rules.mjs tests/e2e/x.test.mjs any other test files, one at a time
  *
  * Starts the emulators, waits until they answer, runs the tests with this same Node and
@@ -13,7 +13,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
 
 const PROJECT = 'demo-edx-digital';
-const PORTS = [9099, 8080];
+const PORTS = [9099, 8080, 9199];
 const windows = process.platform === 'win32';
 
 function isOpen(port) {
@@ -40,7 +40,7 @@ if (await allOpen()) {
   console.log('Emuladores já estão no ar; usando os que estão rodando.');
 } else {
   console.log('Subindo os emuladores do Firebase...');
-  emulators = spawn('firebase', ['emulators:start', '--only', 'auth,firestore', '--project', PROJECT], { shell: true, stdio: 'ignore' });
+  emulators = spawn('firebase', ['emulators:start', '--only', 'auth,firestore,storage', '--project', PROJECT], { shell: true, stdio: 'ignore' });
   const deadline = Date.now() + 90000;
   while (!(await allOpen())) {
     if (emulators.exitCode !== null || Date.now() > deadline) {
@@ -53,7 +53,7 @@ if (await allOpen()) {
 }
 
 const given = process.argv.slice(2);
-const files = given.length > 0 ? given : ['tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs'];
+const files = given.length > 0 ? given : ['tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs', 'tests/rules/storage-rules.test.mjs'];
 // files given by hand share accounts between their tests: they run in order
 const tests = spawnSync(process.execPath, ['--test', ...(given.length > 0 ? ['--test-concurrency=1'] : []), ...files], { stdio: 'inherit' });
 stop(emulators);

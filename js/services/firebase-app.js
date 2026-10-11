@@ -7,7 +7,7 @@
 
 import { defaultFirebaseConfig } from '../core/config.js';
 
-const SDK_BASE = 'https://www.gstatic.com/firebasejs/11.4.0/';
+export const SDK_BASE = 'https://www.gstatic.com/firebasejs/11.4.0/';
 const EMULATOR_FLAG = 'edx_use_emulator';
 const AUTH_EMULATOR_URL = 'http://127.0.0.1:9099';
 const FIRESTORE_EMULATOR_PORT = 8080;

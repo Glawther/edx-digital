@@ -4,6 +4,7 @@
  */
 
 import { countByPipeline } from '../core/pipelines.js';
+import { formatBytes } from '../core/attachments.js';
 import { weekDays, weekTitle, tasksByDay, googleCalendarUrl } from '../core/agenda.js';
 import { goalProgress, recurringRevenue } from '../core/pipeline-rules.js';
 import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId, crmStore } from '../core/crm-store.js';
@@ -908,6 +909,23 @@ export function renderLeadTimeline(customer) {
       <button type="button" class="btn btn-outline btn-sm" data-click="handleAnalyzeWithAI" data-a="${escapeHtml(customer.id)}">Analisar com IA</button>
       ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" data-click="handleDeleteCustomer" data-a="${escapeHtml(customer.id)}">Excluir</button>` : ''}
     `;
+  }
+
+  // Attached files exist only for a company's account (they are kept in the cloud)
+  const attachBlock = document.getElementById('lead-attachments-block');
+  const attachList = document.getElementById('lead-details-attachments');
+  if (attachBlock && attachList) {
+    attachBlock.hidden = !isCloudSession();
+    const files = customer.attachments || [];
+    attachList.innerHTML = files.length === 0
+      ? '<p class="empty-note" style="margin: 0 0 0.75rem;">Nenhum arquivo. Guarde aqui a proposta assinada, o contrato ou o que o cliente enviou.</p>'
+      : files.map(file => `
+          <div class="lead-task attachment-row">
+            <span class="attachment-kind">${escapeHtml(file.ext)}</span>
+            <button type="button" class="link-btn attachment-name" data-click="handleOpenAttachment" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(file.id)}" title="Baixar">${escapeHtml(file.name)}</button>
+            <span class="task-due-date">${formatBytes(file.size)}${file.by ? `, ${escapeHtml(file.by)}` : ''}</span>
+            <button type="button" class="link-btn danger task-delete" data-click="handleDeleteAttachment" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(file.id)}" aria-label="Excluir o arquivo ${escapeHtml(file.name)}">Excluir</button>
+          </div>`).join('');
   }
 
   const tasksEl = document.getElementById('lead-details-tasks');

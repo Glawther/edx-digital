@@ -1443,6 +1443,11 @@ body.is-read-only .pipeline-hint { display: none; }
 .lead-task-title { color: var(--text-primary); overflow-wrap: anywhere; }
 .lead-task-form { display: grid; grid-template-columns: 1fr 150px 110px auto; gap: 0.5rem; margin: 0.75rem 0 0.25rem; }
 .task-delete { margin-left: 0.6rem; font-size: 0.78rem; }
+.attachment-kind { min-width: 2.6rem; padding: 0.1rem 0.35rem; border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; text-align: center; color: var(--text-muted); }
+.attachment-name { text-align: left; overflow-wrap: anywhere; }
+.attachment-add { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.attachment-hint { font-size: 0.78rem; color: var(--text-muted); }
+body.is-read-only .attachment-add { display: none !important; }
 body.is-read-only #lead-task-form, body.is-read-only .task-delete { display: none !important; }
 @media (max-width: 640px) {
   .lead-task-form { grid-template-columns: 1fr 1fr; }

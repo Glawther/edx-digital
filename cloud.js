@@ -7,7 +7,8 @@
  *   usageOn...   after each change to an opportunity or to a person, counts what the company
  *                has and records whether its plan is full (the database rules read that)
  *   dailyEmails  every morning, the summary of the day for each person and the notices about
- *                a trial or a plan about to end
+ *                a trial or a plan about to end; and the files of opportunities that were
+ *                deleted are removed from storage
  *
  * Secrets live in Secret Manager, never in the code:
  *   firebase functions:secrets:set MERCADO_PAGO_ACCESS_TOKEN      (docs/COBRANCA_PIX.md)
@@ -26,6 +27,7 @@ const { firestoreStore } = require('./server/billing/firestore-store');
 const { createUsageService, customerChangeMatters, userChangeMatters } = require('./server/usage/usage-service');
 const mailer = require('./server/mail/brevo');
 const { runDailyEmails } = require('./server/mail/daily-emails');
+const { cleanOrphanAttachments } = require('./server/storage/attachment-cleanup');
 
 const MERCADO_PAGO_ACCESS_TOKEN = defineSecret('MERCADO_PAGO_ACCESS_TOKEN');
 const MERCADO_PAGO_WEBHOOK_SECRET = defineSecret('MERCADO_PAGO_WEBHOOK_SECRET');
@@ -91,5 +93,10 @@ exports.dailyEmails = onSchedule(
       loadToday: () => import('./js/core/today.js')
     });
     console.log(JSON.stringify({ message: '[E-mail] resumo da manhã', ...result }));
+    try {
+      console.log(JSON.stringify({ message: '[Arquivos] limpeza dos anexos sem oportunidade', ...(await cleanOrphanAttachments()) }));
+    } catch (err) {
+      console.error('[Arquivos] limpeza:', err.message);
+    }
   }
 );

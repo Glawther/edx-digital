@@ -4,11 +4,13 @@
 
 import { escapeHtml } from '../core/html.js';
 import { pipelineIdOf } from '../core/pipelines.js';
+import { checkFile, newAttachmentId, safeFileName } from '../core/attachments.js';
 import { getSavedOrganization } from '../core/config.js';
 import { missingForStage, missingMessage } from '../core/pipeline-rules.js';
 import { crmStore, STAGES } from '../core/crm-store.js';
 import { buildContact, CONTACT_TYPES, toLocalInput } from '../core/history.js';
 import { storage } from '../core/storage-manager.js';
+import { attachmentUrl, deleteAttachment, describeStorageError, uploadAttachment } from '../services/attachment-service.js';
 import { AUDIT_ACTIONS, AUDIT_SEVERITY, logAudit } from '../services/audit-service.js';
 import { getCurrentUser, isAdmin, isCloudSession, isReadOnly } from '../services/auth-service.js';
 import { currentPlan, describeLimit, leadsRoom } from '../services/billing-service.js';
@@ -143,6 +145,91 @@ export function setupLeadDetailsEvents() {
     setHistoryFilter(filter);
     const customer = storage.getCustomer(activeLeadDetailsCustomerId);
     if (customer) renderLeadTimeline(customer);
+  };
+
+  // Attached files: the file goes to storage first, and then the opportunity records it
+  const attachInput = document.getElementById('lead-attachment-input');
+  const attachButton = document.getElementById('btn-add-attachment');
+  const placeOf = (customer) => ({ orgId: customer.orgId || getCurrentUser()?.orgId, docId: customer.firestoreId || customer.id });
+  const historyNote = (title, text) => ({ id: 'act-' + Date.now(), type: 'note', title, text, author: getCurrentUser()?.name || '', timestamp: new Date().toISOString() });
+
+  attachButton?.addEventListener('click', () => {
+    if (isReadOnly()) {
+      window.handleReadOnlyAttempt();
+      return;
+    }
+    attachInput.click();
+  });
+
+  attachInput?.addEventListener('change', async () => {
+    const file = attachInput.files && attachInput.files[0];
+    attachInput.value = '';
+    const customer = storage.getCustomer(activeLeadDetailsCustomerId);
+    if (!file || !customer) return;
+    const check = checkFile(file, customer.attachments || []);
+    if (!check.ok) {
+      showToast(check.message, 'error');
+      return;
+    }
+    const attachment = { id: newAttachmentId(), ext: check.ext, name: safeFileName(file.name), size: file.size, by: getCurrentUser()?.name || '', at: new Date().toISOString() };
+    const { orgId, docId } = placeOf(customer);
+    attachButton.disabled = true;
+    attachButton.textContent = 'Enviando...';
+    try {
+      await uploadAttachment(orgId, docId, attachment, file);
+      const current = storage.getCustomer(customer.id) || customer;
+      await storage.saveCustomer({
+        id: customer.id,
+        attachments: [...(current.attachments || []), attachment],
+        activities: [...(current.activities || []), historyNote('Arquivo anexado', attachment.name)]
+      });
+      showToast('Arquivo anexado.', 'success');
+    } catch (err) {
+      console.error('Attachment upload:', err);
+      showToast(describeStorageError(err), 'error');
+    } finally {
+      attachButton.disabled = false;
+      attachButton.textContent = 'Anexar arquivo';
+    }
+  });
+
+  window.handleOpenAttachment = async function(customerId, attachmentId) {
+    const customer = storage.getCustomer(customerId);
+    const attachment = (customer?.attachments || []).find(item => item.id === attachmentId);
+    if (!attachment) return;
+    try {
+      const { orgId, docId } = placeOf(customer);
+      const link = document.createElement('a');
+      link.href = await attachmentUrl(orgId, docId, attachment);
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.click();
+    } catch (err) {
+      showToast(describeStorageError(err), 'error');
+    }
+  };
+
+  window.handleDeleteAttachment = async function(customerId, attachmentId) {
+    if (isReadOnly()) {
+      window.handleReadOnlyAttempt();
+      return;
+    }
+    const customer = storage.getCustomer(customerId);
+    const attachment = (customer?.attachments || []).find(item => item.id === attachmentId);
+    if (!attachment || !confirm(`Excluir o arquivo "${attachment.name}"? Não dá para desfazer.`)) return;
+    try {
+      const { orgId, docId } = placeOf(customer);
+      await deleteAttachment(orgId, docId, attachment);
+      const current = storage.getCustomer(customerId) || customer;
+      await storage.saveCustomer({
+        id: customerId,
+        attachments: (current.attachments || []).filter(item => item.id !== attachmentId),
+        activities: [...(current.activities || []), historyNote('Arquivo excluído', attachment.name)]
+      });
+      showToast('Arquivo excluído.', 'success');
+    } catch (err) {
+      showToast(describeStorageError(err), 'error');
+    }
   };
 
   window.handleDeleteActivity = async function(customerId, activityId) {
