@@ -117,7 +117,18 @@ async function buildOverview(store, now = Date.now()) {
 async function handleOwner(req, res, pathname, store = firestoreStore) {
   if (req.method !== 'GET') return send(res, 405, { error: 'method_not_allowed' });
   const owner = await ownerFrom(req);
-  if (pathname === '/api/owner/check') return send(res, 200, { owner: Boolean(owner) });
+  if (pathname === '/api/owner/check') {
+    if (owner) return send(res, 200, { owner: true });
+    // The owner's own account, signed in, with the address still unconfirmed: said plainly,
+    // so the screen can offer to confirm it. Anyone else only hears "no".
+    let unconfirmed = false;
+    try {
+      const header = req.headers.authorization || '';
+      const user = await verifyIdToken(header.startsWith('Bearer ') ? header.slice(7) : '');
+      unconfirmed = !user.emailVerified && ownerEmails().includes(String(user.email || '').toLowerCase());
+    } catch { /* not signed in */ }
+    return send(res, 200, { owner: false, ...(unconfirmed ? { reason: 'email_not_verified' } : {}) });
+  }
   // the same answer for "not signed in" and "not an owner": nothing to learn from it
   if (!owner) return send(res, 404, { error: 'not_found' });
   if (pathname !== '/api/owner/overview') return send(res, 404, { error: 'not_found' });

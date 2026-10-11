@@ -5,7 +5,8 @@
  * tools menu never appears.
  */
 
-import { getIdToken, isCloudSession } from '../services/auth-service.js';
+import { getIdToken, isCloudSession, sendMyEmailVerification } from '../services/auth-service.js';
+import { describeAuthError } from '../services/firebase-app.js';
 import { escapeHtml, formatBRL, showToast } from './ui-renderer.js';
 import { downloadCsv } from '../services/export-service.js';
 
@@ -27,8 +28,8 @@ export function isSystemOwner() {
   return systemOwner;
 }
 
-async function ask(path) {
-  const token = await getIdToken();
+async function ask(path, fresh = false) {
+  const token = await getIdToken(fresh);
   const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) throw new Error('Não foi possível carregar o painel.');
   return res.json();
@@ -110,6 +111,16 @@ export function setupOwnerPanel() {
   document.getElementById('btn-close-owner-dialog')?.addEventListener('click', () => dialog.close());
   document.getElementById('btn-owner-refresh')?.addEventListener('click', open);
   document.getElementById('btn-owner-export')?.addEventListener('click', exportCsv);
+  document.getElementById('btn-menu-owner-verify')?.addEventListener('click', async () => {
+    const menu = document.getElementById('header-tools-menu');
+    if (menu) menu.style.display = 'none';
+    try {
+      const email = await sendMyEmailVerification();
+      showToast(`Enviamos um link de confirmação para ${email}. Clique nele e depois recarregue esta página.`, 'success');
+    } catch (err) {
+      showToast(describeAuthError(err), 'error');
+    }
+  });
 }
 
 /**
@@ -119,11 +130,17 @@ export function setupOwnerPanel() {
 export async function refreshOwnerEntry() {
   const entry = document.getElementById('btn-menu-owner');
   if (!entry) return;
+  const confirm = document.getElementById('btn-menu-owner-verify');
   entry.hidden = true;
+  if (confirm) confirm.hidden = true;
   systemOwner = false;
   if (!isCloudSession()) return;
   try {
-    systemOwner = (await ask('/api/owner/check')).owner === true;
+    let answer = await ask('/api/owner/check');
+    // the address may have been confirmed since this session's proof of identity was issued
+    if (answer.reason === 'email_not_verified') answer = await ask('/api/owner/check', true);
+    systemOwner = answer.owner === true;
     entry.hidden = !systemOwner;
+    if (confirm) confirm.hidden = answer.reason !== 'email_not_verified';
   } catch { /* without an answer the entry stays hidden */ }
 }

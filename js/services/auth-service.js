@@ -518,10 +518,22 @@ export function isReadOnly() {
 /**
  * Token that proves to the billing server who is asking
  */
-export async function getIdToken() {
+export async function getIdToken(fresh = false) {
   if (sessionKind !== SESSION_KINDS.CLOUD) return null;
   const { auth } = await getFirebase();
-  return auth.currentUser ? auth.currentUser.getIdToken() : null;
+  return auth.currentUser ? auth.currentUser.getIdToken(fresh) : null;
+}
+
+/**
+ * Sends the confirmation link to the signed-in person's own address (accounts from before
+ * the confirmation was asked at sign-up never received one)
+ * @returns {Promise<string>} the address the message went to
+ */
+export async function sendMyEmailVerification() {
+  const { auth, authMod } = await getFirebase();
+  if (!auth.currentUser) throw new Error('Entre na sua conta para continuar.');
+  await authMod.sendEmailVerification(auth.currentUser);
+  return auth.currentUser.email || '';
 }
 
 /**
