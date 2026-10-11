@@ -116,7 +116,8 @@ test('conta nova: o passeio começa sozinho, e a tela Hoje convida a cadastrar a
   if (!world.dona) return t.skip('depende do cadastro');
   const { page, problems } = world.dona;
   await page.locator('.tour-card').waitFor({ timeout: 10000 });
-  assert.match(await page.textContent('#tour-title'), /Bem-vindo/);
+  // o cartão aparece um instante antes de receber o texto do primeiro passo
+  await page.waitForFunction(() => /Bem-vindo/.test(document.getElementById('tour-title')?.textContent || ''), null, { timeout: 10000 });
   await page.click('[data-tour="skip"]');
   await page.locator('.tour').waitFor({ state: 'detached' });
 
@@ -151,7 +152,7 @@ test('convite: o vendedor entra com o código, vê só a própria carteira, e a 
 
   // entra direto (o código já veio de quem administra) e também recebe o passeio
   await page.locator('.tour-card').waitFor({ timeout: 20000 });
-  assert.match(await page.textContent('#tour-progress'), /de 12/, 'o passeio do vendedor não tem as telas de administrador');
+  await page.waitForFunction(() => /de 12/.test(document.getElementById('tour-progress')?.textContent || ''), null, { timeout: 10000 }); // sem as telas de administrador
   await page.click('[data-tour="skip"]');
 
   for (const view of ['team', 'audit', 'security']) {
