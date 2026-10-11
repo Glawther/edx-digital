@@ -127,6 +127,46 @@ test('pagar R$ 1 numa cobrança normal não libera nada', async () => {
   assert.equal(db.organizations.org_a.planStatus, 'trial');
 });
 
+test('pagar outro plano manda recontar os limites na hora; renovar o mesmo plano, não', async () => {
+  const recounted = [];
+  const { db, gateway, clock } = setup();
+  const remote = {};
+  let nextId = 5000;
+  const store = {
+    getUserProfile: async (uid) => db.users[uid] || null,
+    getOrganization: async (id) => ({ ...db.organizations[id] }),
+    updateOrganization: async (id, data) => { Object.assign(db.organizations[id], data); },
+    getPayment: async (id) => (db.payments[id] ? { ...db.payments[id] } : null),
+    savePayment: async (id, data) => { db.payments[id] = { ...data }; },
+    updatePayment: async (id, data) => { Object.assign(db.payments[id], data); }
+  };
+  const gate = {
+    createPixPayment: async (input) => { const id = String(nextId++); remote[id] = { id, status: 'pending', amount: input.amount, currency: 'BRL', externalReference: input.externalReference }; return { id, status: 'pending', copyPaste: 'x', qrCodeBase64: '' }; },
+    getPayment: async (id) => ({ ...remote[id] })
+  };
+  const service = createBillingService({ store, gateway: gate, now: () => clock.now, onPlanChanged: async (orgId) => { recounted.push(orgId); } });
+  assert.ok(gateway);
+
+  const upgrade = await service.createCharge(admin, 'enterprise');   // a empresa está no pro
+  remote[upgrade.paymentId].status = 'approved';
+  await service.syncPayment(upgrade.paymentId);
+  assert.deepEqual(recounted, ['org_a']);
+  await service.syncPayment(upgrade.paymentId);
+  assert.deepEqual(recounted, ['org_a'], 'a mesma confirmação não reconta de novo');
+
+  const renew = await service.createCharge(admin, 'enterprise');
+  remote[renew.paymentId].status = 'approved';
+  await service.syncPayment(renew.paymentId);
+  assert.deepEqual(recounted, ['org_a'], 'renovar o mesmo plano não muda limite nenhum');
+
+  // uma falha na recontagem não desfaz o pagamento
+  const failing = createBillingService({ store, gateway: gate, now: () => clock.now, onPlanChanged: async () => { throw new Error('fora do ar'); } });
+  const down = await failing.createCharge(admin, 'starter');
+  remote[down.paymentId].status = 'approved';
+  assert.equal((await failing.syncPayment(down.paymentId)).status, 'approved');
+  assert.equal(db.organizations.org_a.plan, 'starter');
+});
+
 // ---------------------------------------------------------------- liberar o plano
 
 test('pagamento aprovado libera o plano por 30 dias', async () => {

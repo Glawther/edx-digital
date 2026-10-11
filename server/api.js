@@ -28,7 +28,8 @@ function handleApi(req, res) {
   const pathname = (req.url || '/').split('?')[0];
   if (!pathname.startsWith('/api/') && pathname !== '/health') return false;
 
-  applySecurityHeaders(res);
+  // a form on someone's site sends leads here; nothing else is for other sites
+  applySecurityHeaders(res, { openToOtherSites: pathname === '/api/webhook/leads' && (req.method === 'POST' || req.method === 'OPTIONS') });
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
