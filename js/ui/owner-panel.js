@@ -20,6 +20,12 @@ const STATES = {
 const PLAN_NAMES = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
 
 let lastOverview = null;
+let systemOwner = false;
+
+/** Whether the server said this person owns the system (asked when the session begins) */
+export function isSystemOwner() {
+  return systemOwner;
+}
 
 async function ask(path) {
   const token = await getIdToken();
@@ -114,8 +120,10 @@ export async function refreshOwnerEntry() {
   const entry = document.getElementById('btn-menu-owner');
   if (!entry) return;
   entry.hidden = true;
+  systemOwner = false;
   if (!isCloudSession()) return;
   try {
-    entry.hidden = !(await ask('/api/owner/check')).owner;
+    systemOwner = (await ask('/api/owner/check')).owner === true;
+    entry.hidden = !systemOwner;
   } catch { /* without an answer the entry stays hidden */ }
 }

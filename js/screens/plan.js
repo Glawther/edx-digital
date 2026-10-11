@@ -9,6 +9,7 @@ import { AUDIT_ACTIONS, logAudit } from '../services/audit-service.js';
 import { getIdToken, isAdmin, isCloudSession, isSessionActive, refreshOrganization } from '../services/auth-service.js';
 import { currentPlan, describeLimit, leadsRoom, seatsRoom } from '../services/billing-service.js';
 import { getEmployees } from '../services/employee-service.js';
+import { isSystemOwner } from '../ui/owner-panel.js';
 import { formatBRL, showToast } from '../ui/ui-renderer.js';
 
 // ==========================================================================
@@ -249,13 +250,15 @@ export function setupCheckoutModalEvents() {
     // The billing server may be asleep; the first answer can take a while
     show('message', 'Gerando o PIX. Isso pode levar até um minuto.');
     try {
-      const charge = await api('/api/billing/pix', { method: 'POST', body: JSON.stringify({ plan }) });
+      // the R$ 1 test charge exists only for the owner of the system; the server checks it again
+      const test = isSystemOwner() && el('chk-test-charge')?.checked === true;
+      const charge = await api('/api/billing/pix', { method: 'POST', body: JSON.stringify({ plan, ...(test ? { test: true } : {}) }) });
       if (seq !== requestSeq) return; // another plan was chosen meanwhile
       activePaymentId = charge.paymentId;
       el('chk-pix-copypaste-input').value = charge.copyPaste;
       el('chk-pix-qrcode-img').src = charge.qrCodeBase64 ? `data:image/png;base64,${charge.qrCodeBase64}` : '';
       el('chk-pix-qrcode-img').closest('.pix-qr').style.display = charge.qrCodeBase64 ? '' : 'none';
-      el('chk-pix-amount').textContent = formatBRL(charge.amount);
+      el('chk-pix-amount').textContent = charge.amount < 10 ? charge.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : formatBRL(charge.amount);
       show('ready');
       pollTimer = setInterval(checkPayment, 5000);
     } catch (err) {
@@ -279,6 +282,11 @@ export function setupCheckoutModalEvents() {
     if (!isSessionActive()) return;
     const org = getSavedOrganization();
     renderCurrentPlan();
+    const testRow = el('chk-test-row');
+    if (testRow) {
+      testRow.hidden = !isSystemOwner();
+      el('chk-test-charge').checked = false;
+    }
     if (!modal.open) modal.showModal();
     window.selectCheckoutPlan(planNames[plan] ? plan : (planNames[org.plan] ? org.plan : 'pro'));
   };
@@ -299,6 +307,7 @@ export function setupCheckoutModalEvents() {
   el('btn-close-checkout-footer')?.addEventListener('click', close);
   modal.addEventListener('close', stopPolling);
   el('chk-retry')?.addEventListener('click', () => loadCharge(activePlan));
+  el('chk-test-charge')?.addEventListener('change', () => loadCharge(activePlan));
 
   el('btn-copy-pix-code')?.addEventListener('click', async () => {
     const input = el('chk-pix-copypaste-input');

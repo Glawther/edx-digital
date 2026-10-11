@@ -1,6 +1,6 @@
 {
   "name": "edx-digital",
-  "version": "3.20.1",
+  "version": "3.21.0",
   "description": "EDX Digital: funil de vendas, clientes e tarefas para equipes pequenas",
   "main": "cloud.js",
   "scripts": {

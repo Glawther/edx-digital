@@ -2,6 +2,7 @@
  * EDX Digital - HTTP side of PIX billing
  *
  *   POST /api/billing/pix                     create (or reuse) the charge for a plan   [signed-in admin]
+ *                                             with { test: true }, a charge of R$ 1     [owner of the system]
  *   GET  /api/billing/pix/:paymentId          has it been paid?                         [signed-in admin]
  *   POST /api/billing/webhook/mercadopago     Mercado Pago tells us a payment changed   [public, verified]
  *   GET  /api/billing/status                  is billing set up on this server?         [public]
@@ -12,6 +13,7 @@ const { verifyIdToken, isServiceAccountConfigured } = require('./google-auth');
 const { firestoreStore } = require('./firestore-store');
 const mercadopago = require('./mercadopago');
 const { createBillingService, BillingError } = require('./billing-service');
+const { isOwnerUser } = require('../controllers/owner-controller');
 
 function isBillingConfigured() {
   return mercadopago.isConfigured() && isServiceAccountConfigured();
@@ -68,7 +70,11 @@ async function handleBilling(req, res, pathname) {
       const user = await authenticate(req);
       throttle(user.uid);
       const { body } = await parseJsonBody(req, 4096).catch(() => { throw new BillingError('invalid_body', 'Pedido inválido.', 400); });
-      const charge = await billingService().createCharge(user, String(body.plan || ''));
+      const test = body.test === true;
+      if (test && !isOwnerUser(user)) {
+        throw new BillingError('not_owner', 'A cobrança de teste é só para quem é dono do sistema.', 403);
+      }
+      const charge = await billingService().createCharge(user, String(body.plan || ''), { test });
       return send(res, 200, charge);
     }
 

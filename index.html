@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.20.1">
-  <link rel="stylesheet" href="css/layout.css?v=3.20.1">
-  <link rel="stylesheet" href="css/components.css?v=3.20.1">
-  <link rel="stylesheet" href="css/animations.css?v=3.20.1">
-  <link rel="stylesheet" href="css/identity.css?v=3.20.1">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.21.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.21.0">
+  <link rel="stylesheet" href="css/components.css?v=3.21.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.21.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.21.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.20.1"></script>
+  <script src="js/theme-boot.js?v=3.21.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -1879,6 +1879,11 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
 
       <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Pague por PIX</h3>
 
+      <label class="check-row" id="chk-test-row" hidden style="margin: 0 0 0.75rem; font-size: 0.85rem;">
+        <input type="checkbox" id="chk-test-charge">
+        <span>Cobrança de teste de R$ 1,00. Só você, que é dono do sistema, vê esta opção; o pagamento libera o plano escolhido por 30 dias, como um pagamento normal.</span>
+      </label>
+
       <div class="pay-state" id="chk-state-message" hidden>
         <p id="chk-state-text"></p>
         <button type="button" class="btn btn-outline btn-sm" id="chk-retry" hidden>Tentar de novo</button>
@@ -1918,7 +1923,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.20.1"></script>
+  <script type="module" src="js/app.js?v=3.21.0"></script>
 
 </body>
 </html>

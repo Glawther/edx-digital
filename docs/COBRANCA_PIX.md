@@ -111,3 +111,9 @@ Empresas criadas antes desta regra não têm `trialEndsAtMs` e por isso nunca en
 Testes da lógica (sem rede): `npm test`. A cobrança está em `server/tests/billing-pix.test.js`; importação, lembretes, relatório e personalização estão em `tests/unit/`.
 
 Para rodar de ponta a ponta sem tocar em nada real: `npm run build` e depois `firebase emulators:start --only auth,firestore,functions,hosting --project demo-edx-digital`. O site abre em http://127.0.0.1:5000 com a função atrás de `/api`, como em produção. O emulador lê os segredos de um arquivo `.secret.local` (fora do repositório); com `MERCADO_PAGO_API_BASE` apontando para um servidor de mentira dá para simular pagamentos. Os emuladores são ignorados em produção.
+
+## Cobrança de teste de R$ 1,00
+
+Para ver um pagamento de verdade passar pelo caminho inteiro sem pagar o preço de um plano, quem é dono do sistema (o e-mail em `OWNER_EMAILS`) tem, na janela de assinatura, a opção **Cobrança de teste de R$ 1,00**. Ninguém mais vê essa opção, e o servidor recusa o pedido de qualquer outra conta.
+
+A cobrança de teste é registrada com `test: true` e, quando paga, libera o plano escolhido por 30 dias, como uma cobrança normal: é o mesmo caminho, só o valor muda. O valor esperado vem do registro que o servidor gravou, então pagar R$ 1,00 numa cobrança normal não libera nada.
