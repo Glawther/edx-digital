@@ -25,12 +25,17 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+/** Is this signed-in person (as verifyIdToken returns it) an owner of the system? */
+function isOwnerUser(user) {
+  const email = String((user && user.email) || '').toLowerCase();
+  return Boolean(user && user.emailVerified && email && ownerEmails().includes(email));
+}
+
 async function ownerFrom(req) {
   const header = req.headers.authorization || '';
   try {
     const user = await verifyIdToken(header.startsWith('Bearer ') ? header.slice(7) : '');
-    const email = String(user.email || '').toLowerCase();
-    return user.emailVerified && email && ownerEmails().includes(email) ? user : null;
+    return isOwnerUser(user) ? user : null;
   } catch {
     return null;
   }
@@ -124,4 +129,4 @@ async function handleOwner(req, res, pathname, store = firestoreStore) {
   }
 }
 
-module.exports = { handleOwner, buildOverview, planState, ownerEmails };
+module.exports = { handleOwner, buildOverview, planState, ownerEmails, isOwnerUser };

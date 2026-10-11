@@ -102,6 +102,31 @@ test('pedir de novo o mesmo plano devolve a mesma cobrança enquanto ela vale', 
   assert.notEqual(later.paymentId, other.paymentId, 'cobrança vencida não é reaproveitada');
 });
 
+test('cobrança de teste: R$ 1, registrada como teste, e libera o plano como as outras', async () => {
+  const { service, gateway, db, pay } = setup();
+  const real = await service.createCharge(admin, 'pro');
+  const charge = await service.createCharge(admin, 'pro', { test: true });
+  assert.notEqual(charge.paymentId, real.paymentId, 'a cobrança normal que estava aberta não é reaproveitada');
+  assert.equal(charge.amount, 1);
+  assert.equal(gateway.created[1].amount, 1);
+  assert.match(gateway.created[1].description, /teste/);
+  assert.equal(db.payments[charge.paymentId].test, true);
+  assert.equal((await service.createCharge(admin, 'pro', { test: true })).paymentId, charge.paymentId);
+
+  pay(charge.paymentId);
+  assert.equal((await service.syncPayment(charge.paymentId)).status, 'approved');
+  assert.equal(db.organizations.org_a.planStatus, 'active');
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + PERIOD_DAYS * DAY);
+});
+
+test('pagar R$ 1 numa cobrança normal não libera nada', async () => {
+  const { service, db, pay } = setup();
+  const charge = await service.createCharge(admin, 'starter');
+  pay(charge.paymentId, { amount: 1 });
+  await assert.rejects(service.syncPayment(charge.paymentId), err => err instanceof BillingError && err.code === 'amount_mismatch');
+  assert.equal(db.organizations.org_a.planStatus, 'trial');
+});
+
 // ---------------------------------------------------------------- liberar o plano
 
 test('pagamento aprovado libera o plano por 30 dias', async () => {
@@ -265,4 +290,21 @@ test('a assinatura do aviso do Mercado Pago é conferida', () => {
   assert.equal(verifyWebhookSignature({ signatureHeader: header, requestId, dataId, secret: 'errado' }), false);
   assert.equal(verifyWebhookSignature({ signatureHeader: 'ts=1,v1=abc', requestId, dataId, secret }), false);
   assert.equal(verifyWebhookSignature({ signatureHeader: '', requestId, dataId, secret }), false);
+});
+
+test('dono do sistema: só o e-mail confirmado que está em OWNER_EMAILS', () => {
+  const { isOwnerUser } = require('../controllers/owner-controller');
+  const before = process.env.OWNER_EMAILS;
+  process.env.OWNER_EMAILS = 'Dono@edx.test, outro@edx.test';
+  try {
+    assert.equal(isOwnerUser({ email: 'dono@edx.test', emailVerified: true }), true);
+    assert.equal(isOwnerUser({ email: 'dono@edx.test', emailVerified: false }), false, 'endereço não confirmado não prova nada');
+    assert.equal(isOwnerUser({ email: 'ana@a.test', emailVerified: true }), false);
+    assert.equal(isOwnerUser({ emailVerified: true }), false);
+    assert.equal(isOwnerUser(null), false);
+    process.env.OWNER_EMAILS = 'pendente';
+    assert.equal(isOwnerUser({ email: 'pendente', emailVerified: true }), false);
+  } finally {
+    if (before === undefined) delete process.env.OWNER_EMAILS; else process.env.OWNER_EMAILS = before;
+  }
 });

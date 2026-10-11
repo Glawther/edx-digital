@@ -12,6 +12,8 @@ const crypto = require('crypto');
 const PLAN_PRICES = { starter: 97, pro: 197, enterprise: 497 };
 const PLAN_NAMES = { starter: 'Starter', pro: 'Professional', enterprise: 'Enterprise' };
 const PERIOD_DAYS = 30;
+// A charge of this amount, only for whoever owns the system, to see a real payment go through
+const TEST_AMOUNT = 1;
 const CHARGE_VALID_MINUTES = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 // What Mercado Pago reports when the whole amount went back to the payer
@@ -47,8 +49,10 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
   /**
    * Creates the PIX charge for a plan. A charge still valid for the same plan is handed back
    * instead of creating another one.
+   * With `test`, the charge is of R$ 1 and releases the plan like any other: the caller has
+   * already made sure only the owner of the system can ask for it.
    */
-  async function createCharge(user, plan) {
+  async function createCharge(user, plan, { test = false } = {}) {
     if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES, plan)) {
       throw new BillingError('invalid_plan', 'Plano inválido.');
     }
@@ -59,19 +63,19 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
     const current = now();
     if (org.pendingPaymentId) {
       const pending = await store.getPayment(org.pendingPaymentId);
-      if (pending && pending.status === 'pending' && pending.plan === plan && Date.parse(pending.expiresAt) > current + 60000) {
+      if (pending && pending.status === 'pending' && pending.plan === plan && Boolean(pending.test) === test && Date.parse(pending.expiresAt) > current + 60000) {
         return publicCharge(org.pendingPaymentId, pending);
       }
     }
 
-    const amount = PLAN_PRICES[plan];
+    const amount = test ? TEST_AMOUNT : PLAN_PRICES[plan];
     const expiresAt = new Date(current + CHARGE_VALID_MINUTES * 60000).toISOString();
     // Letters, numbers, hyphen and underscore only, within the 64 characters Mercado Pago accepts
     const reference = `${profile.orgId}-${plan}-${crypto.randomBytes(8).toString('hex')}`.slice(0, 64);
 
     const charge = await gateway.createPixPayment({
       amount,
-      description: `EDX Digital, plano ${PLAN_NAMES[plan]}, ${PERIOD_DAYS} dias`,
+      description: test ? 'EDX Digital, cobrança de teste' : `EDX Digital, plano ${PLAN_NAMES[plan]}, ${PERIOD_DAYS} dias`,
       payerEmail: user.email || profile.email,
       externalReference: reference,
       idempotencyKey: reference,
@@ -82,6 +86,7 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
       orgId: profile.orgId,
       plan,
       amount,
+      ...(test ? { test: true } : {}),
       status: 'pending',
       reference,
       copyPaste: charge.copyPaste,
@@ -152,7 +157,9 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
     if (!referenceMatches(record, payment.externalReference)) {
       throw new BillingError('reference_mismatch', 'A cobrança não corresponde ao registro.', 409);
     }
-    if (payment.currency !== 'BRL' || !(payment.amount >= PLAN_PRICES[record.plan])) {
+    // the amount expected comes from the record this server wrote, never from the request
+    const expected = record.test === true ? TEST_AMOUNT : PLAN_PRICES[record.plan];
+    if (payment.currency !== 'BRL' || !(payment.amount >= expected)) {
       throw new BillingError('amount_mismatch', 'O valor pago não corresponde ao plano.', 409);
     }
 
@@ -238,4 +245,4 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
   return { createCharge, syncPayment, checkCharge };
 }
 
-module.exports = { createBillingService, BillingError, PLAN_PRICES, PERIOD_DAYS };
+module.exports = { createBillingService, BillingError, PLAN_PRICES, PERIOD_DAYS, TEST_AMOUNT };
