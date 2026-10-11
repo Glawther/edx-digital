@@ -106,7 +106,7 @@ export function setupWhatsAppModalEvents() {
       if (!customer) return;
 
       btnGenerateAi.disabled = true;
-      btnGenerateAi.textContent = 'Gerando sugestões...';
+      btnGenerateAi.textContent = 'Gerando sugestões…';
 
       const org = getSavedOrganization();
       const user = getCurrentUser();

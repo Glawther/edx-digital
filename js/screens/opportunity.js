@@ -174,7 +174,7 @@ export function setupLeadDetailsEvents() {
     const attachment = { id: newAttachmentId(), ext: check.ext, name: safeFileName(file.name), size: file.size, by: getCurrentUser()?.name || '', at: new Date().toISOString() };
     const { orgId, docId } = placeOf(customer);
     attachButton.disabled = true;
-    attachButton.textContent = 'Enviando...';
+    attachButton.textContent = 'Enviando…';
     try {
       await uploadAttachment(orgId, docId, attachment, file);
       const current = storage.getCustomer(customer.id) || customer;

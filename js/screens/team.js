@@ -187,7 +187,7 @@ export function setupEmployeeManagementEvents() {
       const originalLabel = btnSave ? btnSave.textContent : '';
       if (btnSave) {
         btnSave.disabled = true;
-        btnSave.textContent = 'Salvando...';
+        btnSave.textContent = 'Salvando…';
       }
 
       const result = await saveEmployee(empData);

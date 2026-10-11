@@ -404,7 +404,7 @@
 }
 
 .priority-badge {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: var(--radius-full);
@@ -1328,7 +1328,7 @@
 }
 
 .command-palette-badge {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--text-secondary);
   background: var(--bg-surface-elevated);
@@ -1344,7 +1344,7 @@
 }
 
 .command-group-title {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1417,7 +1417,7 @@
 
 .command-palette-footer kbd {
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   padding: 2px 5px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -1604,7 +1604,7 @@
 }
 
 .dropdown-item-desc {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
 }
 
@@ -1658,7 +1658,7 @@
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   pointer-events: none;
 }
@@ -1722,7 +1722,7 @@
   height: 18px;
   background: #ef4444;
   color: #fff;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 800;
   border-radius: 50%;
   display: flex;
@@ -1804,7 +1804,7 @@
 }
 
 .notification-item-time {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
   margin-top: 4px;
 }

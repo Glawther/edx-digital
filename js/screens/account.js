@@ -144,7 +144,7 @@ export function setupAccountDialog() {
 
     const button = document.getElementById('btn-account-delete');
     button.disabled = true;
-    button.textContent = 'Excluindo...';
+    button.textContent = 'Excluindo…';
     try {
       if (isCompanyOwner()) {
         await deleteCompany(password);
@@ -298,7 +298,7 @@ export function setupAuthPortalEvents() {
         return;
       }
 
-      const restore = setBusy(formLogin.querySelector('button[type="submit"]'), 'Entrando...');
+      const restore = setBusy(formLogin.querySelector('button[type="submit"]'), 'Entrando…');
       try {
         const user = await signIn(email, password);
         formLogin.reset();
@@ -379,7 +379,7 @@ export function setupAuthPortalEvents() {
 
       const submitButton = document.getElementById('btn-submit-register');
       const verifyNote = document.getElementById('reg-verify-note');
-      const restore = setBusy(submitButton, 'Criando a empresa...');
+      const restore = setBusy(submitButton, 'Criando a empresa…');
       let waitingForEmail = false;
       try {
         await registerCompany({ name, email, company, password, plan });
@@ -448,7 +448,7 @@ export function setupAuthPortalEvents() {
         return;
       }
 
-      const restore = setBusy(document.getElementById('btn-submit-join-team'), 'Conferindo o convite...');
+      const restore = setBusy(document.getElementById('btn-submit-join-team'), 'Conferindo o convite…');
       try {
         await joinCompany({ inviteCode, name, email, password });
         requestTourForNewAccount();

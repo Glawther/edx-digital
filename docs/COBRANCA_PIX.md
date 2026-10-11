@@ -117,3 +117,13 @@ Para rodar de ponta a ponta sem tocar em nada real: `npm run build` e depois `fi
 Para ver um pagamento de verdade passar pelo caminho inteiro sem pagar o preço de um plano, quem é dono do sistema (o e-mail em `OWNER_EMAILS`) tem, na janela de assinatura, a opção **Cobrança de teste de R$ 1,00**. Ninguém mais vê essa opção, e o servidor recusa o pedido de qualquer outra conta.
 
 A cobrança de teste é registrada com `test: true` e, quando paga, libera o plano escolhido por 30 dias, como uma cobrança normal: é o mesmo caminho, só o valor muda. O valor esperado vem do registro que o servidor gravou, então pagar R$ 1,00 numa cobrança normal não libera nada.
+
+## Conferir se os avisos do Mercado Pago estão chegando
+
+Cada aviso (webhook) que chega deixa uma linha no registro da função `api`, começando por `[Cobrança] aviso do Mercado Pago:`, com o tipo do aviso, o número da cobrança e o que resultou (recebido e aprovado, ignorado, assinatura inválida). Para ver:
+
+```
+npx firebase functions:log --only api --project nexuscrm-d8e13
+```
+
+ou, no console do Firebase, Functions, Registros. Se um pagamento foi feito e nenhuma linha apareceu, o Mercado Pago não está avisando: confira no painel dele, em Webhooks, o endereço e o evento **Order (Mercado Pago)**.

@@ -1,6 +1,6 @@
 /* EDX Digital - Styles of the terms of use (termos.html) */
 
-:root { --ink: #18212f; --ink-soft: #4a5565; --ink-muted: #6f7a8a; --line: #e4e7ec; --accent: #2447a8; --wash: #f5f6f8; }
+:root { --ink: #18212f; --ink-soft: #4a5565; --ink-muted: #616c7d; --line: #e4e7ec; --accent: #2447a8; --wash: #f5f6f8; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #fff; color: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 a { color: var(--accent); }

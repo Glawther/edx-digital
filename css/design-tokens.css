@@ -9,6 +9,7 @@
    -------------------------------------------------------------------------- */
 :root,
 [data-theme="light"] {
+  color-scheme: light;
   --theme-name: 'light';
 
   /* Surfaces & Backgrounds */
@@ -24,7 +25,7 @@
   /* Text & Foreground */
   --text-primary: #18212f;
   --text-secondary: #566173;
-  --text-muted: #8a93a1;
+  --text-muted: #616c7d;
   --text-inverse: #ffffff;
 
   /* Primary actions use ink; the blue accent marks selection, links and focus */
@@ -80,6 +81,8 @@
   --border-subtle: #e4e7ec;
   --border-strong: #cdd3db;
   --border-focus: #2447a8;
+  /* the outline of a field: 3:1 against the page, so the field is seen without its fill */
+  --border-field: #848d9b;
 
   /* Typography: one family for everything; weight and size carry the hierarchy */
   --font-heading: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -112,6 +115,8 @@
    Dark Mode ([data-theme="dark"])
    -------------------------------------------------------------------------- */
 [data-theme="dark"] {
+  /* native controls (date fields, scrollbars, select lists) follow the theme */
+  color-scheme: dark;
   --theme-name: 'dark';
 
   /* Surfaces & Backgrounds */
@@ -127,7 +132,7 @@
   /* Text & Foreground */
   --text-primary: #e9edf2;
   --text-secondary: #a3adba;
-  --text-muted: #77818f;
+  --text-muted: #8d97a5;
   --text-inverse: #10141a;
 
   --accent-primary: #e9edf2;
@@ -181,6 +186,7 @@
   --border-subtle: #2b3340;
   --border-strong: #3a4454;
   --border-focus: #8fb0ff;
+  --border-field: #6f7a8a;
 
   /* Shadows & Elevation */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);

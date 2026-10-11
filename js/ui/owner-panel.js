@@ -77,7 +77,7 @@ function render(overview) {
 async function open() {
   const dialog = document.getElementById('owner-dialog');
   const content = document.getElementById('owner-content');
-  content.innerHTML = '<p class="empty-note">Carregando...</p>';
+  content.innerHTML = '<p class="empty-note">Carregando…</p>';
   if (!dialog.open) dialog.showModal();
   try {
     lastOverview = await ask('/api/owner/overview');
