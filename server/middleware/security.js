@@ -7,14 +7,18 @@ const path = require('path');
 const { ROOT_DIR, SECURITY_HEADERS } = require('../config/constants');
 
 /**
- * Applies security and CORS headers to the response
- * @param {import('http').ServerResponse} res 
+ * Applies the security headers to the response.
+ * Other sites may call only what was made for them (`openToOtherSites`): the address forms
+ * send leads to. Billing, the owner's panel and the rest answer only to the app itself.
+ * @param {import('http').ServerResponse} res
+ * @param {{openToOtherSites?: boolean}} [options]
  */
-function applySecurityHeaders(res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-webhook-token');
+function applySecurityHeaders(res, { openToOtherSites = false } = {}) {
+  if (openToOtherSites) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-webhook-token');
+  }
 
   // OWASP Security Headers
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {

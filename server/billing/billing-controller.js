@@ -14,6 +14,7 @@ const { firestoreStore } = require('./firestore-store');
 const mercadopago = require('./mercadopago');
 const { createBillingService, BillingError } = require('./billing-service');
 const { isOwnerUser } = require('../controllers/owner-controller');
+const { createUsageService } = require('../usage/usage-service');
 
 function isBillingConfigured() {
   return mercadopago.isConfigured() && isServiceAccountConfigured();
@@ -22,7 +23,8 @@ function isBillingConfigured() {
 let service = null;
 function billingService() {
   if (!service) {
-    service = createBillingService({ store: firestoreStore, gateway: mercadopago });
+    const usage = createUsageService({ store: firestoreStore });
+    service = createBillingService({ store: firestoreStore, gateway: mercadopago, onPlanChanged: (orgId) => usage.refreshUsage(orgId) });
   }
   return service;
 }

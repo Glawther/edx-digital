@@ -100,6 +100,10 @@ service cloud.firestore {
         && (!('custom' in data) || data.custom is map);
     }
 
+    function isClosed(stage) {
+      return stage == 'won' || stage == 'lost';
+    }
+
     function assignedToMe(data) {
       return 'assignedTo' in data && data.assignedTo.id == request.auth.uid;
     }
@@ -123,9 +127,11 @@ service cloud.firestore {
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.inviteCode is string
           && inviteOpens(request.resource.data.inviteCode, request.resource.data.orgId)
+          && planAllowsWrites(request.resource.data.orgId)
           && !usageFull(request.resource.data.orgId, 'seatsFull'))
         // 3. o administrador cadastra alguém da própria empresa
         || (request.auth.uid != uid && isOrgAdmin(request.resource.data.orgId)
+          && planAllowsWrites(request.resource.data.orgId)
           && !usageFull(request.resource.data.orgId, 'seatsFull'))
       );
 
@@ -143,6 +149,9 @@ service cloud.firestore {
           && validName(request.resource.data.name)
           && request.resource.data.role in ['admin', 'employee']
           && request.resource.data.status in ['active', 'blocked']
+          // desbloquear alguém ocupa um lugar na equipe, como cadastrar: com a equipe cheia, não
+          && (resource.data.status == 'active' || request.resource.data.status != 'active'
+              || !usageFull(resource.data.orgId, 'seatsFull'))
           && request.resource.data.diff(resource.data).affectedKeys()
                .hasOnly(['name', 'role', 'status', 'jobTitle', 'department', 'mustChangePassword', 'updatedAt']))
       );
@@ -248,6 +257,9 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn()
         && request.auth.token.email == email
+        // só com o e-mail confirmado: sem isso, alguém abriria uma conta com o endereço de outra
+        // pessoa e gastaria o teste gratuito dela antes de ela chegar
+        && request.auth.token.email_verified == true
         && request.resource.data.trialEndsAtMs is int
         // no máximo 14 dias a partir de agora (com 5 minutos de folga de relógio)
         && request.resource.data.trialEndsAtMs <= request.time.toMillis() + trialMs() + 5 * 60 * 1000
@@ -290,6 +302,10 @@ service cloud.firestore {
       allow update: if validCustomer(request.resource.data)
         && request.resource.data.orgId == resource.data.orgId
         && planAllowsWrites(resource.data.orgId)
+        // reabrir uma oportunidade ganha ou perdida conta como criar: com o plano cheio, não
+        // (sem isso, bastaria cadastrar tudo como "ganha" e reabrir depois)
+        && (!isClosed(resource.data.stage) || isClosed(request.resource.data.stage)
+            || !usageFull(resource.data.orgId, 'leadsFull'))
         && (
           isOrgAdmin(resource.data.orgId)
           || (isMember(resource.data.orgId)
@@ -313,6 +329,7 @@ service cloud.firestore {
         && request.resource.data.timestamp is string && request.resource.data.timestamp.size() <= 40
         && optText(request.resource.data, 'userName', 200) && optText(request.resource.data, 'userEmail', 320)
         && optText(request.resource.data, 'severity', 20)
+        && optText(request.resource.data, 'orgName', 200) && optText(request.resource.data, 'id', 120)
         && (!('details' in request.resource.data) || request.resource.data.details is map)
         && request.resource.data.keys().hasOnly(['id', 'action', 'severity', 'timestamp', 'userId', 'userName', 'userEmail', 'userRole', 'orgId', 'orgName', 'details']);
       allow update: if false; // o registro não pode ser alterado

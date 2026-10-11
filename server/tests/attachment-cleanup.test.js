@@ -27,7 +27,7 @@ test('apaga só os arquivos cuja oportunidade sumiu ou é de outra empresa', asy
     bucket: 'balde-de-teste',
     fetchImpl,
     token: async () => 't',
-    getCustomer: async (id) => { asked.push(id); return id === 'vivo' ? { orgId: 'o1' } : null; }
+    getCustomer: async (id) => { asked.push(id); return id === 'vivo' ? { orgId: 'o1', attachments: [{ id: 'a_aaaaaaaa' }] } : null; }
   });
 
   assert.deepEqual(result, { files: 5, removed: 3 });
@@ -42,4 +42,20 @@ test('apaga só os arquivos cuja oportunidade sumiu ou é de outra empresa', asy
 test('sem o serviço de arquivos ativado, não faz nada e não falha', async () => {
   const { fetchImpl } = fakeStorage([]);
   assert.deepEqual(await cleanOrphanAttachments({ bucket: 'b', fetchImpl, token: async () => 't', getCustomer: async () => null }), { skipped: 'no_bucket', files: 0, removed: 0 });
+});
+
+test('arquivo que nenhuma oportunidade lista é apagado depois de uma hora; o recém-enviado fica', async () => {
+  const now = Date.parse('2026-10-11T12:00:00.000Z');
+  const at = (minutesAgo) => new Date(now - minutesAgo * 60000).toISOString();
+  const { fetchImpl, calls } = fakeStorage([{ items: [
+    { name: 'orgs/o1/customers/vivo/a_listado01.pdf', timeCreated: at(5000) },
+    { name: 'orgs/o1/customers/vivo/a_porfora01.pdf', timeCreated: at(90) },
+    { name: 'orgs/o1/customers/vivo/a_agorinha1.pdf', timeCreated: at(10) }
+  ] }]);
+  const result = await cleanOrphanAttachments({
+    bucket: 'b', fetchImpl, token: async () => 't', now,
+    getCustomer: async () => ({ orgId: 'o1', attachments: [{ id: 'a_listado01', name: 'x.pdf' }] })
+  });
+  assert.deepEqual(result, { files: 3, removed: 1 });
+  assert.deepEqual(calls.filter(call => call.method === 'DELETE').map(call => decodeURIComponent(call.url.split('/o/')[1])), ['orgs/o1/customers/vivo/a_porfora01.pdf']);
 });

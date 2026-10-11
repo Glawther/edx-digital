@@ -85,6 +85,25 @@ Os anexos das oportunidades ficam no Firebase Storage, em `orgs/{empresa}/custom
 
 Os testes ficam em `tests/rules/storage-rules.test.mjs` e rodam com `npm run test:rules`.
 
+## Auditoria de acessos (outubro de 2026)
+
+Varredura das regras do banco, das regras de arquivos, do servidor e das telas, com tentativas de burlar cada limite no emulador. O que foi fechado:
+
+- **Limites do plano que não acompanhavam a troca de plano**: a marca de "plano cheio" só era recontada quando uma oportunidade ou uma pessoa mudava. Quem pagava um plano maior porque a equipe estava cheia continuava travado. Agora o pagamento de outro plano manda recontar na hora.
+- **Reabrir oportunidades para passar do limite**: ganhas e perdidas não contam para o limite, e reabrir não era conferido. Com o plano cheio, reabrir passa a ser recusado, como criar.
+- **Desbloquear pessoas para passar do limite**: com a equipe cheia, desbloquear alguém passa a ser recusado, como cadastrar.
+- **Plano vencido**: ninguém entra na equipe (por convite ou cadastrado) enquanto o plano não é renovado.
+- **Teste gratuito gasto por terceiros**: o registro do teste de um e-mail só é aceito com o endereço confirmado.
+- **Arquivos enviados por fora do aplicativo**: o limite de arquivos fica no registro da oportunidade; um arquivo que nenhuma oportunidade lista é apagado pela limpeza diária.
+- **API aberta a outros sites**: só o endereço que recebe contatos de formulários aceita chamadas de outros sites. Cobrança, painel do dono e o resto respondem apenas ao próprio aplicativo, e nenhuma resposta da API é guardada em cache.
+
+O que foi conferido e estava certo: isolamento entre empresas, vendedor restrito à própria carteira, plano e pagamento inalteráveis pelo aplicativo, cobranças visíveis só ao administrador, texto hostil gravado por fora do aplicativo aparecendo como texto em todas as telas (`tests/e2e/account.test.mjs`), nenhum segredo no repositório nem no site publicado, e nenhuma vulnerabilidade conhecida nas bibliotecas.
+
+Limites conhecidos, que não têm correção só no código:
+
+- O código de convite fica no registro da empresa, que todo membro lê: um vendedor consegue vê-lo. Quem entra por ele é sempre vendedor, e bloquear alguém troca o código.
+- O link de download de um anexo vale para quem o tiver. Quem baixou o link uma vez continua conseguindo abrir aquele arquivo até ele ser excluído.
+- Os limites de pedidos por minuto são contados em cada cópia do servidor, e uma rajada de gravações pode passar um pouco do limite do plano antes de a marca fechar.
 ## Erros das telas
 
 Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/errors`) e o relato vira uma linha de erro no registro das funções, no console do Firebase. Vão a mensagem, o trecho do código, a tela aberta e a versão; nada da pessoa, da empresa ou dos clientes, e o servidor ainda apaga o que tiver formato de e-mail ou de número longo. São no máximo 5 relatos por visita e 10 por minuto por endereço.

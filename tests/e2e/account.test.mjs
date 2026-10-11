@@ -253,3 +253,115 @@ test('dona do sistema: o painel aparece no menu, também depois de recarregar a 
   // o vendedor bloqueado saiu; outra pessoa qualquer não vê nem o painel nem a opção
   assert.equal(await world.vendedor.page.evaluate(() => document.getElementById('btn-menu-owner').hidden), true);
 });
+// ---------------------------------------------------------------- texto hostil gravado por fora do aplicativo
+
+test('texto hostil no banco (gravado por fora do aplicativo) aparece como texto em todas as telas, nunca como marcação', async (t) => {
+  if (!world.dona) return t.skip('depende do cadastro');
+  const { page, problems } = world.dona;
+  const DOCS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
+  const asServer = { 'Content-Type': 'application/json', Authorization: 'Bearer owner' };
+  const toValue = (v) => {
+    if (typeof v === 'string') return { stringValue: v };
+    if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+    if (typeof v === 'boolean') return { booleanValue: v };
+    if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+    return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
+  };
+  const write = async (path, data, merge = false) => {
+    const mask = merge ? '?' + Object.keys(data).map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&') : '';
+    const res = await fetch(`${DOCS}/${path}${mask}`, { method: 'PATCH', headers: asServer, body: JSON.stringify(toValue(data).mapValue) });
+    assert.equal(res.status, 200, `${path}: ${await res.text()}`);
+  };
+  const found = await (await fetch(`${DOCS}:runQuery`, {
+    method: 'POST', headers: asServer,
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'users' }], where: { fieldFilter: { field: { fieldPath: 'email' }, op: 'EQUAL', value: { stringValue: world.dona.email } } } } })
+  })).json();
+  const profile = found.find(row => row.document).document;
+  const uid = profile.name.split('/').pop();
+  const orgId = profile.fields.orgId.stringValue;
+
+  // cada campo leva uma marca própria, para o teste dizer qual escapou
+  const P = (n) => `x"'><img src=x onerror="window.__xss='${n}'" data-xss="${n}"><svg onload="window.__xss='${n}'"></svg><b data-xss="${n}">B</b>`;
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  const hostile = (id, extra) => ({
+    orgId, name: P('name'), company: P('company'), role: P('role'), email: P('email'), phone: '(11) 98888-7777', notes: P('notes'),
+    stage: 'lead', priority: P('priority'), dealValue: 1000, expectedCloseDate: today, pipelineId: 'default',
+    tags: [P('tag')], createdAt: now, updatedAt: now, createdBy: P('createdBy'), updatedBy: P('updatedBy'),
+    assignedTo: { id: uid, name: P('assignedName'), email: P('assignedEmail') },
+    tasks: [{ id: 't1', title: P('taskTitle'), type: P('taskType'), dueDate: today, dueTime: '10:00', completed: false }],
+    activities: [{ id: 'act1', type: P('actType'), title: P('actTitle'), text: P('actText'), author: P('actAuthor'), timestamp: now },
+      { id: 'act2', type: 'call', title: P('callTitle'), text: P('callText'), author: P('callAuthor'), timestamp: now }],
+    items: [{ description: P('item'), quantity: 2, unitPrice: 10 }],
+    attachments: [{ id: 'a_xssxssxss1', ext: 'pdf', name: P('fileName'), size: 10, by: P('fileBy'), at: now }],
+    custom: { cf_hostil: P('customValue') },
+    id, ...extra
+  });
+  await write(`customers/xss-aberta-${RUN}`, hostile(`xss-aberta-${RUN}`, {}));
+  await write(`customers/xss-perdida-${RUN}`, hostile(`xss-perdida-${RUN}`, { stage: 'lost', lossReason: P('lossReason'), lossDetails: P('lossDetails'), lostAt: now }));
+  await write(`customers/xss-ganha-${RUN}`, hostile(`xss-ganha-${RUN}`, { stage: 'won', wonAt: now, recurring: true }));
+  await write(`organizations/${orgId}`, {
+    name: P('orgName'), legalName: P('legalName'), cnpj: P('cnpj'), brandColor: P('brandColor'), logoUrl: 'javascript:window.__xss="logo"',
+    stageNames: { lead: P('stageLead'), contact: P('stageContact'), proposal: P('stageProposal'), negotiation: P('stageNeg'), won: P('stageWon'), lost: P('stageLost') },
+    customFields: [{ id: 'cf_hostil', label: P('customLabel'), type: 'text' }],
+    messageTemplates: [{ id: 'm1', name: P('templateName'), text: P('templateText') }],
+    pipelines: [{ id: 'p_hostil123', name: P('pipelineName'), stageNames: { lead: P('pipelineStage') } }],
+    stageRequirements: { proposal: [P('requirement')] }, sellerGoals: { [uid]: 1000 }, mainPipelineName: P('mainPipeline'), monthlyGoal: 5000
+  }, true);
+  await write(`users/${uid}`, { name: P('myName'), jobTitle: P('myJob'), department: P('myDept') }, true);
+  await write(`users/colega-hostil-${RUN}`, { orgId, role: 'employee', status: 'active', name: P('mateName'), email: P('mateEmail'), jobTitle: P('mateJob'), department: P('mateDept') });
+  await write(`audit_logs/xss-${RUN}`, { orgId, userId: uid, action: P('auditAction'), userName: P('auditName'), userEmail: P('auditEmail'), userRole: 'admin', severity: P('auditSeverity'), orgName: P('auditOrg'), timestamp: now, details: { campo: P('auditDetail') } });
+
+  const escaped = async (where) => {
+    const found = await page.evaluate(() => ({
+      marks: [...new Set([...document.querySelectorAll('[data-xss]')].map(el => el.getAttribute('data-xss')))],
+      ran: window.__xss || null,
+      // um endereço perigoso num link ou numa imagem também é marcação que não devia existir
+      links: [...document.querySelectorAll('a[href^="javascript:"], img[src^="javascript:"], [style*="data-xss"]')].length
+    }));
+    assert.deepEqual(found, { marks: [], ran: null, links: 0 }, where);
+  };
+  const closeDialogs = () => page.evaluate(() => document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close()));
+
+  await page.reload();
+  await page.locator('#today-content > *').first().waitFor({ timeout: 20000 });
+  await page.waitForFunction(() => document.body.textContent.includes('data-xss'), null, { timeout: 15000 });
+  await escaped('tela Hoje');
+
+  for (const view of ['pipeline', 'customers', 'tasks', 'metrics', 'team', 'audit', 'security', 'today']) {
+    await page.click(`.nav-item[data-view="${view}"]`);
+    await page.waitForTimeout(700);
+    await escaped(`tela ${view}`);
+  }
+
+  for (const id of [`xss-aberta-${RUN}`, `xss-perdida-${RUN}`, `xss-ganha-${RUN}`]) {
+    for (const opener of ['handleOpenLeadDetails', 'handleOpenEditCustomer', 'handleOpenProposalModal', 'handleOpenWhatsAppModal']) {
+      await page.evaluate(([fn, customerId]) => window[fn] && window[fn](customerId), [opener, id]);
+      await page.waitForTimeout(500);
+      await escaped(`${opener} em ${id}`);
+      await closeDialogs();
+    }
+  }
+
+  for (const entry of ['btn-menu-customize', 'btn-menu-billing', 'btn-menu-account', 'btn-menu-whitelabel', 'btn-menu-webhook', 'btn-menu-import', 'btn-menu-owner']) {
+    await page.evaluate((id) => document.getElementById(id)?.click(), entry);
+    await page.waitForTimeout(700);
+    await escaped(`menu ${entry}`);
+    await closeDialogs();
+  }
+
+  // a busca e o funil secundário também desenham os mesmos textos
+  await page.click('.nav-item[data-view="pipeline"]');
+  await page.fill('#global-search-input', 'x');
+  await page.waitForTimeout(600);
+  await escaped('busca');
+  await page.fill('#global-search-input', '');
+  await page.evaluate(() => document.querySelectorAll('[data-click="setActivePipeline"], .pipeline-switch button').forEach(button => button.click()));
+  await page.waitForTimeout(500);
+  await escaped('troca de funil');
+
+  // relatórios exportados e títulos também não podem ter virado marcação em lugar nenhum
+  assert.equal(await page.evaluate(() => document.querySelectorAll('script:not([src])').length), 0, 'nenhum script embutido na página');
+  // e nenhuma tela quebrou por causa do texto estranho
+  assert.deepEqual(problems, []);
+});

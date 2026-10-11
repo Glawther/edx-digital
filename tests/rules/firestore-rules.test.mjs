@@ -560,13 +560,17 @@ test('dados da empresa: meta numérica, nome obrigatório, logotipo com limite',
 
 test('sem o e-mail confirmado ninguém cria empresa', async () => {
   const u = await signUp('semconfirmar', { verified: false });
-  const endsAt = await claimTrial(u);
+  // nem o registro do teste gratuito, nem a empresa
+  const endsAt = Date.now() + 14 * DAY;
+  assert.equal(await put(u, `trial_claims/${u.email}`, { trialEndsAtMs: endsAt }), DENIED);
   const company = { name: 'Fantasma', ownerUid: u.uid, plan: 'pro', planStatus: 'trial', trialEndsAtMs: endsAt };
   assert.equal(await put(u, `organizations/org_fantasma_${RUN}`, company), DENIED);
-  // depois de confirmar, com um token novo, a mesma criação passa
+  // depois de confirmar, com um token novo, os dois passam
   await authCall('update', { localId: u.uid, emailVerified: true }, true);
   const again = await authCall('signInWithPassword', { email: u.email, password: PASSWORD, returnSecureToken: true });
-  assert.equal(await put({ ...u, token: again.idToken }, `organizations/org_fantasma_${RUN}`, company), OK);
+  const confirmed = { ...u, token: again.idToken };
+  assert.equal(await put(confirmed, `trial_claims/${u.email}`, { trialEndsAtMs: endsAt }), OK);
+  assert.equal(await put(confirmed, `organizations/org_fantasma_${RUN}`, company), OK);
 });
 
 test('plano cheio (marcado pelo servidor): ninguém cria oportunidade nem entra na equipe; o resto continua', async () => {
@@ -630,4 +634,88 @@ test('funis: o administrador cria até cinco além do principal, e a oportunidad
   assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'p_funil0001' }), OK);
   assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'x'.repeat(41) }), DENIED);
   assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 7 }), DENIED);
+});
+
+// ---------------------------------------------------------------- auditoria de acessos
+
+test('o teste gratuito só é registrado para um e-mail confirmado', async () => {
+  const impostor = await signUp('impostor', { verified: false });
+  // quem abriu a conta com o endereço de outra pessoa não consegue gastar o teste dela
+  assert.equal(await put(impostor, `trial_claims/${impostor.email}`, { trialEndsAtMs: Date.now() + DAY }), DENIED);
+  assert.equal(await put(impostor, `trial_claims/${impostor.email}`, { trialEndsAtMs: 1 }), DENIED);
+  const dono = await signUp('confirmado');
+  assert.equal(await put(dono, `trial_claims/${dono.email}`, { trialEndsAtMs: Date.now() + 14 * DAY }), OK);
+});
+
+test('equipe cheia: desbloquear alguém é recusado, como cadastrar; bloquear e renomear continuam', async () => {
+  const c = await registerCompany('lotada');
+  const beto = await join('beto', c);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { status: 'blocked' }), OK);
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: true } }), OK);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { status: 'active' }), DENIED);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { name: 'Beto Bloqueado' }), OK);
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: false } }), OK);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { status: 'active' }), OK);
+  // quem já está ativo segue editável com a equipe cheia
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: true } }), OK);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { jobTitle: 'Vendas' }), OK);
+  assert.equal(await patch(c.owner, `users/${beto.uid}`, { status: 'blocked' }), OK);
+});
+
+test('plano cheio: reabrir uma oportunidade fechada é recusado, como criar; o resto continua', async () => {
+  const c = await registerCompany('reabre');
+  assert.equal(await put(c.owner, `customers/reabre-1-${RUN}`, lead(c.orgId, c.owner, { stage: 'won' })), OK);
+  assert.equal(await put(c.owner, `customers/reabre-2-${RUN}`, lead(c.orgId, c.owner)), OK);
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: true, seatsFull: false } }), OK);
+  assert.equal(await patch(c.owner, `customers/reabre-1-${RUN}`, { stage: 'negotiation' }), DENIED);
+  assert.equal(await patch(c.owner, `customers/reabre-1-${RUN}`, { stage: 'lost' }), OK, 'de ganha para perdida não abre nada');
+  assert.equal(await patch(c.owner, `customers/reabre-1-${RUN}`, { notes: 'anotação' }), OK);
+  assert.equal(await patch(c.owner, `customers/reabre-2-${RUN}`, { stage: 'proposal' }), OK, 'a que já estava aberta anda no funil');
+  assert.equal(await patch(c.owner, `customers/reabre-2-${RUN}`, { stage: 'won' }), OK);
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { usage: { leadsFull: false, seatsFull: false } }), OK);
+  assert.equal(await patch(c.owner, `customers/reabre-1-${RUN}`, { stage: 'lead' }), OK);
+});
+
+test('plano vencido: ninguém entra na equipe, nem por convite nem cadastrado pelo administrador', async () => {
+  const c = await registerCompany('vencida2');
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { trialEndsAtMs: Date.now() - DAY }), OK);
+  const novato = await signUp('tardio');
+  const profile = { orgId: c.orgId, role: 'employee', name: 'Tardio', email: novato.email, status: 'active', inviteCode: c.code };
+  assert.equal(await put(novato, `users/${novato.uid}`, profile), DENIED);
+  assert.equal(await put(c.owner, `users/colab2-${RUN}`, { orgId: c.orgId, role: 'employee', name: 'Colab', email: 'colab2@teste.local', status: 'active' }), DENIED);
+  // com o pagamento confirmado pelo servidor, volta a valer
+  assert.equal(await patch(SERVER, `organizations/${c.orgId}`, { planStatus: 'active', paidUntilMs: Date.now() + 30 * DAY }), OK);
+  assert.equal(await put(novato, `users/${novato.uid}`, profile), OK);
+});
+
+test('hierarquia: o vendedor não se promove, não mexe no plano, não vê cobranças, auditoria nem dados privados', async () => {
+  const { a, ana, bruno } = world;
+  assert.equal(await patch(ana, `users/${ana.uid}`, { role: 'admin' }), DENIED);
+  assert.equal(await patch(ana, `users/${ana.uid}`, { orgId: world.b.orgId }), DENIED);
+  assert.equal(await patch(ana, `users/${ana.uid}`, { status: 'active', role: 'admin' }), DENIED);
+  assert.equal(await patch(ana, `users/${bruno.uid}`, { status: 'blocked' }), DENIED);
+  assert.equal(await del(ana, `users/${bruno.uid}`), DENIED);
+  for (const change of [{ plan: 'enterprise' }, { planStatus: 'active' }, { paidUntilMs: Date.now() + 365 * DAY }, { trialEndsAtMs: Date.now() + 365 * DAY }, { ownerUid: ana.uid }, { usage: { leadsFull: false } }, { name: 'Outra' }]) {
+    assert.equal(await patch(ana, `organizations/${a.orgId}`, change), DENIED, JSON.stringify(change));
+  }
+  // nem a administradora muda o próprio plano, o dono da empresa ou a contagem
+  for (const change of [{ plan: 'enterprise' }, { planStatus: 'active' }, { paidUntilMs: Date.now() + 365 * DAY }, { trialEndsAtMs: Date.now() + 365 * DAY }, { ownerUid: ana.uid }, { usage: { leadsFull: false } }, { pendingPaymentId: 'x' }, { lastPaymentId: 'x' }]) {
+    assert.equal(await patch(a.owner, `organizations/${a.orgId}`, change), DENIED, JSON.stringify(change));
+  }
+  assert.equal(await put(SERVER, `payments/pg-${RUN}`, { orgId: a.orgId, plan: 'pro', amount: 197, status: 'approved' }), OK);
+  assert.equal(await get(ana, `payments/pg-${RUN}`), DENIED);
+  assert.equal(await get(world.b.owner, `payments/pg-${RUN}`), DENIED);
+  assert.equal(await get(a.owner, `payments/pg-${RUN}`), OK);
+  assert.equal(await patch(a.owner, `payments/pg-${RUN}`, { status: 'refunded' }), DENIED);
+  assert.equal(await put(a.owner, `payments/falso-${RUN}`, { orgId: a.orgId, plan: 'enterprise', amount: 497, status: 'approved' }), DENIED);
+  assert.equal((await list(ana, 'audit_logs', [['orgId', a.orgId]])).denied, true);
+  assert.equal((await list(ana, 'payments', [['orgId', a.orgId]])).denied, true);
+  assert.equal(await put(ana, `invites/NX-FALSO${RUN.toUpperCase()}`, { orgId: a.orgId, role: 'employee', active: true }), DENIED);
+  assert.equal(await put(ana, `user_private/${ana.uid}`, { orgId: a.orgId, cpf: '000' }), DENIED);
+  assert.equal(await get(ana, `system_state/error_mail`), DENIED);
+  assert.equal(await put(a.owner, `system_state/error_mail`, { lastSentMs: 0 }), DENIED);
+  // a vendedora não passa a própria oportunidade para a empresa vizinha nem pega a do colega
+  assert.equal(await patch(ana, `customers/a-ana-${RUN}`, { orgId: world.b.orgId }), DENIED);
+  assert.equal(await patch(ana, `customers/a-bruno-${RUN}`, { assignedTo: { id: ana.uid, name: 'x', email: ana.email } }), DENIED);
+  assert.equal(await del(ana, `customers/a-ana-${RUN}`), DENIED);
 });

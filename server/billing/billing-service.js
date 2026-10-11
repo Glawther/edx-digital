@@ -32,8 +32,9 @@ class BillingError extends Error {
  * @param {Object} deps.store    - getUserProfile, getOrganization, updateOrganization, getPayment, savePayment, updatePayment
  * @param {Object} deps.gateway  - createPixPayment, getPayment
  * @param {Function} [deps.now]  - clock, for tests
+ * @param {Function} [deps.onPlanChanged] - called with the company's id after its plan changed
  */
-function createBillingService({ store, gateway, now = () => Date.now() }) {
+function createBillingService({ store, gateway, now = () => Date.now(), onPlanChanged = null }) {
 
   async function requireCompanyAdmin(uid) {
     const profile = await store.getUserProfile(uid);
@@ -186,6 +187,13 @@ function createBillingService({ store, gateway, now = () => Date.now() }) {
       pendingPaymentId: null,
       updatedAt: new Date(current).toISOString()
     });
+
+    // The limits are the new plan's from now on. Whoever upgraded because the plan was full
+    // must not stay locked out until the next change to the data; a failure here does not
+    // undo the payment (the count is redone on the next change anyway).
+    if (onPlanChanged && org.plan !== record.plan) {
+      await Promise.resolve(onPlanChanged(record.orgId)).catch(err => console.error('[Billing] recontagem do plano:', err.message));
+    }
 
     return { status: 'approved', plan: record.plan, paidUntil };
   }
