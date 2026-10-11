@@ -149,6 +149,8 @@
       "runtime": "nodejs22",
       "ignore": [
         "node_modules",
+        ".claude",
+        ".playwright-cli",
         ".git",
         "dist",
         "data",
