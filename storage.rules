@@ -1,0 +1,58 @@
+rules_version = '2';
+
+// Regras de acesso aos arquivos do EDX Digital (Firebase Storage).
+//
+// Só existem os anexos das oportunidades, em orgs/{empresa}/customers/{oportunidade}/{arquivo}.
+// Quem alcança um arquivo é quem alcança a oportunidade no banco: o administrador da empresa,
+// ou o vendedor responsável por ela. O perfil e a oportunidade são conferidos no Firestore.
+//
+// Testes: `npm run test:rules` (emulador local). Detalhes em docs/LOGIN_E_SEGURANCA.md.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function profile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function customer(customerId) {
+      return firestore.get(/databases/(default)/documents/customers/$(customerId)).data;
+    }
+
+    function reaches(orgId, customerId) {
+      return request.auth != null
+        && profile().orgId == orgId
+        && profile().status == 'active'
+        && customer(customerId).orgId == orgId
+        && (profile().role == 'admin' || customer(customerId).assignedTo.id == request.auth.uid);
+    }
+
+    match /orgs/{orgId}/customers/{customerId}/{fileName} {
+      // Abrir um arquivo conhecido; ninguém lista a pasta
+      allow get: if reaches(orgId, customerId);
+      allow list: if false;
+
+      // Só documentos e imagens, até 10 MB, sempre entregues como download (nunca abertos como página)
+      allow create: if reaches(orgId, customerId)
+        && resource == null
+        && fileName.matches('^a_[a-z0-9]{6,16}[.](pdf|png|jpg|jpeg|webp|doc|docx|xls|xlsx|csv|txt)$')
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in [
+          'application/pdf', 'image/png', 'image/jpeg', 'image/webp',
+          'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/csv', 'text/plain'
+        ]
+        && request.resource.contentDisposition.matches('^attachment.*');
+
+      // Um arquivo não é trocado por outro: exclui-se e anexa-se de novo
+      allow update: if false;
+      allow delete: if reaches(orgId, customerId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

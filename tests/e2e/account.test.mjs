@@ -194,3 +194,45 @@ test('bloqueio: a administradora bloqueia e o vendedor perde o acesso', async (t
   assert.equal(await page.locator('#auth-portal-screen').isVisible(), true);
   assert.ok((await toasts(page)).some(text => /bloqueado/i.test(text)));
 });
+
+test('anexos: o arquivo é guardado na oportunidade, continua lá depois de recarregar e pode ser excluído', async (t) => {
+  if (!world.dona) return t.skip('depende do cadastro');
+  const { page, problems } = world.dona;
+  const open = async () => {
+    await page.click('.nav-item[data-view="pipeline"]');
+    await page.locator('.lead-card', { hasText: 'Cliente da Dona' }).click();
+    await page.locator('#lead-attachments-block').waitFor({ state: 'visible' });
+  };
+  await open();
+  assert.match(await page.textContent('#lead-details-attachments'), /Nenhum arquivo/);
+
+  await page.setInputFiles('#lead-attachment-input', { name: 'Proposta assinada.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 arquivo de teste') });
+  const row = page.locator('.attachment-row', { hasText: 'Proposta assinada.pdf' });
+  await row.waitFor({ timeout: 20000 });
+  assert.match(await row.textContent(), /pdf/);
+  assert.match(await row.textContent(), /Dona Teste/);
+
+  // um tipo que o navegador executaria é recusado antes de sair da máquina
+  await page.setInputFiles('#lead-attachment-input', { name: 'pagina.html', mimeType: 'text/html', buffer: Buffer.from('<p>oi</p>') });
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast')].some(el => /não é aceito/.test(el.textContent)));
+  assert.equal(await page.locator('.attachment-row').count(), 1);
+
+  await page.reload();
+  await page.locator('#today-content > *').first().waitFor({ timeout: 20000 });
+  await open();
+  await row.waitFor({ timeout: 15000 });
+
+  // o nome abre o endereço de download do arquivo guardado
+  const [download] = await Promise.all([
+    page.context().waitForEvent('page', { timeout: 15000 }),
+    row.locator('.attachment-name').click()
+  ]);
+  await download.close().catch(() => {});
+
+  await row.locator('[data-click="handleDeleteAttachment"]').click();
+  await row.waitFor({ state: 'detached', timeout: 15000 });
+  assert.match(await page.textContent('#lead-details-attachments'), /Nenhum arquivo/);
+  assert.match(await page.textContent('#lead-details-timeline'), /Arquivo excluído/);
+  await page.click('#btn-close-lead-details');
+  assert.deepEqual(problems, []);
+});
