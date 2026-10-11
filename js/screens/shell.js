@@ -444,16 +444,35 @@ export function setupPWA() {
     // or a field has unsaved text: then the new version simply applies on the next visit.
     const hadVersion = !!navigator.serviceWorker.controller;
     let reloaded = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!hadVersion || reloaded) return;
+    let newVersionWaiting = false;
+    const applyNewVersion = () => {
+      if (!newVersionWaiting || reloaded) return;
       const busy = document.querySelector('dialog[open]') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
       if (busy) return;
       reloaded = true;
       window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadVersion) return;
+      newVersionWaiting = true;
+      applyNewVersion();
     });
 
+    // A tab left open for days would never hear of a new version: it asks when the person
+    // comes back to it, and once an hour while it stays in view.
+    let registration = null;
+    let lastCheck = Date.now();
+    const checkForNewVersion = () => {
+      applyNewVersion();
+      if (!registration || document.visibilityState !== 'visible' || Date.now() - lastCheck < 15 * 60 * 1000) return;
+      lastCheck = Date.now();
+      registration.update().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', checkForNewVersion);
+    setInterval(checkForNewVersion, 60 * 60 * 1000);
+
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
+      navigator.serviceWorker.register('/sw.js').then((result) => { registration = result; }).catch((err) => {
         console.warn('Service worker não registrado:', err);
       });
     });
