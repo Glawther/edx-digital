@@ -4,7 +4,9 @@ rules_version = '2';
 //
 // Só existem os anexos das oportunidades, em orgs/{empresa}/customers/{oportunidade}/{arquivo}.
 // Quem alcança um arquivo é quem alcança a oportunidade no banco: o administrador da empresa,
-// ou o vendedor responsável por ela. O perfil e a oportunidade são conferidos no Firestore.
+// ou o vendedor responsável por ela. O perfil e a oportunidade são conferidos no Firestore
+// (para isso o serviço de arquivos precisa do papel "Firebase Rules Firestore Service Agent",
+// que o Firebase CLI oferece conceder na primeira publicação destas regras).
 //
 // Testes: `npm run test:rules` (emulador local). Detalhes em docs/LOGIN_E_SEGURANCA.md.
 
