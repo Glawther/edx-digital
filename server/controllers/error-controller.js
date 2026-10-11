@@ -29,13 +29,19 @@ async function mailOwners(report, { store = firestoreStore, mail = mailer, now =
   // marked first: two reports arriving together send one message
   await store.setState('error_mail', { lastSentMs: now });
   const lines = [`Mensagem: ${report.message}`, `Tela: ${report.view || 'não informada'}`, `Versão: ${report.version || 'não informada'}`, `Navegador: ${report.browser || 'não informado'}`, '', report.stack || '(sem rastro)'];
-  for (const email of owners) {
-    await mail.sendEmail({
-      to: { email },
-      subject: `EDX Digital: erro na tela de alguém (${report.message.slice(0, 60)})`,
-      text: [...lines, '', 'Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.'].join('\n'),
-      html: `<pre style="font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;">${escapeHtml(lines.join('\n'))}</pre><p style="font-family:Arial,sans-serif;font-size:13px;color:#4a5565;">Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.</p>`
-    });
+  try {
+    for (const email of owners) {
+      await mail.sendEmail({
+        to: { email },
+        subject: `EDX Digital: erro na tela de alguém (${report.message.slice(0, 60)})`,
+        text: [...lines, '', 'Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.'].join('\n'),
+        html: `<pre style="font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;">${escapeHtml(lines.join('\n'))}</pre><p style="font-family:Arial,sans-serif;font-size:13px;color:#4a5565;">Outros erros desta hora não geram e-mail: veja todos em Functions, Registros, no console do Firebase.</p>`
+      });
+    }
+  } catch (err) {
+    // a message that did not go out must not silence the next hour
+    await store.setState('error_mail', { lastSentMs: 0 });
+    throw err;
   }
   return true;
 }
