@@ -52,7 +52,7 @@ before(async () => {
     probe.listen(0, '127.0.0.1', () => { const { port } = probe.address(); probe.close(() => resolve(port)); });
   });
   base = `http://127.0.0.1:${port}`;
-  server = spawn(process.execPath, ['server.js'], { cwd: root, env: { ...process.env, PORT: String(port), NODE_ENV: 'test' }, stdio: 'ignore' });
+  server = spawn(process.execPath, ['server.js'], { cwd: root, env: { ...process.env, PORT: String(port), NODE_ENV: 'test', FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099', FIREBASE_PROJECT_ID: PROJECT, OWNER_EMAILS: `dona.${RUN}@teste.local` }, stdio: 'ignore' });
   for (let attempt = 0; attempt < 50; attempt++) {
     try { if ((await fetch(`${base}/health`)).ok) break; } catch { /* not up yet */ }
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -235,4 +235,20 @@ test('anexos: o arquivo é guardado na oportunidade, continua lá depois de reca
   assert.match(await page.textContent('#lead-details-timeline'), /Arquivo excluído/);
   await page.click('#btn-close-lead-details');
   assert.deepEqual(problems, []);
+});
+test('dona do sistema: o painel aparece no menu, também depois de recarregar a página', async (t) => {
+  if (!world.dona) return t.skip('depende do cadastro');
+  const { page } = world.dona;
+  const entryShows = () => page.waitForFunction(() => document.getElementById('btn-menu-owner')?.hidden === false, null, { timeout: 15000 });
+  await page.reload();
+  await page.locator('#today-content > *').first().waitFor({ timeout: 20000 });
+  await entryShows();
+
+  // a cobrança de teste de R$ 1 é oferecida só a ela
+  await page.evaluate(() => window.openCheckoutModal('starter'));
+  await page.locator('#chk-test-row').waitFor({ state: 'visible' });
+  await page.click('#btn-close-checkout-modal');
+
+  // o vendedor bloqueado saiu; outra pessoa qualquer não vê nem o painel nem a opção
+  assert.equal(await world.vendedor.page.evaluate(() => document.getElementById('btn-menu-owner').hidden), true);
 });

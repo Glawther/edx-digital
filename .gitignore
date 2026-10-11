@@ -17,3 +17,5 @@ dist/
 
 # Valores usados só pelo emulador de funções
 .secret.local
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
