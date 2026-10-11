@@ -1616,3 +1616,11 @@ a.dropdown-item { text-decoration: none; box-sizing: border-box; }
 @media print {
   .proposal-items-editor, #prop-items-mismatch { display: none !important; }
 }
+
+/* More than one funnel */
+.pipeline-switch { font-size: 0.82rem; color: var(--text-secondary); }
+.pipeline-row { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; margin-bottom: 0.6rem; }
+.pipeline-row summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.6rem; align-items: center; cursor: pointer; list-style: none; }
+.pipeline-row summary::-webkit-details-marker { display: none; }
+.pipeline-row .form-grid { margin-top: 0.75rem; }
+.pipeline-count { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }

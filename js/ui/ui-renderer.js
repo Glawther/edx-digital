@@ -3,9 +3,10 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
+import { countByPipeline } from '../core/pipelines.js';
 import { weekDays, weekTitle, tasksByDay, googleCalendarUrl } from '../core/agenda.js';
 import { goalProgress, recurringRevenue } from '../core/pipeline-rules.js';
-import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
+import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId, crmStore } from '../core/crm-store.js';
 import { REPORT_PERIODS, periodReport, sellerReportRows } from '../core/report.js';
 import { todayPanel, daysLabel, CLOSING_WINDOW_DAYS } from '../core/today.js';
 import { downloadCsv } from '../services/export-service.js';
@@ -424,6 +425,20 @@ export function renderTasksView(tasks, filter, customers) {
   }).join('');
 }
 
+/**
+ * The funnel selectors (in the funnel, in the list of customers, in the opportunity form).
+ * A company with a single funnel never sees them.
+ */
+export function renderPipelineSwitch(pipelines, activeId, customers = []) {
+  const many = pipelines.length > 1;
+  document.querySelectorAll('.pipeline-switch').forEach(wrapper => { wrapper.hidden = !many; });
+  if (!many) return;
+  const counts = countByPipeline(customers, pipelines);
+  document.querySelectorAll('select[data-pipeline-switch]').forEach(select => {
+    select.innerHTML = pipelines.map(pipeline => `<option value="${escapeHtml(pipeline.id)}" ${pipeline.id === activeId ? 'selected' : ''}>${escapeHtml(pipeline.name)} (${counts[pipeline.id]})</option>`).join('');
+  });
+}
+
 // Which week the agenda shows, counted from the current one
 let weekOffset = 0;
 export function moveWeek(step) {
@@ -495,12 +510,21 @@ function barRow(label, figures, pct, kind = '') {
  * Renders the reports view: what happened in the chosen period, then how the funnel stands now.
  * Every number comes from the opportunities the person can see; nothing is a target or an estimate.
  */
-export function renderDetailedMetrics(metrics, customers = [], permissions = {}) {
+export function renderDetailedMetrics(metrics, customers = [], permissions = {}, everything = customers) {
   const container = document.getElementById('metrics-content');
   if (!container) return;
 
+  const state = crmStore.getState();
+  const funnel = state.pipelines.length > 1 ? state.pipelines.find(pipeline => pipeline.id === state.activePipelineId) : null;
+  const funnelPicker = !funnel ? '' : `
+    <label class="inline-field">Funil
+      <select class="form-select form-select-sm" data-change="handlePipeline" data-value aria-label="Funil">
+        ${state.pipelines.map(pipeline => `<option value="${escapeHtml(pipeline.id)}" ${pipeline.id === funnel.id ? 'selected' : ''}>${escapeHtml(pipeline.name)}</option>`).join('')}
+      </select>
+    </label>`;
+
   if (customers.length === 0) {
-    container.innerHTML = `<section class="settings-section"><p class="empty-note" style="margin: 0;">Ainda não há oportunidades para gerar relatórios. Cadastre a primeira em "Nova oportunidade".</p></section>`;
+    container.innerHTML = `<section class="settings-section">${funnelPicker}<p class="empty-note" style="margin: ${funnel ? '0.75rem' : '0'} 0 0;">${funnel ? `Ainda não há oportunidades no funil ${escapeHtml(funnel.name)}.` : 'Ainda não há oportunidades para gerar relatórios. Cadastre a primeira em "Nova oportunidade".'}</p></section>`;
     return;
   }
 
@@ -588,7 +612,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
   ` : '';
 
   // Each person's goal of the month: everyone to an administrator, their own to a salesperson
-  const monthPeople = periodId === 'month' ? report.people : periodReport(customers, 'month', new Date(), reportMembers(permissions)).people;
+  const monthPeople = periodReport(everything, 'month', new Date(), reportMembers(permissions)).people;
   const myId = getCurrentUser()?.uid;
   const goalRows = goalProgress(monthPeople, getSavedOrganization().sellerGoals).filter(row => permissions.isAdmin || row.id === myId);
   const sellerGoalsHtml = goalRows.length === 0 ? '' : `
@@ -597,7 +621,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
       <div class="bar-list">${goalRows.map(row => barRow(escapeHtml(row.name), `${row.percent}%<strong>${formatBRL(row.sold)} de ${formatBRL(row.goal)}</strong>`, Math.min(100, row.percent), row.percent >= 100 ? 'won' : '')).join('')}</div>
     </section>`;
 
-  const recurring = recurringRevenue(customers);
+  const recurring = recurringRevenue(everything);
   const recurringHtml = recurring.contracts + recurring.openCount === 0 ? '' : `
       <div class="figure-box">
         <div class="figure-label">Receita recorrente por mês</div>
@@ -607,7 +631,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
 
   // The month's goal is the company's: shown to whoever administers
   const goal = Number(getSavedOrganization().monthlyGoal) || 0;
-  const soldThisMonth = periodId === 'month' ? totals.wonValue : periodReport(customers, 'month').totals.wonValue;
+  const soldThisMonth = periodReport(everything, 'month').totals.wonValue;
   const goalPct = goal > 0 ? Math.round((soldThisMonth / goal) * 100) : 0;
   const goalHtml = permissions.isAdmin && goal > 0 ? `
     <section class="settings-section">
@@ -618,7 +642,8 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
 
   container.innerHTML = `
     <div class="report-period">
-      <h2 class="section-title">No período</h2>
+      <h2 class="section-title">No período${funnel ? `, no funil ${escapeHtml(funnel.name)}` : ''}</h2>
+      ${funnelPicker}
       <div class="filter-pills" role="group" aria-label="Período do relatório">${periodPills}</div>
     </div>
 

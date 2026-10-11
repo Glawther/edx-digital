@@ -552,3 +552,51 @@ test('páginas públicas: desenhadas pelos arquivos de estilo, sem nada recusado
     await page.close();
   }
 });
+
+test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mostra só o que é seu', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  assert.equal(await page.locator('#view-pipeline .pipeline-switch').isVisible(), false, 'com um funil só, o seletor não aparece');
+  const mainCards = await page.locator('.lead-card').count();
+
+  await page.click('#btn-header-tools');
+  await page.click('#btn-menu-customize');
+  await page.click('#btn-add-pipeline');
+  await page.locator('#customize-pipelines input[data-part="name"]').fill('Pós venda');
+  await page.locator('#customize-pipelines input[data-stage="lead"]').fill('Implantação');
+  await page.click('#customize-form button[type="submit"]');
+  await page.locator('#customize-dialog').waitFor({ state: 'hidden' });
+
+  const picker = page.locator('#view-pipeline select[data-pipeline-switch]');
+  await picker.waitFor({ state: 'visible' });
+  assert.deepEqual((await picker.locator('option').allTextContents()).map(text => text.replace(/\s*\(\d+\)$/, '')), ['Vendas', 'Pós venda']);
+
+  await picker.selectOption({ index: 1 });
+  await page.waitForFunction(() => document.querySelectorAll('.lead-card').length === 0);
+  await page.locator('.column-title', { hasText: 'Implantação' }).waitFor();
+
+  await page.click('#btn-new-lead');
+  await page.fill('#input-customer-name', 'Cliente em Implantação');
+  await page.fill('#input-deal-value', '2.000');
+  await page.click('#btn-submit-customer');
+  await page.locator('.lead-card', { hasText: 'Cliente em Implantação' }).waitFor();
+  assert.equal(await page.locator('.lead-card').count(), 1);
+
+  // de volta ao principal: os nomes das etapas e os cartões são os dele
+  await picker.selectOption({ index: 0 });
+  await page.waitForFunction(count => document.querySelectorAll('.lead-card').length === count, mainCards);
+  assert.equal(await page.locator('.lead-card', { hasText: 'Cliente em Implantação' }).count(), 0);
+  assert.equal(await page.locator('.column-title', { hasText: 'Implantação' }).count(), 0);
+
+  // a tela Hoje junta todos os funis, e abrir dali leva ao funil da oportunidade
+  await page.click('.nav-item[data-view="today"]');
+  await page.locator('#today-notask button.today-row', { hasText: 'Cliente em Implantação' }).click();
+  await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#lead-details-stage option').first().textContent(), 'Implantação');
+  await page.click('#btn-close-lead-details');
+
+  await page.click('.nav-item[data-view="metrics"]');
+  assert.match(await page.textContent('#metrics-content'), /no funil Pós venda/);
+  assert.deepEqual(problems, []);
+});

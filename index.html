@@ -500,6 +500,9 @@
 
       <section class="view-section" id="view-pipeline">
         <div class="pipeline-actions-bar">
+          <label class="inline-field pipeline-switch" hidden>Funil
+            <select class="form-select form-select-sm" data-pipeline-switch data-change="handlePipeline" data-value aria-label="Funil"></select>
+          </label>
           <div class="filter-group">
             <span class="filter-label" id="priority-filter-label">Prioridade</span>
             <div class="filter-pills" role="group" aria-labelledby="priority-filter-label">
@@ -536,7 +539,7 @@
         <div class="table-container">
           <div class="table-header-bar">
             <h2 id="customers-count-label">Clientes</h2>
-            <div class="table-tools">
+            <div class="table-tools"><label class="inline-field pipeline-switch" hidden>Funil <select class="form-select form-select-sm" data-pipeline-switch data-change="handlePipeline" data-value aria-label="Funil"></select></label>
               <label class="inline-field" for="customers-stage-filter">Etapa
                 <select id="customers-stage-filter" class="form-select form-select-sm" data-change="handleCustomersStage" data-value></select>
               </label>
@@ -823,6 +826,10 @@
               <label for="input-customer-assigned">Responsável</label>
               <select id="input-customer-assigned" class="form-select"></select>
             </div>
+          </div>
+          <div class="form-group pipeline-switch" style="margin-top: 0.75rem; max-width: 280px;" hidden>
+            <label for="input-deal-pipeline">Funil</label>
+            <select id="input-deal-pipeline" class="form-select"></select>
           </div>
           <label class="consent-line" style="margin-top: 0.75rem;">
             <input type="checkbox" id="input-deal-recurring">
@@ -1208,6 +1215,11 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <h3 class="section-title" style="margin-bottom: 0.25rem;">Nomes das etapas</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">As etapas são as mesmas para todos; aqui você escolhe como cada uma se chama na sua empresa. Deixe em branco para usar o nome padrão.</p>
         <div class="form-grid" id="customize-stages"></div>
+
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Outros funis</h3>
+        <p class="empty-note" style="margin: 0 0 0.85rem;">Para acompanhar outro processo no mesmo sistema, como pós-venda, renovações ou uma segunda linha de produtos. Cada funil tem as mesmas seis etapas, com os nomes que você escolher. As etapas acima são as do funil principal. Com mais de um funil, aparece um seletor no Funil, em Clientes e em Relatórios.</p>
+        <div id="customize-pipelines"></div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-add-pipeline">Adicionar funil</button>
 
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Campos extras da oportunidade</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>

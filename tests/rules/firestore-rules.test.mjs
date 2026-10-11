@@ -620,3 +620,14 @@ test('itens da proposta: lista de até 30 linhas na oportunidade', async () => {
   assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: Array.from({ length: 31 }, () => item) }), DENIED);
   assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: 'texto' }), DENIED);
 });
+
+test('funis: o administrador cria até cinco além do principal, e a oportunidade guarda em qual está', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  const funil = (n) => ({ id: `p_funil000${n}`, name: `Funil ${n}`, stageNames: { lead: 'Entrada' } });
+  assert.equal(await patch(world.a.owner, org, { pipelines: [funil(1), funil(2)] }), OK);
+  assert.equal(await patch(world.a.owner, org, { pipelines: [1, 2, 3, 4, 5, 6].map(funil) }), DENIED);
+  assert.equal(await patch(world.ana, org, { pipelines: [] }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'p_funil0001' }), OK);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'x'.repeat(41) }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 7 }), DENIED);
+});

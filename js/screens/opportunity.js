@@ -2,6 +2,8 @@
  * EDX Digital - One opportunity: its window (tasks, contacts, history) and the form that creates or edits it
  */
 
+import { escapeHtml } from '../core/html.js';
+import { pipelineIdOf } from '../core/pipelines.js';
 import { getSavedOrganization } from '../core/config.js';
 import { missingForStage, missingMessage } from '../core/pipeline-rules.js';
 import { crmStore, STAGES } from '../core/crm-store.js';
@@ -27,6 +29,13 @@ import {
 } from './shared.js';
 
 let activeLeadDetailsCustomerId = null;
+
+// The funnels the opportunity can be in (the field only shows when the company has more than one)
+function fillPipelineSelect(selectedId) {
+  const select = document.getElementById('input-deal-pipeline');
+  if (!select) return;
+  select.innerHTML = crmStore.getState().pipelines.map(pipeline => `<option value="${escapeHtml(pipeline.id)}" ${pipeline.id === selectedId ? 'selected' : ''}>${escapeHtml(pipeline.name)}</option>`).join('');
+}
 
 // Keeps the opportunity window in step with the data while it is open
 export function refreshOpenOpportunity(state) {
@@ -59,6 +68,10 @@ export function setupLeadDetailsEvents() {
   window.handleOpenLeadDetails = function(customerId) {
     const customer = storage.getCustomer(customerId);
     if (!customer) return;
+
+    // an opportunity of another funnel brings that funnel to the screen, so the stage names are its own
+    const state = crmStore.getState();
+    crmStore.setActivePipeline(pipelineIdOf(customer, state.pipelines));
 
     activeLeadDetailsCustomerId = customerId;
     resetContactForm();
@@ -238,6 +251,7 @@ export function setupDialogEvents() {
     fillStageSelect();
     renderCustomFieldInputs({});
     document.getElementById('input-deal-stage').value = 'lead';
+    fillPipelineSelect(crmStore.getState().activePipelineId);
     document.getElementById('input-deal-priority').value = 'medium';
     document.getElementById('input-deal-forecast').value = '';
     const assignedSelect = document.getElementById('input-customer-assigned');
@@ -319,6 +333,7 @@ export function setupDialogEvents() {
         tags,
         notes,
         recurring: document.getElementById('input-deal-recurring')?.checked === true,
+        pipelineId: document.getElementById('input-deal-pipeline')?.value || crmStore.getState().activePipelineId,
         custom: collectCustomFieldValues(),
         assignedTo: {
           id: assignedMember.id,
@@ -394,6 +409,7 @@ window.handleOpenEditCustomer = function(customerId) {
   document.getElementById('input-customer-notes').value = customer.notes || '';
   const recurringBox = document.getElementById('input-deal-recurring');
   if (recurringBox) recurringBox.checked = customer.recurring === true;
+  fillPipelineSelect(pipelineIdOf(customer, crmStore.getState().pipelines));
 
   const assignedSelect = document.getElementById('input-customer-assigned');
   if (assignedSelect) {

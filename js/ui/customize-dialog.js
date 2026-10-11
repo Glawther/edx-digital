@@ -4,6 +4,7 @@
  * writes the company's message templates and sets the month's goal.
  */
 
+import { MAIN_PIPELINE, MAX_EXTRA_PIPELINES, MAX_PIPELINE_NAME, cleanPipelines, countByPipeline, newPipelineId } from '../core/pipelines.js';
 import { getSavedOrganization, saveOrganization } from '../core/config.js';
 import { STAGES, getDefaultStageNames } from '../core/crm-store.js';
 import { escapeHtml, showToast } from './ui-renderer.js';
@@ -150,6 +151,67 @@ export function setupCustomizeDialog() {
     renderTemplates();
   });
 
+  // ---- other funnels
+  const pipelinesBox = document.getElementById('customize-pipelines');
+  const btnAddPipeline = document.getElementById('btn-add-pipeline');
+  let pipelines = [];
+
+  function renderPipelines() {
+    const counts = countByPipeline(crmStore.getState().visibleCustomers, [{ id: MAIN_PIPELINE }, ...pipelines]);
+    pipelinesBox.innerHTML = pipelines.length === 0
+      ? '<p class="empty-note" style="margin: 0 0 0.75rem;">Só o funil principal.</p>'
+      : pipelines.map((pipeline, index) => `
+        <details class="pipeline-row" ${pipeline.isNew ? 'open' : ''}>
+          <summary>
+            <input type="text" class="form-input" value="${escapeHtml(pipeline.name)}" maxlength="${MAX_PIPELINE_NAME}" placeholder="Nome do funil, por exemplo Pós-venda" data-index="${index}" data-part="name" aria-label="Nome do funil ${index + 1}">
+            <span class="pipeline-count">${counts[pipeline.id] || 0} ${counts[pipeline.id] === 1 ? 'oportunidade' : 'oportunidades'}</span>
+            <button type="button" class="link-btn danger" data-index="${index}" data-part="remove">Remover</button>
+          </summary>
+          <div class="form-grid">
+            ${STAGES.map(stage => `
+              <div class="form-group">
+                <label for="pipeline-${index}-${stage.id}">${escapeHtml(defaults[stage.id])}</label>
+                <input type="text" id="pipeline-${index}-${stage.id}" class="form-input" maxlength="${MAX_LABEL_LENGTH}" data-index="${index}" data-part="stage" data-stage="${stage.id}"
+                       value="${escapeHtml((pipeline.stageNames && pipeline.stageNames[stage.id]) || '')}" placeholder="${escapeHtml(defaults[stage.id])}" autocomplete="off">
+              </div>`).join('')}
+          </div>
+        </details>`).join('');
+    btnAddPipeline.disabled = pipelines.length >= MAX_EXTRA_PIPELINES;
+    btnAddPipeline.textContent = pipelines.length >= MAX_EXTRA_PIPELINES ? `Limite de ${MAX_EXTRA_PIPELINES} funis além do principal` : 'Adicionar funil';
+  }
+
+  pipelinesBox.addEventListener('input', (event) => {
+    const { index, part, stage } = event.target.dataset;
+    if (part === 'name') pipelines[Number(index)].name = event.target.value;
+    if (part === 'stage') (pipelines[Number(index)].stageNames ||= {})[stage] = event.target.value;
+  });
+  pipelinesBox.addEventListener('click', (event) => {
+    const { index, part } = event.target.dataset;
+    // typing in the name must not fold the block
+    if (part === 'name') event.preventDefault();
+    if (part !== 'remove') return;
+    event.preventDefault();
+    const pipeline = pipelines[Number(index)];
+    const inside = countByPipeline(crmStore.getState().visibleCustomers, [{ id: MAIN_PIPELINE }, ...pipelines])[pipeline.id] || 0;
+    if (inside > 0 && !confirm(`O funil "${pipeline.name}" tem ${inside} ${inside === 1 ? 'oportunidade' : 'oportunidades'}. Ao remover, ${inside === 1 ? 'ela passa' : 'elas passam'} para o funil principal, na mesma etapa. Remover mesmo assim?`)) return;
+    pipelines.splice(Number(index), 1);
+    renderPipelines();
+  });
+  pipelinesBox.addEventListener('keydown', (event) => {
+    // a space typed in the name is a space, not "open the block"
+    if (event.target.dataset.part === 'name' && (event.key === ' ' || event.key === 'Enter')) event.stopPropagation();
+  });
+  pipelinesBox.addEventListener('keyup', (event) => {
+    if (event.target.dataset.part === 'name' && event.key === ' ') event.preventDefault();
+  });
+  btnAddPipeline.addEventListener('click', () => {
+    if (pipelines.length >= MAX_EXTRA_PIPELINES) return;
+    pipelines.push({ id: newPipelineId(), name: '', stageNames: {}, isNew: true });
+    renderPipelines();
+    const inputs = pipelinesBox.querySelectorAll('input[data-part="name"]');
+    inputs[inputs.length - 1]?.focus();
+  });
+
   // ---- what each stage asks for, and each person's goal
   const requirementsBox = document.getElementById('customize-requirements');
   const goalsBox = document.getElementById('customize-seller-goals');
@@ -222,6 +284,8 @@ export function setupCustomizeDialog() {
     renderFields();
     templates = cleanTemplates(org.messageTemplates);
     renderTemplates();
+    pipelines = cleanPipelines(org.pipelines).map(pipeline => ({ ...pipeline, stageNames: { ...pipeline.stageNames } }));
+    renderPipelines();
     renderRequirements(org.stageRequirements);
     renderSellerGoals(org.sellerGoals);
     const goal = Number(org.monthlyGoal) || 0;
@@ -250,6 +314,12 @@ export function setupCustomizeDialog() {
       return;
     }
     const monthlyGoal = parseMoney(document.getElementById('customize-goal').value);
+    const namedPipelines = pipelines.filter(pipeline => pipeline.name.trim() !== '');
+    const savedPipelines = cleanPipelines(namedPipelines);
+    if (savedPipelines.length < namedPipelines.length) {
+      showToast('Dois funis têm o mesmo nome. Dê nomes diferentes a cada um.', 'error');
+      return;
+    }
     const required = {};
     requirementsBox.querySelectorAll('input[type="checkbox"]:checked').forEach(box => { (required[box.dataset.stage] ||= []).push(box.dataset.field); });
     const typedGoals = {};
@@ -257,7 +327,7 @@ export function setupCustomizeDialog() {
     saveOrganization({
       ...getSavedOrganization(),
       stageNames: cleanStageNames(names, defaults), customFields, messageTemplates, monthlyGoal,
-      stageRequirements: cleanRequirements(required), sellerGoals: cleanSellerGoals(typedGoals)
+      stageRequirements: cleanRequirements(required), sellerGoals: cleanSellerGoals(typedGoals), pipelines: savedPipelines
     });
     dialog.close();
     showToast('Alterações salvas.', 'success');

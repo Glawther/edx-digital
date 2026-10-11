@@ -42,7 +42,7 @@ export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;
 
 // Fields of the company record an administrator may change from the app.
 // The plan and its status are not here: those only change through billing.
-const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal', 'stageRequirements', 'sellerGoals'];
+const ORG_EDITABLE_FIELDS = ['name', 'legalName', 'cnpj', 'logoUrl', 'brandColor', 'stageNames', 'customFields', 'messageTemplates', 'monthlyGoal', 'stageRequirements', 'sellerGoals', 'pipelines'];
 
 let currentUser = null;
 let currentRole = USER_ROLES.EMPLOYEE;
