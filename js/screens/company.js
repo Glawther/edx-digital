@@ -98,7 +98,7 @@ export function setupWebhookModalEvents() {
   if (btnSendTest) {
     btnSendTest.addEventListener('click', async () => {
       btnSendTest.disabled = true;
-      btnSendTest.textContent = 'Enviando lead de teste...';
+      btnSendTest.textContent = 'Enviando lead de teste…';
       try {
         const res = await sendTestWebhookLead();
         if (crmStore) crmStore.emitChange();

@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.21.1">
-  <link rel="stylesheet" href="css/layout.css?v=3.21.1">
-  <link rel="stylesheet" href="css/components.css?v=3.21.1">
-  <link rel="stylesheet" href="css/animations.css?v=3.21.1">
-  <link rel="stylesheet" href="css/identity.css?v=3.21.1">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.22.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.22.0">
+  <link rel="stylesheet" href="css/components.css?v=3.22.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.22.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.22.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.21.1"></script>
+  <script src="js/theme-boot.js?v=3.22.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -919,7 +919,7 @@
       <div id="lead-details-summary"></div>
       <div class="lead-details-actions" id="lead-details-actions"></div>
 
-      <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Tarefas</h3>
+      <h3 class="section-title section-gap">Tarefas</h3>
       <div id="lead-details-tasks"></div>
       <form id="lead-task-form" class="lead-task-form">
         <input type="text" id="lead-task-title" class="form-input" placeholder="Próximo passo, por exemplo: ligar para confirmar" required maxlength="300" aria-label="O que precisa ser feito">
@@ -929,7 +929,7 @@
       </form>
 
       <div id="lead-attachments-block" hidden>
-        <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Anexos</h3>
+        <h3 class="section-title section-gap">Anexos</h3>
         <div id="lead-details-attachments"></div>
         <div class="attachment-add">
           <input type="file" id="lead-attachment-input" hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt" aria-label="Arquivo para anexar">
@@ -938,7 +938,7 @@
         </div>
       </div>
 
-      <h3 class="section-title" style="margin: 1.25rem 0 0.6rem;">Registrar um contato</h3>
+      <h3 class="section-title section-gap">Registrar um contato</h3>
       <form id="contact-log-form" class="contact-log-form">
         <select id="contact-log-type" class="form-select" aria-label="Tipo de contato"></select>
         <input type="datetime-local" id="contact-log-when" class="form-input" aria-label="Quando aconteceu">
@@ -1233,28 +1233,28 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p class="empty-note" style="margin: 0 0 0.85rem;">As etapas são as mesmas para todos; aqui você escolhe como cada uma se chama na sua empresa. Deixe em branco para usar o nome padrão.</p>
         <div class="form-grid" id="customize-stages"></div>
 
-        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Outros funis</h3>
+        <h3 class="section-title section-gap-tight">Outros funis</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">Para acompanhar outro processo no mesmo sistema, como pós-venda, renovações ou uma segunda linha de produtos. Cada funil tem as mesmas seis etapas, com os nomes que você escolher. As etapas acima são as do funil principal. Com mais de um funil, aparece um seletor no Funil, em Clientes e em Relatórios.</p>
         <div id="customize-pipelines"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-pipeline">Adicionar funil</button>
 
-        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Campos extras da oportunidade</h3>
+        <h3 class="section-title section-gap-tight">Campos extras da oportunidade</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
 
-        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">O que cada etapa exige</h3>
+        <h3 class="section-title section-gap-tight">O que cada etapa exige</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">Marque o que uma oportunidade precisa ter para entrar em cada etapa. Sem o que foi marcado, o sistema não deixa mover e diz o que falta.</p>
         <div class="table-scroll" id="customize-requirements"></div>
 
-        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Mensagens do WhatsApp</h3>
+        <h3 class="section-title section-gap-tight">Mensagens do WhatsApp</h3>
         <p class="empty-note" style="margin: 0 0 0.5rem;">Os modelos que a equipe vê ao escrever para um cliente. Sem nenhum modelo aqui, valem os quatro modelos padrão do sistema.</p>
         <p class="empty-note" style="margin: 0 0 0.85rem;" id="customize-template-fields"></p>
         <div id="customize-templates"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-template">Adicionar modelo</button>
         <button type="button" class="link-btn" id="btn-start-from-defaults" style="margin-left: 0.75rem;">Começar pelos modelos padrão</button>
 
-        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Meta de vendas do mês</h3>
+        <h3 class="section-title section-gap-tight">Meta de vendas do mês</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">O valor que a empresa quer vender em cada mês. O andamento aparece em Relatórios, para quem administra. Deixe em branco para não usar meta.</p>
         <div class="form-group" style="max-width: 240px;">
           <label for="customize-goal">Meta (R$)</label>
@@ -1865,7 +1865,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <span class="status-text pending" id="chk-trial-days-badge"></span>
       </div>
 
-      <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Escolha o plano</h3>
+      <h3 class="section-title section-gap">Escolha o plano</h3>
       <div class="plan-grid">
         <button type="button" class="plan-option checkout-plan-card" data-plan="starter" data-click="selectCheckoutPlan" data-a="starter">
           <span class="plan-option-name">Starter</span>
@@ -1884,7 +1884,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         </button>
       </div>
 
-      <h3 class="section-title" style="margin: 1.25rem 0 0.65rem;">Pague por PIX</h3>
+      <h3 class="section-title section-gap">Pague por PIX</h3>
 
       <label class="check-row" id="chk-test-row" hidden style="margin: 0 0 0.75rem; font-size: 0.85rem;">
         <input type="checkbox" id="chk-test-charge">
@@ -1930,7 +1930,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.21.1"></script>
+  <script type="module" src="js/app.js?v=3.22.0"></script>
 
 </body>
 </html>

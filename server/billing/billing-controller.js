@@ -99,6 +99,13 @@ async function handleBilling(req, res, pathname) {
  * Mercado Pago calls this when a charge changes (event "Order" in its panel). The body is only
  * a pointer: the charge is always read back from Mercado Pago before anything is released.
  */
+// One line in the function's log for each notice that arrives, so it can be seen that Mercado
+// Pago is reaching this server and what came of it. Only the kind of notice, the charge's
+// number and the outcome: nothing about who paid.
+function logNotice(topic, dataId, outcome) {
+  console.log(JSON.stringify({ message: `[Cobrança] aviso do Mercado Pago: ${outcome}`, topic: String(topic || '').slice(0, 30), charge: String(dataId || '').slice(0, 64), outcome }));
+}
+
 async function handleWebhook(req, res) {
   if (!isBillingConfigured()) return send(res, 503, { error: 'billing_not_configured' });
 
@@ -113,8 +120,14 @@ async function handleWebhook(req, res) {
   const topic = body.type || query.get('type') || query.get('topic') || '';
   const dataId = query.get('data.id') || (body.data && body.data.id) || query.get('id') || '';
   // "payment" is what charges made through the older Payments API are announced as
-  if (topic && topic !== 'order' && topic !== 'payment') return send(res, 200, { ignored: true });
-  if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(dataId))) return send(res, 200, { ignored: true });
+  if (topic && topic !== 'order' && topic !== 'payment') {
+    logNotice(topic, '', 'ignorado, outro tipo de aviso');
+    return send(res, 200, { ignored: true });
+  }
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(dataId))) {
+    logNotice(topic, '', 'ignorado, sem número de cobrança');
+    return send(res, 200, { ignored: true });
+  }
 
   const secret = mercadopago.webhookSecret();
   if (secret) {
@@ -124,18 +137,26 @@ async function handleWebhook(req, res) {
       dataId,
       secret
     });
-    if (!valid) return send(res, 401, { error: 'invalid_signature' });
+    if (!valid) {
+      logNotice(topic, dataId, 'recusado, assinatura inválida');
+      return send(res, 401, { error: 'invalid_signature' });
+    }
   }
 
   try {
     const result = await billingService().syncPayment(String(dataId));
+    logNotice(topic, dataId, `recebido, cobrança ${result.status}${result.alreadyApplied ? ' (já aplicada)' : ''}`);
     return send(res, 200, { received: true, status: result.status });
   } catch (err) {
     if (err instanceof BillingError && err.code === 'unknown_payment') {
       // A payment of the same Mercado Pago account that is not a CRM charge: acknowledged, nothing to do
+      logNotice(topic, dataId, 'ignorado, cobrança que não é do CRM');
       return send(res, 200, { ignored: true });
     }
-    if (err instanceof BillingError) return send(res, 200, { received: true, problem: err.code });
+    if (err instanceof BillingError) {
+      logNotice(topic, dataId, `recebido, com problema: ${err.code}`);
+      return send(res, 200, { received: true, problem: err.code });
+    }
     console.error('[Billing webhook]', err.message);
     // A 5xx makes Mercado Pago try again later
     return send(res, 500, { error: 'retry' });

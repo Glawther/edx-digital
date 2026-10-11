@@ -97,7 +97,7 @@ html, body {
 }
 
 .brand-badge {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   padding: 2px 7px;
@@ -297,7 +297,7 @@ html, body {
 }
 
 .tools-group-title {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -360,7 +360,7 @@ html, body {
 }
 
 .sidebar-dropdown-menu .dropdown-item-desc {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 
