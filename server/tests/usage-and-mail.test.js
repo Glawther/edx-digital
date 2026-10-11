@@ -323,7 +323,7 @@ test('painel do dono: só para o e-mail do dono, confirmado; para os demais o en
   };
   try {
     assert.deepEqual((await call('/api/owner/check', { email: 'DONO@edx.com', email_verified: true })).body, { owner: true });
-    assert.deepEqual((await call('/api/owner/check', { email: 'dono@edx.com', email_verified: false })).body, { owner: false });
+    assert.deepEqual((await call('/api/owner/check', { email: 'dono@edx.com', email_verified: false })).body, { owner: false, reason: 'email_not_verified' }, 'a própria conta do dono fica sabendo que falta confirmar');
     assert.deepEqual((await call('/api/owner/check', { email: 'cliente@empresa.com', email_verified: true })).body, { owner: false });
     assert.deepEqual((await call('/api/owner/check', null)).body, { owner: false });
 
