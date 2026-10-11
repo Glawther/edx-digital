@@ -164,6 +164,11 @@ const firestoreStore = {
   countDocs,
   // for the morning e-mails
   listOrganizations: () => listDocs('organizations'),
+  // for the owner's panel
+  listAllUsers: () => listDocs('users'),
+  listAllPayments: () => listDocs('payments'),
+  getState: (name) => getDoc(`system_state/${name}`),
+  setState: (name, data) => setDoc(`system_state/${name}`, data),
   listUsers: (orgId) => queryDocs('users', [['orgId', orgId]], 1000),
   listCustomers: (orgId) => queryDocs('customers', [['orgId', orgId]], 10000)
 };

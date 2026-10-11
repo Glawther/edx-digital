@@ -76,3 +76,4 @@ Publicar a função exige o plano Blaze do Firebase e os dois segredos do Mercad
 - [Login, permissões e segurança](docs/LOGIN_E_SEGURANCA.md)
 - [Cobrança por PIX](docs/COBRANCA_PIX.md)
 - [E-mails enviados pelo sistema](docs/EMAILS.md)
+- [Operação: painel do sistema, cópia de segurança e erros](docs/OPERACAO.md)

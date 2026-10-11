@@ -2,6 +2,8 @@
  * EDX Digital - The funnel: filters, moving cards between stages, the reason for a loss
  */
 
+import { getSavedOrganization } from '../core/config.js';
+import { searchCustomers, missingForStage, missingMessage } from '../core/pipeline-rules.js';
 import { crmStore, LOSS_REASONS, STAGES } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
 import { AUDIT_ACTIONS, AUDIT_SEVERITY, logAudit } from '../services/audit-service.js';
@@ -34,30 +36,22 @@ export function setupFilterEvents() {
       activeIndex = -1;
     };
 
-    const findMatches = (query) => {
-      const text = query.toLowerCase().trim();
-      const digits = text.replace(/\D/g, '');
-      return crmStore.getState().visibleCustomers.filter(c => {
-        const haystack = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
-        if (haystack.includes(text)) return true;
-        return digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits);
-      });
-    };
-
     const renderResults = () => {
       const query = searchInput.value.trim();
       if (query.length < 2) { closeResults(); return; }
-      const matches = findMatches(query).slice(0, 6);
+      const matches = searchCustomers(crmStore.getState().visibleCustomers, query, 6);
       activeIndex = -1;
       searchResults.innerHTML = matches.length === 0
         ? `<div class="search-empty">Nada encontrado para "${escapeHtml(query)}".</div>`
-        : matches.map((c, i) => {
+        : matches.map(({ customer: c, where, snippet }, i) => {
             const stage = STAGES.find(s => s.id === c.stage) || STAGES[0];
+            const found = where === 'main' ? '' : `<span class="search-snippet">${where === 'notes' ? 'Nas anotações' : 'No histórico'}: ${escapeHtml(snippet)}</span>`;
             return `
               <button type="button" class="search-result" role="option" id="search-result-${i}" data-id="${escapeHtml(c.id)}">
                 <span class="search-result-main">
                   <strong>${escapeHtml(c.name)}</strong>
                   <span>${escapeHtml(c.company || 'Sem empresa')}</span>
+                  ${found}
                 </span>
                 <span class="search-result-side">${escapeHtml(stage.name)}<br>${formatBRL(c.dealValue)}</span>
               </button>`;
@@ -137,6 +131,18 @@ window.handleDragStartCard = function(event, customerId) {
   event.target.closest('.lead-card')?.classList.add('dragging');
 };
 
+// The company may ask for some things before an opportunity enters a stage (Ferramentas,
+// "Funil, campos e mensagens"). Says what is missing and offers to open the form.
+function mayEnterStage(customerId, stage) {
+  const customer = storage.getCustomer(customerId);
+  if (!customer) return true;
+  const missing = missingForStage(customer, stage, getSavedOrganization().stageRequirements);
+  if (missing.length === 0) return true;
+  const stageName = STAGES.find(item => item.id === stage)?.name || stage;
+  showToast(missingMessage(stageName, missing), 'warning', { label: 'Completar', onClick: () => window.handleOpenEditCustomer(customerId) });
+  return false;
+}
+
 window.handleDropCard = async function(event, targetStage) {
   event.preventDefault();
   const customerId = draggedCustomerId || event.dataTransfer.getData('text/plain');
@@ -153,6 +159,10 @@ window.handleDropCard = async function(event, targetStage) {
 
   const before = snapshotOf(customerId);
   if (before && before.stage === targetStage) {
+    draggedCustomerId = null;
+    return;
+  }
+  if (!mayEnterStage(customerId, targetStage)) {
     draggedCustomerId = null;
     return;
   }
@@ -184,6 +194,12 @@ window.handleMoveStage = async function(customerId, newStage) {
 
   if (newStage === 'lost') {
     window.handleTriggerLossReason(customerId);
+    return;
+  }
+
+  if (!mayEnterStage(customerId, newStage)) {
+    // the list goes back to the stage the opportunity is really in
+    crmStore.emitChange();
     return;
   }
 

@@ -540,6 +540,7 @@ class StorageManager {
       orgId: user.orgId || org?.id || 'org_edx_default',
       tasks: [],
       assignedTo: { id: user.uid || 'employee-user-02', name: user.name, email: user.email },
+      pipelineId: crmStore.getState().activePipelineId,
       ...lead,
       tags: [...new Set([...(lead.tags || []), 'Importado'])],
       id: 'lead-' + Date.now() + '-' + index + '-' + Math.random().toString(36).slice(2, 7),

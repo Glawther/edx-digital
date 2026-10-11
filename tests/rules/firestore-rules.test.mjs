@@ -605,3 +605,29 @@ test('o administrador grava os modelos de mensagem da empresa; lista grande e ve
   assert.equal(await patch(world.a.owner, `organizations/${world.a.orgId}`, { messageTemplates: 'texto' }), DENIED);
   assert.equal(await patch(world.ana, `organizations/${world.a.orgId}`, { messageTemplates: [] }), DENIED);
 });
+
+test('exigências por etapa e metas por vendedor: o administrador grava, com o tipo certo; o vendedor não', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  assert.equal(await patch(world.a.owner, org, { stageRequirements: { proposal: ['value', 'closeDate'] }, sellerGoals: { [world.ana.uid]: 15000 } }), OK);
+  assert.equal(await patch(world.a.owner, org, { stageRequirements: ['proposal'] }), DENIED);
+  assert.equal(await patch(world.a.owner, org, { sellerGoals: 'muito' }), DENIED);
+  assert.equal(await patch(world.ana, org, { sellerGoals: { [world.ana.uid]: 1 } }), DENIED);
+});
+
+test('itens da proposta: lista de até 30 linhas na oportunidade', async () => {
+  const item = { description: 'Instalação', quantity: 1, unitPrice: 1500 };
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: [item, item] }), OK);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: Array.from({ length: 31 }, () => item) }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { items: 'texto' }), DENIED);
+});
+
+test('funis: o administrador cria até cinco além do principal, e a oportunidade guarda em qual está', async () => {
+  const org = `organizations/${world.a.orgId}`;
+  const funil = (n) => ({ id: `p_funil000${n}`, name: `Funil ${n}`, stageNames: { lead: 'Entrada' } });
+  assert.equal(await patch(world.a.owner, org, { pipelines: [funil(1), funil(2)] }), OK);
+  assert.equal(await patch(world.a.owner, org, { pipelines: [1, 2, 3, 4, 5, 6].map(funil) }), DENIED);
+  assert.equal(await patch(world.ana, org, { pipelines: [] }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'p_funil0001' }), OK);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 'x'.repeat(41) }), DENIED);
+  assert.equal(await patch(world.a.owner, `customers/a-ana-${RUN}`, { pipelineId: 7 }), DENIED);
+});

@@ -2,7 +2,8 @@
  * EDX Digital - The server in production: Firebase Functions
  *
  *   api          everything under /api (Firebase Hosting hands those requests over, firebase.json):
- *                PIX billing, the inbox for leads sent by forms, errors seen on people's screens
+ *                PIX billing, the inbox for leads sent by forms, errors seen on people's screens,
+ *                the owner's panel
  *   usageOn...   after each change to an opportunity or to a person, counts what the company
  *                has and records whether its plan is full (the database rules read that)
  *   dailyEmails  every morning, the summary of the day for each person and the notices about
@@ -13,6 +14,7 @@
  *   firebase functions:secrets:set MERCADO_PAGO_WEBHOOK_SECRET
  *   firebase functions:secrets:set BREVO_API_KEY                  (docs/EMAILS.md)
  *   firebase functions:secrets:set MAIL_SENDER
+ *   firebase functions:secrets:set OWNER_EMAILS                   (docs/OPERACAO.md)
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
@@ -29,11 +31,13 @@ const MERCADO_PAGO_ACCESS_TOKEN = defineSecret('MERCADO_PAGO_ACCESS_TOKEN');
 const MERCADO_PAGO_WEBHOOK_SECRET = defineSecret('MERCADO_PAGO_WEBHOOK_SECRET');
 const BREVO_API_KEY = defineSecret('BREVO_API_KEY');
 const MAIL_SENDER = defineSecret('MAIL_SENDER');
+// who owns the system: sees the panel of companies and is told about errors (e-mails separated by commas)
+const OWNER_EMAILS = defineSecret('OWNER_EMAILS');
 
 exports.api = onRequest(
   {
     region: 'southamerica-east1',
-    secrets: [MERCADO_PAGO_ACCESS_TOKEN, MERCADO_PAGO_WEBHOOK_SECRET],
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN, MERCADO_PAGO_WEBHOOK_SECRET, BREVO_API_KEY, MAIL_SENDER, OWNER_EMAILS],
     // a small CRM: a few instances are plenty, and the bill cannot run away
     maxInstances: 3,
     memory: '256MiB',

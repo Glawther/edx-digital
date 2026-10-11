@@ -3,7 +3,10 @@
  * Sober Executive White Theme with WhatsApp Templates, Deal Rotting, Tasks & Timeline
  */
 
-import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId } from '../core/crm-store.js';
+import { countByPipeline } from '../core/pipelines.js';
+import { weekDays, weekTitle, tasksByDay, googleCalendarUrl } from '../core/agenda.js';
+import { goalProgress, recurringRevenue } from '../core/pipeline-rules.js';
+import { STAGES, TASK_TYPES, LOSS_REASONS, getLossReasonLabel, getLossReasonId, crmStore } from '../core/crm-store.js';
 import { REPORT_PERIODS, periodReport, sellerReportRows } from '../core/report.js';
 import { todayPanel, daysLabel, CLOSING_WINDOW_DAYS } from '../core/today.js';
 import { downloadCsv } from '../services/export-service.js';
@@ -235,7 +238,7 @@ function renderLeadCard(customer, permissions = {}) {
 
       ${company ? `<div class="lead-company">${company}</div>` : ''}
 
-      <div class="lead-value">${formatBRL(customer.dealValue)}</div>
+      <div class="lead-value">${formatBRL(customer.dealValue)}${customer.recurring ? '<span class="lead-recurring" title="Venda recorrente: o valor se repete todo mês"> por mês</span>' : ''}</div>
 
       ${meta.length > 0 ? `<div class="lead-meta">${meta.join('')}</div>` : ''}
 
@@ -368,6 +371,11 @@ export function renderTasksView(tasks, filter, customers) {
     `).join('');
   }
 
+  if (filter === 'week') {
+    renderWeek(container, tasks);
+    return;
+  }
+
   // Filter tasks
   const todayStr = localDateString();
   const filtered = tasks.filter(t => {
@@ -417,6 +425,64 @@ export function renderTasksView(tasks, filter, customers) {
   }).join('');
 }
 
+/**
+ * The funnel selectors (in the funnel, in the list of customers, in the opportunity form).
+ * A company with a single funnel never sees them.
+ */
+export function renderPipelineSwitch(pipelines, activeId, customers = []) {
+  const many = pipelines.length > 1;
+  document.querySelectorAll('.pipeline-switch').forEach(wrapper => { wrapper.hidden = !many; });
+  if (!many) return;
+  const counts = countByPipeline(customers, pipelines);
+  document.querySelectorAll('select[data-pipeline-switch]').forEach(select => {
+    select.innerHTML = pipelines.map(pipeline => `<option value="${escapeHtml(pipeline.id)}" ${pipeline.id === activeId ? 'selected' : ''}>${escapeHtml(pipeline.name)} (${counts[pipeline.id]})</option>`).join('');
+  });
+}
+
+// Which week the agenda shows, counted from the current one
+let weekOffset = 0;
+export function moveWeek(step) {
+  weekOffset = step === 0 ? 0 : weekOffset + step;
+}
+
+function renderWeek(container, tasks) {
+  const days = weekDays(new Date(), weekOffset);
+  const byDay = tasksByDay(tasks, days);
+  const today = localDateString();
+  const item = (task) => {
+    const late = !task.completed && task.dueDate < today;
+    const calendar = task.completed ? '' : googleCalendarUrl(task);
+    return `
+      <div class="week-task ${task.completed ? 'completed' : ''} ${late ? 'is-late' : ''}">
+        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} aria-label="Concluir: ${escapeHtml(task.title)}"
+               data-change="handleToggleTask" data-a="${escapeHtml(task.customerId)}" data-b="${escapeHtml(task.id)}">
+        <div class="week-task-main">
+          <span class="week-task-title">${task.dueTime ? `<span class="week-task-time">${escapeHtml(task.dueTime)}</span> ` : ''}${escapeHtml(task.title)}</span>
+          <button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(task.customerId)}">${escapeHtml(task.customerName)}</button>
+          ${calendar ? `<a class="link-btn week-task-calendar" href="${escapeHtml(calendar)}" target="_blank" rel="noopener noreferrer">Pôr no Google Agenda</a>` : ''}
+        </div>
+      </div>`;
+  };
+  const pending = tasks.filter(task => !task.completed && task.dueDate).length;
+  container.innerHTML = `
+    <div class="week-head">
+      <div class="week-nav">
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="-1" aria-label="Semana anterior">Anterior</button>
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="0" ${weekOffset === 0 ? 'disabled' : ''}>Esta semana</button>
+        <button type="button" class="btn btn-outline btn-sm" data-click="handleWeek" data-a="1" aria-label="Semana seguinte">Seguinte</button>
+      </div>
+      <strong class="week-title">${weekTitle(days)}</strong>
+      <button type="button" class="link-btn" data-click="handleExportAgenda" ${pending === 0 ? 'disabled' : ''} title="Arquivo que o Google Agenda, o Outlook e o calendário do celular importam">Baixar a agenda (.ics)</button>
+    </div>
+    <div class="week-grid">
+      ${days.map(day => `
+        <div class="week-day ${day.isToday ? 'is-today' : ''}">
+          <div class="week-day-head">${day.weekday}<span>${day.label}</span></div>
+          ${byDay[day.date].length === 0 ? '<p class="week-empty">Nada marcado</p>' : byDay[day.date].map(item).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+
 const REPORT_PERIOD_KEY = 'edx_report_period';
 
 function getReportPeriod() {
@@ -444,12 +510,21 @@ function barRow(label, figures, pct, kind = '') {
  * Renders the reports view: what happened in the chosen period, then how the funnel stands now.
  * Every number comes from the opportunities the person can see; nothing is a target or an estimate.
  */
-export function renderDetailedMetrics(metrics, customers = [], permissions = {}) {
+export function renderDetailedMetrics(metrics, customers = [], permissions = {}, everything = customers) {
   const container = document.getElementById('metrics-content');
   if (!container) return;
 
+  const state = crmStore.getState();
+  const funnel = state.pipelines.length > 1 ? state.pipelines.find(pipeline => pipeline.id === state.activePipelineId) : null;
+  const funnelPicker = !funnel ? '' : `
+    <label class="inline-field">Funil
+      <select class="form-select form-select-sm" data-change="handlePipeline" data-value aria-label="Funil">
+        ${state.pipelines.map(pipeline => `<option value="${escapeHtml(pipeline.id)}" ${pipeline.id === funnel.id ? 'selected' : ''}>${escapeHtml(pipeline.name)}</option>`).join('')}
+      </select>
+    </label>`;
+
   if (customers.length === 0) {
-    container.innerHTML = `<section class="settings-section"><p class="empty-note" style="margin: 0;">Ainda não há oportunidades para gerar relatórios. Cadastre a primeira em "Nova oportunidade".</p></section>`;
+    container.innerHTML = `<section class="settings-section">${funnelPicker}<p class="empty-note" style="margin: ${funnel ? '0.75rem' : '0'} 0 0;">${funnel ? `Ainda não há oportunidades no funil ${escapeHtml(funnel.name)}.` : 'Ainda não há oportunidades para gerar relatórios. Cadastre a primeira em "Nova oportunidade".'}</p></section>`;
     return;
   }
 
@@ -536,9 +611,27 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     </section>
   ` : '';
 
+  // Each person's goal of the month: everyone to an administrator, their own to a salesperson
+  const monthPeople = periodReport(everything, 'month', new Date(), reportMembers(permissions)).people;
+  const myId = getCurrentUser()?.uid;
+  const goalRows = goalProgress(monthPeople, getSavedOrganization().sellerGoals).filter(row => permissions.isAdmin || row.id === myId);
+  const sellerGoalsHtml = goalRows.length === 0 ? '' : `
+    <section class="settings-section" id="seller-goals">
+      <div class="settings-section-head"><div><h2>${permissions.isAdmin ? 'Meta de cada vendedor' : 'Sua meta do mês'}</h2><p>Vendas fechadas neste mês diante da meta.</p></div></div>
+      <div class="bar-list">${goalRows.map(row => barRow(escapeHtml(row.name), `${row.percent}%<strong>${formatBRL(row.sold)} de ${formatBRL(row.goal)}</strong>`, Math.min(100, row.percent), row.percent >= 100 ? 'won' : '')).join('')}</div>
+    </section>`;
+
+  const recurring = recurringRevenue(everything);
+  const recurringHtml = recurring.contracts + recurring.openCount === 0 ? '' : `
+      <div class="figure-box">
+        <div class="figure-label">Receita recorrente por mês</div>
+        <div class="figure-value">${formatBRL(recurring.monthly)}</div>
+        <div class="figure-note">${recurring.contracts} ${recurring.contracts === 1 ? 'venda mensal fechada' : 'vendas mensais fechadas'}${recurring.openCount ? `. Em aberto: ${formatBRL(recurring.inNegotiation)} por mês.` : '.'}</div>
+      </div>`;
+
   // The month's goal is the company's: shown to whoever administers
   const goal = Number(getSavedOrganization().monthlyGoal) || 0;
-  const soldThisMonth = periodId === 'month' ? totals.wonValue : periodReport(customers, 'month').totals.wonValue;
+  const soldThisMonth = periodReport(everything, 'month').totals.wonValue;
   const goalPct = goal > 0 ? Math.round((soldThisMonth / goal) * 100) : 0;
   const goalHtml = permissions.isAdmin && goal > 0 ? `
     <section class="settings-section">
@@ -549,7 +642,8 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
 
   container.innerHTML = `
     <div class="report-period">
-      <h2 class="section-title">No período</h2>
+      <h2 class="section-title">No período${funnel ? `, no funil ${escapeHtml(funnel.name)}` : ''}</h2>
+      ${funnelPicker}
       <div class="filter-pills" role="group" aria-label="Período do relatório">${periodPills}</div>
     </div>
 
@@ -593,6 +687,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
     </div>
 
     ${goalHtml}
+    ${sellerGoalsHtml}
 
     <div class="figure-pair">
       <div class="figure-box">
@@ -604,7 +699,7 @@ export function renderDetailedMetrics(metrics, customers = [], permissions = {})
         <div class="figure-label">Paradas há 3 dias ou mais</div>
         <div class="figure-value">${metrics.rottingCount}</div>
         <div class="figure-note">Oportunidades em aberto sem nenhuma atualização nesse período.</div>
-      </div>
+      </div>${recurringHtml}
     </div>
 
     <section class="settings-section">
@@ -782,7 +877,7 @@ export function renderLeadTimeline(customer) {
     const fact = (label, value) => value ? `<div class="fact"><dt>${label}</dt><dd>${value}</dd></div>` : '';
     summaryEl.innerHTML = `
       <dl class="fact-grid">
-        ${fact('Valor', `<strong>${formatBRL(customer.dealValue)}</strong>`)}
+        ${fact('Valor', `<strong>${formatBRL(customer.dealValue)}</strong>${customer.recurring ? ' por mês' : ''}`)}
         <div class="fact">
           <dt><label for="lead-details-stage">Etapa</label></dt>
           <dd>

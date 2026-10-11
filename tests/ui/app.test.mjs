@@ -85,7 +85,7 @@ async function openDemo(t, role = 'admin', viewport = { width: 1300, height: 800
   await page.addInitScript(() => {
     document.addEventListener('securitypolicyviolation', event => {
       // fonts and the cloud are outside this machine; what matters here is the page's own code
-      if (event.violatedDirective.startsWith('script-src')) console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`);
+      if (event.violatedDirective.startsWith('script-src') || event.violatedDirective.startsWith('style-src-elem')) console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`);
     });
   });
   page.on('dialog', dialog => dialog.accept());
@@ -107,6 +107,10 @@ test('a página não tem código embutido e a política de segurança o proíbe'
   const response = await fetch(base + '/');
   const policy = response.headers.get('content-security-policy');
   assert.match(policy, /script-src 'self' https:\/\/www\.gstatic\.com;/);
+  assert.match(policy, /style-src 'self' https:\/\/fonts\.googleapis\.com; style-src-attr 'unsafe-inline';/);
+  for (const address of ['/', '/landing', '/ajuda', '/termos', '/privacidade']) {
+    assert.equal(/<style[\s>]/i.test(await (await fetch(base + address)).text()), false, `${address}: bloco de estilo na página`);
+  }
   const html = await response.text();
   assert.equal(/<script(?![^>]*\ssrc=)/i.test(html), false, 'script embutido na página');
   assert.equal(/\son[a-z]+\s*=\s*["']/i.test(html), false, 'evento embutido na página');
@@ -423,4 +427,176 @@ test('conta recém-criada: o passeio começa sozinho na primeira tela, uma vez s
   await page.waitForSelector('#today-content > *');
   await page.waitForTimeout(1500);
   assert.equal(await page.locator('.tour').count(), 0);
+});
+
+test('regras do funil: a etapa exige, o sistema barra a mudança e diz o que falta; meta por vendedor aparece nos relatórios', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+
+  await page.click('#btn-header-tools');
+  await page.click('#btn-menu-customize');
+  await page.check('#customize-requirements input[data-stage="contact"][data-field="company"]');
+  await page.locator('#customize-seller-goals input').first().fill('50.000');
+  await page.click('#customize-form button[type="submit"]');
+  await page.locator('#customize-dialog').waitFor({ state: 'hidden' });
+
+  // uma oportunidade sem empresa não entra em "Primeiro contato"
+  await page.click('#btn-new-lead');
+  await page.fill('#input-customer-name', 'Sem Empresa da Silva');
+  await page.fill('#input-deal-value', '900');
+  await page.locator('#customer-form-more').evaluate(details => { details.open = true; });
+  await page.check('#input-deal-recurring');
+  await page.click('#btn-submit-customer');
+  const card = page.locator('.lead-card', { hasText: 'Sem Empresa da Silva' });
+  await card.waitFor();
+  assert.match(await card.locator('.lead-value').textContent(), /por mês/);
+
+  await card.locator('.move-stage-select').selectOption('contact');
+  await page.waitForFunction(() => [...document.querySelectorAll('.toast')].some(el => /falta: Empresa/.test(el.textContent)));
+  assert.equal(await card.evaluate(el => el.closest('[data-drop]').dataset.drop), 'lead');
+  assert.equal(await card.locator('.move-stage-select').inputValue(), 'lead', 'a lista volta para a etapa em que a oportunidade está');
+
+  await page.click('.nav-item[data-view="metrics"]');
+  await page.locator('#seller-goals .bar-row').first().waitFor();
+  assert.match(await page.textContent('#seller-goals'), /de R\$\s?50\.000/);
+  assert.deepEqual(problems, []);
+});
+
+test('busca: encontra pelo que está no histórico e mostra o trecho', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.fill('#contact-log-text', 'Cliente pediu amostra do produto azul-turquesa');
+  await page.click('#contact-log-form button[type="submit"]');
+  await page.locator('.timeline-item-text', { hasText: 'azul-turquesa' }).waitFor();
+  await page.click('#btn-close-lead-details');
+
+  await page.fill('#global-search-input', 'TURQUESA');
+  const result = page.locator('.search-result').first();
+  await result.waitFor();
+  assert.match(await result.locator('.search-snippet').textContent(), /No histórico: .*azul-turquesa/);
+  assert.equal(await page.locator('.lead-card').count(), 1, 'o funil também filtra pelo histórico');
+  await result.click();
+  await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+  assert.deepEqual(problems, []);
+});
+test('agenda da semana: tarefas no dia certo, link para o Google Agenda, troca de semana e arquivo .ics', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.click('.nav-item[data-view="tasks"]');
+  await page.click('[data-task-filter="week"]');
+  await page.locator('.week-grid').waitFor();
+  assert.equal(await page.locator('.week-day').count(), 7);
+  assert.equal(await page.locator('.week-day.is-today').count(), 1);
+  const todayTasks = page.locator('.week-day.is-today .week-task');
+  assert.ok(await todayTasks.count() >= 1, 'a demonstração tem tarefas para hoje');
+  assert.match(await todayTasks.first().locator('.week-task-calendar').getAttribute('href'), /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+
+  const title = await page.textContent('.week-title');
+  await page.click('[data-click="handleWeek"][data-a="1"]');
+  await page.waitForFunction(before => document.querySelector('.week-title').textContent !== before, title);
+  assert.equal(await page.locator('.week-day.is-today').count(), 0);
+  await page.click('[data-click="handleWeek"][data-a="0"]');
+  await page.waitForFunction(before => document.querySelector('.week-title').textContent === before, title);
+
+  const download = page.waitForEvent('download');
+  await page.click('[data-click="handleExportAgenda"]');
+  assert.equal((await download).suggestedFilename(), 'edx-digital-agenda.ics');
+  assert.deepEqual(problems, []);
+});
+
+test('proposta com itens: a tabela aparece na folha e o total vira o valor da oportunidade', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.click('#lead-details-actions [data-click="handleOpenProposalModal"]');
+  await page.locator('#proposal-dialog').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#prop-items-block').isVisible(), false, 'sem itens, a proposta mostra só o valor');
+
+  await page.locator('#proposal-items-editor summary').click();
+  for (const [description, quantity, price] of [['Instalação', '2', '1.500,00'], ['Treinamento da equipe', '', '800']]) {
+    await page.click('#btn-add-proposal-item');
+    const row = page.locator('.proposal-item-row').last();
+    await row.locator('[data-part="description"]').fill(description);
+    await row.locator('[data-part="quantity"]').fill(quantity);
+    await row.locator('[data-part="unitPrice"]').fill(price);
+  }
+  await page.click('#btn-save-proposal-items');
+  await page.locator('#prop-items-body tr').nth(1).waitFor();
+  assert.deepEqual((await page.locator('#prop-items-body tr').first().locator('td').allTextContents()).map(text => text.replace(/\s/g, ' ')), ['Instalação', '2', 'R$ 1.500', 'R$ 3.000']);
+  assert.match((await page.textContent('#prop-price-display')).replace(/\s/g, ' '), /R\$ 3\.800/);
+  assert.equal(await page.locator('#prop-items-mismatch').count(), 0);
+  await page.click('#btn-close-proposal-footer');
+  assert.match((await page.locator('#lead-details-summary').textContent()).replace(/\s/g, ' '), /R\$ 3\.800/);
+  assert.deepEqual(problems, []);
+});
+
+test('páginas públicas: desenhadas pelos arquivos de estilo, sem nada recusado pela política de segurança', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR' });
+  t.after(() => context.close());
+  for (const address of ['/landing', '/ajuda', '/termos', '/privacidade']) {
+    const page = await context.newPage();
+    const refused = [];
+    await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`)));
+    page.on('console', message => { if (/^CSP (style|script)/.test(message.text())) refused.push(message.text()); });
+    await page.goto(base + address);
+    // the page's own stylesheet applied: the title is not the browser's default serif
+    const font = await page.locator('h1').first().evaluate(el => getComputedStyle(el).fontFamily);
+    assert.match(font, /IBM Plex Sans|system-ui/, `${address}: ${font}`);
+    assert.deepEqual(refused, [], address);
+    await page.close();
+  }
+});
+
+test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mostra só o que é seu', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  assert.equal(await page.locator('#view-pipeline .pipeline-switch').isVisible(), false, 'com um funil só, o seletor não aparece');
+  const mainCards = await page.locator('.lead-card').count();
+
+  await page.click('#btn-header-tools');
+  await page.click('#btn-menu-customize');
+  await page.click('#btn-add-pipeline');
+  await page.locator('#customize-pipelines input[data-part="name"]').fill('Pós venda');
+  await page.locator('#customize-pipelines input[data-stage="lead"]').fill('Implantação');
+  await page.click('#customize-form button[type="submit"]');
+  await page.locator('#customize-dialog').waitFor({ state: 'hidden' });
+
+  const picker = page.locator('#view-pipeline select[data-pipeline-switch]');
+  await picker.waitFor({ state: 'visible' });
+  assert.deepEqual((await picker.locator('option').allTextContents()).map(text => text.replace(/\s*\(\d+\)$/, '')), ['Vendas', 'Pós venda']);
+
+  await picker.selectOption({ index: 1 });
+  await page.waitForFunction(() => document.querySelectorAll('.lead-card').length === 0);
+  await page.locator('.column-title', { hasText: 'Implantação' }).waitFor();
+
+  await page.click('#btn-new-lead');
+  await page.fill('#input-customer-name', 'Cliente em Implantação');
+  await page.fill('#input-deal-value', '2.000');
+  await page.click('#btn-submit-customer');
+  await page.locator('.lead-card', { hasText: 'Cliente em Implantação' }).waitFor();
+  assert.equal(await page.locator('.lead-card').count(), 1);
+
+  // de volta ao principal: os nomes das etapas e os cartões são os dele
+  await picker.selectOption({ index: 0 });
+  await page.waitForFunction(count => document.querySelectorAll('.lead-card').length === count, mainCards);
+  assert.equal(await page.locator('.lead-card', { hasText: 'Cliente em Implantação' }).count(), 0);
+  assert.equal(await page.locator('.column-title', { hasText: 'Implantação' }).count(), 0);
+
+  // a tela Hoje junta todos os funis, e abrir dali leva ao funil da oportunidade
+  await page.click('.nav-item[data-view="today"]');
+  await page.locator('#today-notask button.today-row', { hasText: 'Cliente em Implantação' }).click();
+  await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#lead-details-stage option').first().textContent(), 'Implantação');
+  await page.click('#btn-close-lead-details');
+
+  await page.click('.nav-item[data-view="metrics"]');
+  assert.match(await page.textContent('#metrics-content'), /no funil Pós venda/);
+  assert.deepEqual(problems, []);
 });

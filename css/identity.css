@@ -1562,3 +1562,65 @@ body.tour-open { overflow: hidden; }
 
 /* A link among the tools menu's buttons */
 a.dropdown-item { text-decoration: none; box-sizing: border-box; }
+
+/* Owner's panel */
+.cell-sub { font-size: 0.78rem; color: var(--text-muted); font-weight: 400; }
+#owner-content .figure-row { margin-bottom: 1rem; }
+
+/* Search result found in the notes or in the history */
+.search-snippet { display: block; margin-top: 0.15rem; font-size: 0.76rem; color: var(--text-muted); font-style: normal; white-space: normal; }
+/* A recurring sale on its card */
+.lead-recurring { font-size: 0.78rem; font-weight: 400; color: var(--text-secondary); }
+/* What each stage requires */
+.requirements-table th, .requirements-table td { text-align: center; font-size: 0.8rem; }
+.requirements-table th:first-child, .requirements-table td:first-child { text-align: left; white-space: nowrap; }
+.requirements-table input { width: 16px; height: 16px; }
+
+/* Tasks: the week as an agenda */
+.week-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.week-nav { display: flex; gap: 0.35rem; }
+.week-title { font-size: 0.95rem; font-weight: 600; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.5rem; }
+.week-day { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.5rem; min-height: 120px; background: var(--bg-surface); min-width: 0; }
+.week-day.is-today { border-color: var(--accent); }
+.week-day-head { display: flex; justify-content: space-between; gap: 0.25rem; font-size: 0.78rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; }
+.week-day-head span { font-weight: 400; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.week-day.is-today .week-day-head { color: var(--accent); }
+.week-empty { margin: 0; font-size: 0.76rem; color: var(--text-muted); }
+.week-task { display: flex; gap: 0.4rem; align-items: flex-start; padding: 0.35rem 0; border-top: 1px solid var(--border-subtle); }
+.week-task-main { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; min-width: 0; }
+.week-task-title { font-size: 0.8rem; color: var(--text-primary); overflow-wrap: anywhere; line-height: 1.3; }
+.week-task-time { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.week-task .link-btn { font-size: 0.74rem; text-align: left; }
+.week-task-calendar { color: var(--text-muted); text-decoration: none; }
+.week-task-calendar:hover { text-decoration: underline; }
+.week-task.completed .week-task-title { text-decoration: line-through; color: var(--text-muted); }
+.week-task.is-late .week-task-title { color: var(--color-lost, #b42318); }
+@media (max-width: 900px) {
+  .week-grid { grid-template-columns: 1fr; }
+  .week-day { min-height: 0; }
+}
+
+/* Proposal: the items, typed above the sheet and printed inside it */
+.proposal-items-editor { margin: 0 0 1.25rem; border-top: 0; padding-top: 0; }
+.proposal-item-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 120px auto; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.proposal-items-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.proposal-items-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.proposal-items-table th { text-align: left; font-weight: 500; font-size: 0.8rem; color: #6f7a8a; padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid #d5dae1; }
+.proposal-items-table td { padding: 0.5rem 0.5rem 0.5rem 0; border-bottom: 1px solid #e4e7ec; vertical-align: top; overflow-wrap: anywhere; }
+.proposal-items-table .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; padding-right: 0; }
+@media (max-width: 640px) {
+  .proposal-item-row { grid-template-columns: 1fr 1fr; }
+  .proposal-item-row input[data-part="description"] { grid-column: 1 / -1; }
+}
+@media print {
+  .proposal-items-editor, #prop-items-mismatch { display: none !important; }
+}
+
+/* More than one funnel */
+.pipeline-switch { font-size: 0.82rem; color: var(--text-secondary); }
+.pipeline-row { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.6rem 0.75rem; margin-bottom: 0.6rem; }
+.pipeline-row summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.6rem; align-items: center; cursor: pointer; list-style: none; }
+.pipeline-row summary::-webkit-details-marker { display: none; }
+.pipeline-row .form-grid { margin-top: 0.75rem; }
+.pipeline-count { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }

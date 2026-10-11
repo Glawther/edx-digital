@@ -68,6 +68,8 @@ export const TASK_TYPES = [
   { id: 'followup', label: 'Retorno', icon: '' }
 ];
 
+import { matchCustomer } from './pipeline-rules.js';
+import { pipelinesOf, inPipeline, MAIN_PIPELINE } from './pipelines.js';
 import { getCurrentRole, getCurrentUser, USER_ROLES } from '../services/auth-service.js';
 import { matchesFocus, countAttention } from './attention.js';
 
@@ -84,6 +86,9 @@ class CRMStore {
     this.searchQuery = '';
     this.selectedPriority = 'all';
     this.focus = 'all'; // 'all' | 'stalled' | 'noTask' | 'lateTask'
+    // The company's funnels and the one on screen (js/core/pipelines.js)
+    this.pipelines = pipelinesOf({});
+    this.activePipelineId = MAIN_PIPELINE;
     this.selectedSalesperson = 'all'; // Admin filter: 'all' | employee email
     this.activeView = 'pipeline'; // 'pipeline' | 'customers' | 'tasks' | 'metrics' | 'security'
     this.taskFilter = 'pending'; // 'pending' | 'today' | 'all' | 'completed'
@@ -129,6 +134,25 @@ class CRMStore {
   setCustomers(customers, mode = 'local') {
     this.customers = customers;
     this.storageMode = mode;
+    this.emitChange();
+  }
+
+  /**
+   * The company's funnels changed (or a session began): keeps the one on screen if it still
+   * exists, and gives the stages the names that funnel uses.
+   */
+  setPipelines(org) {
+    this.pipelines = pipelinesOf(org);
+    if (!this.pipelines.some(pipeline => pipeline.id === this.activePipelineId)) this.activePipelineId = MAIN_PIPELINE;
+    applyStageNames(this.pipelines.find(pipeline => pipeline.id === this.activePipelineId).stageNames);
+    this.emitChange();
+  }
+
+  setActivePipeline(pipelineId) {
+    const wanted = this.pipelines.find(pipeline => pipeline.id === pipelineId);
+    if (!wanted || wanted.id === this.activePipelineId) return;
+    this.activePipelineId = wanted.id;
+    applyStageNames(wanted.stageNames);
     this.emitChange();
   }
 
@@ -219,7 +243,10 @@ class CRMStore {
       }
     });
 
-    const filteredCustomers = baseCustomers.filter(c => {
+    // The funnel, the list of customers and the reports show one funnel at a time
+    const pipelineCustomers = inPipeline(baseCustomers, this.activePipelineId, this.pipelines);
+
+    const filteredCustomers = pipelineCustomers.filter(c => {
       // Priority filter
       if (this.selectedPriority !== 'all' && c.priority !== this.selectedPriority) {
         return false;
@@ -227,16 +254,14 @@ class CRMStore {
       if (!matchesFocus(c, this.focus)) return false;
       // Search filter
       if (this.searchQuery) {
-        const target = `${c.name || ''} ${c.company || ''} ${c.email || ''} ${(c.tags || []).join(' ')}`.toLowerCase();
-        if (target.includes(this.searchQuery)) return true;
-        const digits = this.searchQuery.replace(/\D/g, '');
-        return digits.length >= 4 && (c.phone || '').replace(/\D/g, '').includes(digits);
+        // the same search as the box at the top: name, company, phone, and what was written or said
+        return matchCustomer(c, this.searchQuery) !== null;
       }
       return true;
     });
 
     // Calcula métricas para os leads visíveis ao usuário atual
-    const metrics = this.calculateMetrics(baseCustomers);
+    const metrics = this.calculateMetrics(pipelineCustomers);
     const allTasks = this.extractAllTasks(baseCustomers);
 
     // Permissões da Tríade CID
@@ -253,8 +278,11 @@ class CRMStore {
 
     return {
       allCustomers: this.customers, // Raw list (for admin)
-      visibleCustomers: baseCustomers, // Filtered by role
-      filteredCustomers, // Filtered by role + search + priority
+      visibleCustomers: baseCustomers, // Filtered by role, every funnel
+      pipelineCustomers, // the same, in the funnel on screen
+      pipelines: this.pipelines,
+      activePipelineId: this.activePipelineId,
+      filteredCustomers, // Filtered by role + funnel + search + priority
       metrics,
       tasks: allTasks,
       taskFilter: this.taskFilter,
@@ -262,7 +290,7 @@ class CRMStore {
       searchQuery: this.searchQuery,
       selectedPriority: this.selectedPriority,
       focus: this.focus,
-      attention: countAttention(baseCustomers),
+      attention: countAttention(pipelineCustomers),
       selectedSalesperson: this.selectedSalesperson,
       storageMode: this.storageMode,
       permissions,

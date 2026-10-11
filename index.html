@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.18.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.18.0">
-  <link rel="stylesheet" href="css/components.css?v=3.18.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.18.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.18.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.19.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.19.0">
+  <link rel="stylesheet" href="css/components.css?v=3.19.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.19.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.19.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.18.0"></script>
+  <script src="js/theme-boot.js?v=3.19.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -359,6 +359,13 @@
                 <span class="dropdown-item-desc">Seus dados, exportação e exclusão</span>
               </div>
             </button>
+            <button type="button" class="dropdown-item" id="btn-menu-owner" hidden>
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Painel do sistema</span>
+                <span class="dropdown-item-desc">Todas as empresas, planos e recebimentos</span>
+              </div>
+            </button>
             <button type="button" class="dropdown-item" id="btn-menu-tour">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -493,6 +500,9 @@
 
       <section class="view-section" id="view-pipeline">
         <div class="pipeline-actions-bar">
+          <label class="inline-field pipeline-switch" hidden>Funil
+            <select class="form-select form-select-sm" data-pipeline-switch data-change="handlePipeline" data-value aria-label="Funil"></select>
+          </label>
           <div class="filter-group">
             <span class="filter-label" id="priority-filter-label">Prioridade</span>
             <div class="filter-pills" role="group" aria-labelledby="priority-filter-label">
@@ -529,7 +539,7 @@
         <div class="table-container">
           <div class="table-header-bar">
             <h2 id="customers-count-label">Clientes</h2>
-            <div class="table-tools">
+            <div class="table-tools"><label class="inline-field pipeline-switch" hidden>Funil <select class="form-select form-select-sm" data-pipeline-switch data-change="handlePipeline" data-value aria-label="Funil"></select></label>
               <label class="inline-field" for="customers-stage-filter">Etapa
                 <select id="customers-stage-filter" class="form-select form-select-sm" data-change="handleCustomersStage" data-value></select>
               </label>
@@ -570,6 +580,7 @@
               <div class="filter-pills" id="task-filter-pills">
                 <button type="button" class="filter-pill active" data-task-filter="pending">Pendentes</button>
                 <button type="button" class="filter-pill" data-task-filter="today">Hoje</button>
+                <button type="button" class="filter-pill" data-task-filter="week">Semana</button>
                 <button type="button" class="filter-pill" data-task-filter="all">Todas</button>
                 <button type="button" class="filter-pill" data-task-filter="completed">Concluídas</button>
               </div>
@@ -816,6 +827,14 @@
               <select id="input-customer-assigned" class="form-select"></select>
             </div>
           </div>
+          <div class="form-group pipeline-switch" style="margin-top: 0.75rem; max-width: 280px;" hidden>
+            <label for="input-deal-pipeline">Funil</label>
+            <select id="input-deal-pipeline" class="form-select"></select>
+          </div>
+          <label class="consent-line" style="margin-top: 0.75rem;">
+            <input type="checkbox" id="input-deal-recurring">
+            <span>Venda recorrente: o valor se repete todo mês (mensalidade, assinatura, contrato de serviço).</span>
+          </label>
           <div class="form-grid" id="customer-custom-fields" hidden></div>
         </details>
       </div>
@@ -1046,6 +1065,20 @@
     </div>
 
     <div class="dialog-body" style="padding: 1.5rem;">
+      <details class="form-more proposal-items-editor" id="proposal-items-editor">
+        <summary>Itens da proposta (opcional)</summary>
+        <p class="empty-note" style="margin: 0.6rem 0;">Liste o que está sendo vendido. A proposta passa a mostrar a tabela com quantidade, preço e total. Sem itens, ela mostra só o valor da oportunidade.</p>
+        <div id="proposal-items-rows"></div>
+        <div class="proposal-items-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-add-proposal-item">Adicionar item</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-proposal-items">Salvar itens</button>
+          <label class="consent-line" style="margin: 0;">
+            <input type="checkbox" id="proposal-items-set-value" checked>
+            <span>Usar o total como valor da oportunidade</span>
+          </label>
+        </div>
+      </details>
+
       <div class="proposal-sheet" id="proposal-print-area">
         <div class="proposal-letterhead">
           <div>
@@ -1069,7 +1102,15 @@
         <div class="proposal-section-title">O que está sendo proposto</div>
         <div class="proposal-block" id="prop-scope-text"></div>
 
-        <div class="proposal-section-title">Valor</div>
+        <div id="prop-items-block" hidden>
+          <div class="proposal-section-title">Itens</div>
+          <table class="proposal-items-table">
+            <thead><tr><th>Descrição</th><th class="num">Qtd.</th><th class="num">Preço unitário</th><th class="num">Total</th></tr></thead>
+            <tbody id="prop-items-body"></tbody>
+          </table>
+        </div>
+
+        <div class="proposal-section-title" id="prop-price-title">Valor</div>
         <div class="proposal-price-box">
           <div class="proposal-price-val" id="prop-price-display"></div>
         </div>
@@ -1152,6 +1193,18 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
     </div>
   </dialog>
 
+  <dialog id="owner-dialog" class="crm-dialog" style="max-width: 1040px; width: 96%;">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Painel do sistema</h2>
+      <button type="button" class="dialog-close" id="btn-close-owner-dialog" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="dialog-body" id="owner-content"></div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-outline" id="btn-owner-export">Exportar</button>
+      <button type="button" class="btn btn-outline" id="btn-owner-refresh">Atualizar</button>
+    </div>
+  </dialog>
+
   <dialog id="customize-dialog" class="crm-dialog" style="max-width: 640px; width: 95%;">
     <div class="dialog-header">
       <h2 class="dialog-title">Funil, campos e mensagens</h2>
@@ -1163,10 +1216,19 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
         <p class="empty-note" style="margin: 0 0 0.85rem;">As etapas são as mesmas para todos; aqui você escolhe como cada uma se chama na sua empresa. Deixe em branco para usar o nome padrão.</p>
         <div class="form-grid" id="customize-stages"></div>
 
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Outros funis</h3>
+        <p class="empty-note" style="margin: 0 0 0.85rem;">Para acompanhar outro processo no mesmo sistema, como pós-venda, renovações ou uma segunda linha de produtos. Cada funil tem as mesmas seis etapas, com os nomes que você escolher. As etapas acima são as do funil principal. Com mais de um funil, aparece um seletor no Funil, em Clientes e em Relatórios.</p>
+        <div id="customize-pipelines"></div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-add-pipeline">Adicionar funil</button>
+
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Campos extras da oportunidade</h3>
         <p class="empty-note" style="margin: 0 0 0.85rem;">Aparecem em Mais detalhes no cadastro, na tela da oportunidade e na planilha exportada. Remover um campo não apaga o que já foi preenchido: ele só deixa de aparecer.</p>
         <div id="customize-fields"></div>
         <button type="button" class="btn btn-outline btn-sm" id="btn-add-custom-field">Adicionar campo</button>
+
+        <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">O que cada etapa exige</h3>
+        <p class="empty-note" style="margin: 0 0 0.85rem;">Marque o que uma oportunidade precisa ter para entrar em cada etapa. Sem o que foi marcado, o sistema não deixa mover e diz o que falta.</p>
+        <div class="table-scroll" id="customize-requirements"></div>
 
         <h3 class="section-title" style="margin: 1.5rem 0 0.25rem;">Mensagens do WhatsApp</h3>
         <p class="empty-note" style="margin: 0 0 0.5rem;">Os modelos que a equipe vê ao escrever para um cliente. Sem nenhum modelo aqui, valem os quatro modelos padrão do sistema.</p>
@@ -1181,6 +1243,8 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
           <label for="customize-goal">Meta (R$)</label>
           <input type="text" id="customize-goal" class="form-input" inputmode="decimal" placeholder="0,00" autocomplete="off">
         </div>
+        <p class="empty-note" style="margin: 1rem 0 0.6rem;">Meta de cada pessoa, se quiser acompanhar uma a uma. Cada vendedor vê a própria em Relatórios. Deixe em branco para quem não tem meta.</p>
+        <div class="form-grid" id="customize-seller-goals"></div>
       </div>
       <div class="dialog-footer">
         <button type="button" class="btn btn-outline" id="btn-cancel-customize">Cancelar</button>
@@ -1844,7 +1908,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.18.0"></script>
+  <script type="module" src="js/app.js?v=3.19.0"></script>
 
 </body>
 </html>

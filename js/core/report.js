@@ -41,8 +41,9 @@ function within(iso, [start, end]) {
 const wonDate = (c) => c.wonAt || c.updatedAt || c.createdAt;
 const lostDate = (c) => c.lostAt || c.updatedAt || c.createdAt;
 
-function emptyRow(name) {
+function emptyRow(name, id = '') {
   return {
+    id,
     name,
     // inside the period
     created: 0, wonCount: 0, wonValue: 0, lostCount: 0, contacts: 0,
@@ -75,13 +76,13 @@ export function periodReport(customers, periodId, now = new Date(), members = []
   const people = new Map();
   const lost = [];
   members.forEach(member => {
-    if (member && member.id && !people.has(member.id)) people.set(member.id, emptyRow(cleanName(member.name) || 'Sem nome'));
+    if (member && member.id && !people.has(member.id)) people.set(member.id, emptyRow(cleanName(member.name) || 'Sem nome', member.id));
   });
 
   customers.forEach(c => {
     const key = c.assignedTo?.id || c.assignedTo?.email || 'none';
     if (!people.has(key)) {
-      people.set(key, emptyRow(cleanName(c.assignedTo?.name || c.assignedTo?.email) || 'Sem responsável'));
+      people.set(key, emptyRow(cleanName(c.assignedTo?.name || c.assignedTo?.email) || 'Sem responsável', key === 'none' ? '' : key));
     }
     const row = people.get(key);
     const value = Number(c.dealValue) || 0;

@@ -3,9 +3,11 @@
  * Wires the screens to the store, the storage and the services
  */
 
+import { tasksToIcs } from './core/agenda.js';
+import { setupOwnerPanel } from './ui/owner-panel.js';
 import { setupErrorReporting } from './services/error-report.js';
 import { applyWhitelabelStyles, getSavedOrganization } from './core/config.js';
-import { applyStageNames, crmStore } from './core/crm-store.js';
+import { crmStore } from './core/crm-store.js';
 import { storage } from './core/storage-manager.js';
 import { initTheme } from './core/theme-manager.js';
 import {
@@ -26,6 +28,8 @@ import {
   renderConnectionStatus,
   renderDetailedMetrics,
   renderToday,
+  renderPipelineSwitch,
+  moveWeek,
   setTodayOwner,
   exportSellerReport,
   renderFocusPills,
@@ -85,10 +89,24 @@ async function initApp() {
       // from the "Hoje" screen: the funnel showing only what one of its lists holds
       openFunnelFocus: (focus) => { window.handleFocus(focus); window.navigateToView('pipeline'); },
       openView: (view) => window.navigateToView(view),
+      handlePipeline: (pipelineId) => crmStore.setActivePipeline(pipelineId),
+      handleWeek: (step) => { moveWeek(Number(step) || 0); crmStore.emitChange(); },
+      handleExportAgenda: () => {
+        const text = tasksToIcs(crmStore.getState().tasks);
+        const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'edx-digital-agenda.ics';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showToast('Agenda baixada. Abra o arquivo, ou importe-o no seu calendário.', 'success');
+      },
       handleTodayOwner: (ownerId) => { setTodayOwner(ownerId || ''); crmStore.emitChange(); },
       handleExportSellerReport: () => {
         try {
-          exportSellerReport(crmStore.getState().visibleCustomers);
+          exportSellerReport(crmStore.getState().pipelineCustomers);
         } catch (err) {
           showToast(err.message, 'error');
         }
@@ -107,6 +125,7 @@ async function initApp() {
     setupProposalModalEvents();
     setupImportDialog();
     setupCustomizeDialog();
+    setupOwnerPanel();
     setupAuthPortalEvents();
     setupCommandPalette();
     setupKeyboardShortcuts();
@@ -140,9 +159,9 @@ async function initApp() {
     }, 15000);
 
     // The company's own stage names and extra fields: redraw whenever the company record changes
-    applyStageNames(getSavedOrganization().stageNames);
+    crmStore.setPipelines(getSavedOrganization());
     window.addEventListener('edx-organization-changed', (event) => {
-      applyStageNames(event.detail && event.detail.stageNames);
+      crmStore.setPipelines(event.detail || getSavedOrganization());
       crmStore.emitChange();
     });
 
@@ -158,11 +177,13 @@ async function initApp() {
     // Subscribe state store changes to DOM rendering
     crmStore.subscribe((state) => {
       renderKPIs(state.metrics, state.permissions);
+      renderPipelineSwitch(state.pipelines, state.activePipelineId, state.visibleCustomers);
+      // the first-run invitation is for whoever has no opportunity at all, not for an empty funnel
       renderKanban(state.filteredCustomers, state.metrics, state.permissions, state.visibleCustomers.length);
       renderFocusPills(state.focus, state.attention);
       renderTable(state.filteredCustomers, state.permissions);
       renderTasksView(state.tasks, state.taskFilter, state.allCustomers);
-      renderDetailedMetrics(state.metrics, state.visibleCustomers, state.permissions);
+      renderDetailedMetrics(state.metrics, state.pipelineCustomers, state.permissions, state.visibleCustomers);
       renderToday(state.visibleCustomers, state.permissions);
       renderSecurityView(state);
       renderConnectionStatus(state.storageMode);

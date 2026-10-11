@@ -85,6 +85,7 @@ Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/error
 - **Versão nova**: quando uma publicação chega, a página recarrega uma vez sozinha (se não houver janela aberta nem texto sendo digitado), para ninguém continuar no código antigo.
 
 - **Nenhum código no HTML**: não há `onclick` nem `<script>` com conteúdo. Os elementos dizem qual ação disparam (`data-click`, `data-change`) e um único ouvinte em `js/ui/actions.js` chama a função. Por isso a política abaixo proíbe scripts embutidos: mesmo que um texto malicioso chegasse à tela como marcação, o navegador não o executaria.
+- **Estilos**: nenhuma página tem bloco `<style>`; os estilos ficam em arquivos de `css/`, e a política recusa qualquer bloco de estilo escrito numa página. Os atributos `style` em elementos ainda são aceitos (há cerca de 200 no aplicativo); o que um atributo consegue fazer é bem menos do que um bloco.
 - **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, nunca embutidos na página, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
 - **Exportação**: células que uma planilha executaria como fórmula (começando com `=`, `+`, `-` ou `@`) saem com um apóstrofo na frente.
 - **Chave do Gemini**: fica só no navegador de quem a informou e vai para o Google num cabeçalho, nunca no endereço.
