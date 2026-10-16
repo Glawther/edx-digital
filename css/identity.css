@@ -1714,3 +1714,19 @@ h1, h2, h3, .dialog-title, .section-title, .page-title { text-wrap: balance; }
 .command-item-icon { font-size: 0.75rem; font-weight: 600; }
 /* "Esc to close" is already in the footer */
 .command-palette-badge { display: none; }
+
+/* Opportunity window actions: one outlined style with icons (never read as tabs),
+   editing slightly stronger, and deleting in its own group, apart from the rest */
+.lead-details-actions { align-items: flex-start; justify-content: space-between; gap: 0.75rem 1rem; }
+.lead-actions-main { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+.lead-actions-danger { display: flex; margin-left: auto; padding-left: 1rem; border-left: 1px solid var(--border-subtle); }
+.lead-action .lead-action-icon { flex: none; }
+.lead-action-edit { color: var(--text-primary); border-color: var(--border-strong); font-weight: 600; }
+body.is-read-only .lead-details-actions .lead-action-edit { display: none !important; }
+@media (max-width: 768px) {
+  .lead-details-actions { flex-direction: column; align-items: stretch; }
+  .lead-actions-danger {
+    margin-left: 0; padding-left: 0; border-left: 0; justify-content: flex-end;
+    margin-top: 0.5rem; padding-top: 0.9rem; border-top: 1px dashed var(--border-subtle);
+  }
+}
