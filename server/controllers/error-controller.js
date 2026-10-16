@@ -17,6 +17,7 @@ const { parseJsonBody } = require('../middleware/body-parser');
 const mailer = require('../mail/brevo');
 const { firestoreStore } = require('../billing/firestore-store');
 const { isServiceAccountConfigured, verifyIdToken } = require('../billing/google-auth');
+const { clientAddress, createRateLimiter } = require('../middleware/rate-limit');
 
 const MAIL_EVERY_MS = 60 * 60 * 1000;
 const escapeHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -81,19 +82,8 @@ async function mailOwners(report, { store = firestoreStore, mail = mailer, now =
   return true;
 }
 
-const WINDOW_MS = 60000;
 const PER_ADDRESS = 10;
-const hits = new Map();
-
-function tooMany(address) {
-  const now = Date.now();
-  const recent = (hits.get(address) || []).filter(time => now - time < WINDOW_MS);
-  if (recent.length >= PER_ADDRESS) return true;
-  recent.push(now);
-  hits.set(address, recent);
-  if (hits.size > 5000) hits.clear();
-  return false;
-}
+const limiter = createRateLimiter({ windowMs: 60000 });
 
 const text = (value, max) => (typeof value === 'string' ? value : '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').slice(0, max);
 
@@ -123,8 +113,7 @@ async function hasValidSession(req, verifyToken) {
  * Resolves after the e-mail step has finished (the reply has already gone out by then).
  */
 async function handleErrorReport(req, res, { verifyToken = verifyIdToken, notify = mailOwners, mailEnabled = isServiceAccountConfigured } = {}) {
-  const address = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || (req.socket && req.socket.remoteAddress) || 'unknown';
-  if (tooMany(address)) return send(res, 429, { error: 'too_many' });
+  if (limiter.tooMany(clientAddress(req), PER_ADDRESS)) return send(res, 429, { error: 'too_many' });
 
   let body;
   try {
