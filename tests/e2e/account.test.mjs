@@ -152,7 +152,7 @@ test('convite: o vendedor entra com o código, vê só a própria carteira, e a 
 
   // entra direto (o código já veio de quem administra) e também recebe o passeio
   await page.locator('.tour-card').waitFor({ timeout: 20000 });
-  await page.waitForFunction(() => /de 12/.test(document.getElementById('tour-progress')?.textContent || ''), null, { timeout: 10000 }); // sem as telas de administrador
+  await page.waitForFunction(() => /de 7/.test(document.getElementById('tour-progress')?.textContent || ''), null, { timeout: 10000 }); // sem as telas de administrador
   await page.click('[data-tour="skip"]');
 
   for (const view of ['team', 'audit', 'security']) {
