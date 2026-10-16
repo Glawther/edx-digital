@@ -31,6 +31,18 @@
 </head>
 <body class="auth-pending" data-view="today">
 
+  <!-- Saved account, server out of reach: wait instead of showing the sign-in form -->
+  <div id="auth-offline-screen" class="auth-portal-wrapper" style="display: none;" role="alert" aria-live="polite">
+    <div class="auth-portal-card auth-offline-card">
+      <div class="auth-portal-header">
+        <h1 class="auth-portal-title">Sem conexão com o servidor</h1>
+        <p class="auth-portal-subtitle">Sua sessão continua guardada neste aparelho. Assim que a conexão voltar, o CRM abre sozinho.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-auth-offline-retry">Tentar de novo</button>
+      <p class="auth-offline-status" id="auth-offline-status" role="status"></p>
+    </div>
+  </div>
+
   <!-- ======================================================================
        PORTAL DE AUTENTICAÇÃO & REGISTRO (Tríade CID & RBAC)
        ====================================================================== -->

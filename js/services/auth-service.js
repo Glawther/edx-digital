@@ -71,18 +71,76 @@ export async function initAuth() {
     return currentUser;
   }
 
+  await restoreAccountSession();
+  return currentUser;
+}
+
+// True while a real account was signed in on this browser but the server could not be reached
+// to confirm it: the app waits instead of showing the sign-in screen
+let restorePending = false;
+let restoreInFlight = null;
+
+let sdkLoadFailed = false;
+
+export function isSessionRestorePending() {
+  return restorePending;
+}
+
+/** True when the Firebase SDK download failed outright; the browser will not fetch it again without a reload */
+export function needsReloadToRetry() {
+  return sdkLoadFailed;
+}
+
+/**
+ * Tries again to confirm the saved session. Resolves with true once it is settled either way
+ * (signed in, or definitely signed out), false while the server is still out of reach.
+ */
+export async function retrySessionRestore() {
+  if (!restoreInFlight) {
+    restoreInFlight = restoreAccountSession().finally(() => { restoreInFlight = null; });
+  }
+  await restoreInFlight;
+  return !restorePending;
+}
+
+async function restoreAccountSession() {
+  // Only someone whose last session here was a real account can be "not known yet";
+  // whoever never signed in, or signed out, goes straight to the sign-in screen as before
+  const hadAccount = localStorage.getItem(SESSION_STORAGE_KEY) === 'cloud';
   try {
-    const { auth } = await withTimeout(getFirebase(), 8000);
+    const { auth } = await withTimeout(getFirebase(), 8000).catch((err) => {
+      // a download that failed (not just slow) stays failed in this page: only a reload retries it
+      if (err.message !== 'timeout') sdkLoadFailed = true;
+      throw err;
+    });
     await withTimeout(auth.authStateReady(), 8000);
     if (auth.currentUser) {
-      await applyFirebaseUser(auth.currentUser);
+      await withTimeout(applyFirebaseUser(auth.currentUser), 15000);
+    } else if (sessionKind === SESSION_KINDS.NONE) {
+      // Firebase answered that nobody is signed in: forget the marker so a later slow load does not wait
+      clearSession();
     }
+    restorePending = false;
   } catch (err) {
     console.warn('Could not restore the session:', err);
     // Leave a session alone if one was started while this check was still running
-    if (sessionKind === SESSION_KINDS.NONE) clearSession();
+    if (sessionKind !== SESSION_KINDS.NONE) {
+      restorePending = false;
+    } else if (hadAccount && !isDefinitiveAuthError(err)) {
+      // Slow or no network: Firebase still holds the session, so nothing is cleared
+      restorePending = true;
+    } else {
+      restorePending = false;
+      clearSession();
+    }
   }
-  return currentUser;
+}
+
+// Answers from the server that settle the matter; anything else (timeouts, failed downloads,
+// "client is offline") only means it could not be asked
+function isDefinitiveAuthError(err) {
+  const code = (err && err.code) || '';
+  return code.startsWith('edx/') || code === 'permission-denied' || code === 'auth/user-disabled' || code === 'auth/user-token-expired';
 }
 
 function withTimeout(promise, ms) {
