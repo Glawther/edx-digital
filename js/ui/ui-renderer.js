@@ -1282,6 +1282,15 @@ export function renderSecurityView(state) {
 export function showToast(message, type = 'info', action = null) {
   const container = document.getElementById('toast-container');
   if (!container) return;
+  // A window opened with showModal sits in the browser's top layer, above everything else.
+  // Shown as a popover, the notices go up there too, after the window: always on top of it.
+  if (typeof container.showPopover === 'function') {
+    if (!container.hasAttribute('popover')) container.setAttribute('popover', 'manual');
+    try {
+      if (container.matches(':popover-open')) container.hidePopover();
+      container.showPopover();
+    } catch { /* an older browser: the notices stay where they always were */ }
+  }
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;

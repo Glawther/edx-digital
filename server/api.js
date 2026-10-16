@@ -24,6 +24,13 @@ function handleApi(req, res) {
   const pathname = (req.url || '/').split('?')[0];
   if (!pathname.startsWith('/api/') && pathname !== '/health') return false;
 
+  // To check how many proxies stand in front (server/middleware/rate-limit.js): only the count
+  // of entries is logged, never an address, and only when the request asks for it
+  if (req.headers['x-edx-diagnose'] === 'proxy-hops') {
+    const entries = String(req.headers['x-forwarded-for'] || '').split(',').filter(item => item.trim()).length;
+    console.log(JSON.stringify({ message: '[Endereço] itens no X-Forwarded-For', entries }));
+  }
+
   // a form on someone's site sends leads here; nothing else is for other sites
   applySecurityHeaders(res, { openToOtherSites: pathname === '/api/webhook/leads' && (req.method === 'POST' || req.method === 'OPTIONS') });
 
