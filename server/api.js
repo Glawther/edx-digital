@@ -6,11 +6,7 @@
  */
 
 const { applySecurityHeaders } = require('./middleware/security');
-const {
-  handleIngestLead,
-  handleGetLeads,
-  handleAcknowledgeLeads
-} = require('./controllers/webhook-controller');
+const { handleIngestLead, handleWebhookToken } = require('./controllers/webhook-controller');
 const { handleBilling } = require('./billing/billing-controller');
 const { handleErrorReport } = require('./controllers/error-controller');
 const { handleOwner } = require('./controllers/owner-controller');
@@ -41,10 +37,8 @@ function handleApi(req, res) {
     handleBilling(req, res, pathname);
   } else if (pathname === '/api/webhook/leads' && req.method === 'POST') {
     handleIngestLead(req, res);
-  } else if (pathname === '/api/webhook/leads' && req.method === 'GET') {
-    handleGetLeads(req, res);
-  } else if (pathname === '/api/webhook/leads/ack' && req.method === 'POST') {
-    handleAcknowledgeLeads(req, res);
+  } else if (pathname === '/api/webhook/token' && (req.method === 'GET' || req.method === 'POST')) {
+    handleWebhookToken(req, res);
   } else if (pathname.startsWith('/api/owner/')) {
     handleOwner(req, res, pathname);
   } else if (pathname === '/api/errors' && req.method === 'POST') {

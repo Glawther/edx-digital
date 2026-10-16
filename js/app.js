@@ -12,14 +12,13 @@ import { storage } from './core/storage-manager.js';
 import { initTheme } from './core/theme-manager.js';
 import {
   initAuth,
-  isAdmin,
   isIdleTooLong,
-  isReadOnly,
   isSessionActive,
   logoutToPortal,
   onAuthChange
 } from './services/auth-service.js';
-import { pollWebhookInbox } from './services/webhook-service.js';
+import { forgetOldWebhookToken } from './services/webhook-service.js';
+import { notify } from './services/notification-service.js';
 import { registerActions, setupActions } from './ui/actions.js';
 import { setupCustomizeDialog } from './ui/customize-dialog.js';
 import { setupImportDialog } from './ui/import-dialog.js';
@@ -143,20 +142,14 @@ async function initApp() {
     setupAccountDialog();
     setupIdleSignOut();
 
-    // Periodic poll for Webhook incoming leads (every 15s)
-    setInterval(async () => {
-      if (!isSessionActive() || !isAdmin() || isReadOnly() || document.hidden) return;
-      try {
-        const res = await pollWebhookInbox();
-        if (res && res.count > 0) {
-          crmStore.emitChange();
-          showToast(res.count === 1 ? '1 novo contato chegou por formulário.' : `${res.count} novos contatos chegaram por formulário.`, 'success');
-        }
-      } catch (err) {
-        // a full plan or a lost connection: the contacts stay in the inbox for the next round
-        console.warn('Webhook inbox:', err.message);
-      }
-    }, 15000);
+    // Leads from forms are written by the server straight into the company: a word when one arrives
+    forgetOldWebhookToken();
+    window.addEventListener('edx-form-lead', (event) => {
+      const names = event.detail.names || [];
+      if (names.length === 0) return;
+      showToast(names.length === 1 ? `Novo contato pelo formulário: ${names[0]}.` : `${names.length} novos contatos chegaram pelo formulário.`, 'success');
+      notify('Novo contato pelo formulário', names.length === 1 ? `${names[0]} entrou no funil.` : `${names.length} contatos entraram no funil.`, { view: 'pipeline' });
+    });
 
     // The company's own stage names and extra fields: redraw whenever the company record changes
     crmStore.setPipelines(getSavedOrganization());

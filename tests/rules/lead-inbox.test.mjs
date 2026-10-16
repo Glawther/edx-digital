@@ -1,6 +1,6 @@
 /**
- * Caixa de entrada de formulários guardada no Firestore (como roda em produção),
- * contra o emulador local: npm run test:rules
+ * Leads de formulário gravados pelo servidor, contra os emuladores (como roda em produção):
+ * npm run test:rules
  */
 
 import { test } from 'node:test';
@@ -8,71 +8,68 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 process.env.FIREBASE_PROJECT_ID = 'demo-edx-digital';
+process.env.GCLOUD_PROJECT = 'demo-edx-digital';
 process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
 process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 
 const require = createRequire(import.meta.url);
-const { firestoreInbox, normalizeLeadPayload } = require('../../server/services/lead-storage.js');
+const { createLeadIntake, firestoreLeadStore } = require('../../server/services/lead-intake.js');
+const { normalizeLeadPayload } = require('../../server/services/lead-storage.js');
+const { setDoc, getDoc, queryDocs } = require('../../server/billing/firestore-store.js');
 
+const PROJECT = 'demo-edx-digital';
+const AUTH = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
+const DOCS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
 const RUN = Date.now().toString(36);
-const inboxA = `caixa-a-${RUN}`;
-const inboxB = `caixa-b-${RUN}`;
-const lead = (inbox, name) => ({ ...normalizeLeadPayload({ name, email: `${name}@teste.local` }), inbox });
+const intake = createLeadIntake({ store: firestoreLeadStore });
 
-test('cada caixa só devolve os próprios contatos', async () => {
-  assert.equal(await firestoreInbox.add(lead(inboxA, 'ana')), true);
-  assert.equal(await firestoreInbox.add(lead(inboxA, 'bia')), true);
-  assert.equal(await firestoreInbox.add(lead(inboxB, 'caio')), true);
+async function account(label) {
+  const res = await fetch(`${AUTH}/accounts:signUp?key=demo-key`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: `${label}.${RUN}@leads.local`, password: 'senha-de-teste-123', returnSecureToken: true }) });
+  const body = await res.json();
+  return { uid: body.localId, token: body.idToken };
+}
 
-  const a = await firestoreInbox.list(inboxA);
-  assert.deepEqual(a.map(item => item.name).sort(), ['ana', 'bia']);
-  assert.ok(a.every(item => item.status === 'unread'));
-  assert.deepEqual((await firestoreInbox.list(inboxB)).map(item => item.name), ['caio']);
-  assert.deepEqual(await firestoreInbox.list(`caixa-vazia-${RUN}`), []);
+const orgA = `leads_a_${RUN}`;
+const orgB = `leads_b_${RUN}`;
+let dona, vend, outra;
+
+test('preparo: duas empresas, uma dona com vendedor', async () => {
+  [dona, vend, outra] = await Promise.all([account('dona'), account('vend'), account('outra')]);
+  const trial = { planStatus: 'trial', trialEndsAtMs: Date.now() + 5 * 86400000, plan: 'pro' };
+  await setDoc(`organizations/${orgA}`, { name: 'Alfa', ownerUid: dona.uid, ...trial });
+  await setDoc(`organizations/${orgB}`, { name: 'Beta', ownerUid: outra.uid, ...trial });
+  await setDoc(`users/${dona.uid}`, { orgId: orgA, role: 'admin', status: 'active', name: 'Dona', email: 'dona@a.local' });
+  await setDoc(`users/${vend.uid}`, { orgId: orgA, role: 'employee', status: 'active', name: 'Vend', email: 'vend@a.local' });
+  await setDoc(`users/${outra.uid}`, { orgId: orgB, role: 'admin', status: 'active', name: 'Outra', email: 'outra@b.local' });
 });
 
-test('confirmar o recebimento tira da caixa só os contatos indicados, e só os dela', async () => {
-  const [first] = await firestoreInbox.list(inboxA);
-  await firestoreInbox.acknowledge(inboxB, [first.id]); // de outra caixa: não acontece nada
-  assert.equal((await firestoreInbox.list(inboxA)).length, 2);
+test('o contato do formulário entra na empresa dona do token, e a administradora o lê pelo aplicativo', async () => {
+  const token = await intake.issueToken({ uid: dona.uid });
+  await intake.issueToken({ uid: outra.uid });
+  const result = await intake.ingest(token, normalizeLeadPayload({ nome: 'Lead Real', email: `lead.${RUN}@site.com`, telefone: '11 90000-0000' }));
+  assert.equal(result.status, 'created');
+  const created = await getDoc(`customers/${result.id}`);
+  assert.equal(created.orgId, orgA);
+  assert.equal(created.assignedTo.id, dona.uid);
 
-  await firestoreInbox.acknowledge(inboxA, [first.id]);
-  const left = await firestoreInbox.list(inboxA);
-  assert.equal(left.length, 1);
-  assert.notEqual(left[0].id, first.id);
+  // pelas regras do banco, como o aplicativo lê
+  const asDona = await fetch(`${DOCS}/customers/${result.id}`, { headers: { Authorization: `Bearer ${dona.token}` } });
+  assert.equal(asDona.status, 200);
+  const asOther = await fetch(`${DOCS}/customers/${result.id}`, { headers: { Authorization: `Bearer ${outra.token}` } });
+  assert.equal(asOther.status, 403);
 
-  await firestoreInbox.acknowledge(inboxA, null); // tudo o que resta
-  assert.deepEqual(await firestoreInbox.list(inboxA), []);
-  assert.equal((await firestoreInbox.list(inboxB)).length, 1);
-  await firestoreInbox.acknowledge(inboxB, null);
+  // repetido vira anotação, sem nova oportunidade
+  assert.equal((await intake.ingest(token, normalizeLeadPayload({ nome: 'Lead Real', email: `LEAD.${RUN}@site.com` }))).status, 'duplicate');
+  assert.equal((await queryDocs('customers', [['orgId', orgA]], 50)).length, 1);
+  assert.equal((await getDoc(`customers/${result.id}`)).activities.length, 2);
 });
 
-// ---------------------------------------------------------------- contagem para os limites do plano
-
-const { firestoreStore, setDoc } = require('../../server/billing/firestore-store.js');
-const { createUsageService } = require('../../server/usage/usage-service.js');
-
-test('o servidor conta as oportunidades em aberto e as pessoas ativas, e marca a empresa cheia', async () => {
-  const orgId = `org_conta_${RUN}`;
-  await setDoc(`organizations/${orgId}`, { name: 'Conta', plan: 'starter', ownerUid: 'dona' });
-  await setDoc(`users/dona-${RUN}`, { orgId, role: 'admin', status: 'active', name: 'Dona', email: 'dona@teste.local' });
-  await setDoc(`users/vend-${RUN}`, { orgId, role: 'employee', status: 'active', name: 'Vend', email: 'vend@teste.local' });
-  await setDoc(`users/bloq-${RUN}`, { orgId, role: 'employee', status: 'blocked', name: 'Bloq', email: 'bloq@teste.local' });
-  for (const [id, stage] of [['a', 'lead'], ['b', 'negotiation'], ['c', 'won'], ['d', 'lost'], ['e', 'contacted']]) {
-    await setDoc(`customers/conta-${id}-${RUN}`, { orgId, name: id, stage });
+test('o token e a ligação token → empresa ficam fora do alcance do aplicativo, até da administradora', async () => {
+  const token = await intake.currentToken({ uid: dona.uid });
+  const { hashOf } = require('../../server/services/lead-intake.js');
+  for (const who of [dona, vend]) {
+    assert.equal((await fetch(`${DOCS}/webhook_config/${orgA}`, { headers: { Authorization: `Bearer ${who.token}` } })).status, 403);
+    assert.equal((await fetch(`${DOCS}/webhook_tokens/${hashOf(token)}`, { headers: { Authorization: `Bearer ${who.token}` } })).status, 403);
   }
-  await setDoc(`customers/outra-${RUN}`, { orgId: 'org_de_outro', name: 'x', stage: 'lead' });
-
-  assert.equal(await firestoreStore.countDocs('customers', [['orgId', orgId], ['stage', 'IN', ['lead', 'contact', 'contacted', 'proposal', 'negotiation']]]), 3);
-  assert.equal(await firestoreStore.countDocs('users', [['orgId', orgId], ['status', 'active']]), 2);
-
-  // Starter comporta 2 pessoas: está cheio de gente, não de oportunidades
-  const usage = createUsageService({ store: firestoreStore });
-  assert.deepEqual(await usage.refreshUsage(orgId), { leadsFull: false, seatsFull: true, changed: true });
-  assert.deepEqual((await firestoreStore.getOrganization(orgId)).usage, { leadsFull: false, seatsFull: true });
-  assert.equal((await usage.refreshUsage(orgId)).changed, false);
-
-  assert.ok((await firestoreStore.listOrganizations()).some(doc => doc.id === orgId));
-  assert.equal((await firestoreStore.listUsers(orgId)).length, 3);
-  assert.equal((await firestoreStore.listCustomers(orgId)).length, 5);
+  await assert.rejects(intake.currentToken({ uid: vend.uid }), err => err.status === 403);
 });

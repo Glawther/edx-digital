@@ -7,9 +7,9 @@ import { crmStore } from '../core/crm-store.js';
 import { safeImageUrl } from '../core/html.js';
 import { storage } from '../core/storage-manager.js';
 import { AUDIT_ACTIONS, AUDIT_SEVERITY, logAudit } from '../services/audit-service.js';
-import { isAdmin } from '../services/auth-service.js';
+import { isAdmin, isCloudSession } from '../services/auth-service.js';
 import { exportCustomersToCSV } from '../services/export-service.js';
-import { getWebhookConfig, regenerateWebhookToken, sendTestWebhookLead } from '../services/webhook-service.js';
+import { fetchWebhookToken, issueWebhookToken, sendTestWebhookLead } from '../services/webhook-service.js';
 import { escapeHtml, showToast } from '../ui/ui-renderer.js';
 
 // ==========================================================================
@@ -29,23 +29,46 @@ export function setupWebhookModalEvents() {
   const btnRegenerateToken = document.getElementById('btn-regenerate-webhook-token');
   const btnSendTest = document.getElementById('btn-send-test-webhook');
 
-  function updateFields() {
-    const cfg = getWebhookConfig();
+  const status = document.getElementById('webhook-status');
+  let currentToken = null;
+  const setStatus = (text) => {
+    if (!status) return;
+    status.textContent = text;
+    status.hidden = !text;
+  };
+
+  async function updateFields() {
     if (urlInput) {
       const base = typeof window.getApiBaseUrl === 'function' && window.getApiBaseUrl() ? window.getApiBaseUrl() : window.location.origin;
       urlInput.value = `${base}/api/webhook/leads`;
     }
-    if (tokenInput) {
-      tokenInput.value = cfg.token;
+    currentToken = null;
+    if (tokenInput) tokenInput.value = '';
+    if (btnSendTest) btnSendTest.disabled = true;
+    if (!isCloudSession()) {
+      setStatus('Na demonstração não há recebimento de formulários. Ele funciona na conta da empresa.');
+      if (btnRegenerateToken) btnRegenerateToken.hidden = true;
+      return;
+    }
+    if (btnRegenerateToken) btnRegenerateToken.hidden = false;
+    setStatus('Carregando…');
+    try {
+      currentToken = await fetchWebhookToken();
+      if (tokenInput) tokenInput.value = currentToken || '';
+      if (btnRegenerateToken) btnRegenerateToken.textContent = currentToken ? 'Gerar outro' : 'Gerar o token';
+      if (btnSendTest) btnSendTest.disabled = !currentToken;
+      setStatus(currentToken ? '' : 'Gere o token para começar a receber contatos. Cada contato entra direto no funil da empresa, mesmo com o CRM fechado.');
+    } catch (err) {
+      setStatus(err.message);
     }
   }
 
   if (btnOpen && dialog) {
     btnOpen.addEventListener('click', () => {
-      updateFields();
       const toolsMenu = document.getElementById('header-tools-menu');
       if (toolsMenu) toolsMenu.style.display = 'none';
       dialog.showModal();
+      updateFields();
     });
   }
 
@@ -88,10 +111,19 @@ export function setupWebhookModalEvents() {
   }
 
   if (btnRegenerateToken) {
-    btnRegenerateToken.addEventListener('click', () => {
-      const newToken = regenerateWebhookToken();
-      if (tokenInput) tokenInput.value = newToken;
-      showToast('Novo token gerado e ativado com segurança!', 'info');
+    btnRegenerateToken.addEventListener('click', async () => {
+      if (currentToken && !confirm('Gerar outro token? O atual deixa de funcionar na hora, e os formulários que usam ele precisam receber o novo.')) return;
+      try {
+        currentToken = await issueWebhookToken();
+        if (tokenInput) tokenInput.value = currentToken;
+        btnRegenerateToken.textContent = 'Gerar outro';
+        if (btnSendTest) btnSendTest.disabled = false;
+        setStatus('');
+        logAudit(AUDIT_ACTIONS.SECURITY_ALERT, { action: 'webhook_token_regenerated' });
+        showToast('Token gerado. Use-o nos formulários.', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
     });
   }
 
@@ -100,14 +132,13 @@ export function setupWebhookModalEvents() {
       btnSendTest.disabled = true;
       btnSendTest.textContent = 'Enviando lead de teste…';
       try {
-        const res = await sendTestWebhookLead();
-        if (crmStore) crmStore.emitChange();
-        showToast(`Lead de teste (${res.lead.name}) recebido e adicionado ao funil!`, 'success');
+        await sendTestWebhookLead(currentToken);
+        showToast('Contato de teste recebido. Ele aparece no funil em alguns segundos.', 'success');
       } catch (err) {
         showToast('Erro ao disparar teste: ' + err.message, 'error');
       } finally {
         btnSendTest.disabled = false;
-        btnSendTest.textContent = 'Simular Envio de Lead via Webhook';
+        btnSendTest.textContent = 'Enviar um lead de teste';
       }
     });
   }

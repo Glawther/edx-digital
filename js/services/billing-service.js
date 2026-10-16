@@ -24,6 +24,8 @@ export class PlanLimitError extends Error {
 }
 
 export function currentPlan(org = getSavedOrganization()) {
+  // keep in step with limitsOf() in server/usage/usage-service.js: an Enterprise trial holds what Professional does
+  if (org.plan === 'enterprise' && org.planStatus === 'trial') return { ...PLANS.enterprise, maxLeads: PLANS.pro.maxLeads, maxUsers: PLANS.pro.maxUsers };
   return PLANS[org.plan] || PLANS.pro;
 }
 

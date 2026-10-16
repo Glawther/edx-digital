@@ -70,7 +70,7 @@ export async function enterSession({ resumed = false } = {}) {
 }
 
 // Nothing that belongs to a company stays in this browser after its session ends.
-// Kept on purpose: theme, the Gemini key and the webhook token (device settings),
+// Kept on purpose: theme and the Gemini key (device settings),
 // and the demo's sample data.
 export function clearCompanyDataFromBrowser() {
   ['edx_audit_logs', 'edx_last_activity', 'edx_reminder_rung'].forEach(key => localStorage.removeItem(key));

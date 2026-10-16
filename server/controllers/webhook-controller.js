@@ -1,26 +1,35 @@
 /**
- * EDX Digital - Inbox for leads sent by forms and ad tools
+ * EDX Digital - Leads sent by forms and ad tools
  *
- * Each CRM account has its own inbox, identified by its webhook token. A lead is only ever
- * handed back to whoever presents the same token it was sent with, and only a hash of the
- * token is stored.
+ *   POST /api/webhook/leads    a form sends one lead, with the company's token          [public]
+ *   GET  /api/webhook/token    the company's token (null when none was issued yet)      [company admin]
+ *   POST /api/webhook/token    a new token; the previous one stops working at once      [company admin]
+ *
+ * The lead is written straight into the company that owns the token (lead-intake.js).
  */
 
 const crypto = require('crypto');
 const { parseJsonBody } = require('../middleware/body-parser');
-const { leadInbox, normalizeLeadPayload } = require('../services/lead-storage');
+const { normalizeLeadPayload } = require('../services/lead-storage');
+const { createLeadIntake, firestoreLeadStore, IntakeError } = require('../services/lead-intake');
+const { verifyIdToken, isServiceAccountConfigured } = require('../billing/google-auth');
+
+let intake = null;
+function leadIntake() {
+  if (!intake) intake = createLeadIntake({ store: firestoreLeadStore });
+  return intake;
+}
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{24,128}$/;
 const MAX_BODY_BYTES = 32 * 1024;
 
-function inboxFromRequest(req) {
+function tokenFromRequest(req) {
   let token = req.headers['x-webhook-token'];
   if (!token) {
     // Form and ad tools often cannot set headers, so the token may come in the address
     token = new URLSearchParams((req.url || '').split('?')[1] || '').get('token');
   }
-  if (typeof token !== 'string' || !TOKEN_PATTERN.test(token)) return null;
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return typeof token === 'string' && TOKEN_PATTERN.test(token) ? token : null;
 }
 
 function send(res, status, body) {
@@ -31,12 +40,7 @@ function send(res, status, body) {
 // The sender is told to try again; the reason stays in the server's log
 function unavailable(res, err) {
   console.error('[Webhook]', err.message);
-  send(res, 503, { success: false, error: 'A caixa de entrada está indisponível. Tente de novo em instantes.' });
-}
-
-function withoutInbox(lead) {
-  const { inbox, ...rest } = lead;
-  return rest;
+  send(res, 503, { success: false, error: 'O recebimento de contatos está indisponível. Tente de novo em instantes.' });
 }
 
 // A sender cannot flood the inbox: so many requests per minute for each address and each inbox
@@ -70,9 +74,10 @@ function clientAddress(req) {
 
 /** POST /api/webhook/leads */
 async function handleIngestLead(req, res) {
-  const inbox = inboxFromRequest(req);
-  if (!inbox) return send(res, 401, { success: false, error: 'Token do webhook ausente ou inválido' });
-  if (tooMany('ip', clientAddress(req)) || tooMany('inbox', inbox)) {
+  const token = tokenFromRequest(req);
+  if (!token) return send(res, 401, { success: false, error: 'Token do webhook ausente ou inválido' });
+  const tokenKey = crypto.createHash('sha256').update(token).digest('hex');
+  if (tooMany('ip', clientAddress(req)) || tooMany('inbox', tokenKey)) {
     return send(res, 429, { success: false, error: 'Muitos envios em pouco tempo. Tente de novo em um minuto.' });
   }
 
@@ -83,57 +88,45 @@ async function handleIngestLead(req, res) {
     return send(res, 400, { success: false, error: 'O corpo precisa ser um JSON de até 32 KB' });
   }
 
-  const lead = { ...normalizeLeadPayload(body), inbox };
+  const lead = normalizeLeadPayload(body);
   if (!lead.name && !lead.email && !lead.phone) {
     return send(res, 400, { success: false, error: 'Informe ao menos nome, e-mail ou telefone' });
   }
-
-  try {
-    const stored = await leadInbox().add(lead);
-    if (!stored) return send(res, 429, { success: false, error: 'A caixa de entrada está cheia. Abra o CRM para recolher os contatos.' });
-  } catch (err) {
-    return unavailable(res, err);
+  if (!isServiceAccountConfigured()) {
+    return send(res, 503, { success: false, error: 'O recebimento de contatos não está configurado neste servidor.' });
   }
 
-  send(res, 201, { success: true, lead: withoutInbox(lead) });
-}
-
-/** GET /api/webhook/leads */
-async function handleGetLeads(req, res) {
-  const inbox = inboxFromRequest(req);
-  if (!inbox) return send(res, 401, { success: false, error: 'Token do webhook ausente ou inválido' });
-
   try {
-    const leads = (await leadInbox().list(inbox)).map(withoutInbox);
-    send(res, 200, { success: true, count: leads.length, leads });
+    const result = await leadIntake().ingest(token, lead);
+    send(res, result.status === 'created' ? 201 : 200, { success: true, status: result.status });
   } catch (err) {
+    if (err instanceof IntakeError) return send(res, err.status, { success: false, error: err.message });
     unavailable(res, err);
   }
 }
 
-/** POST /api/webhook/leads/ack */
-async function handleAcknowledgeLeads(req, res) {
-  const inbox = inboxFromRequest(req);
-  if (!inbox) return send(res, 401, { success: false, error: 'Token do webhook ausente ou inválido' });
-
-  let body;
+/** GET and POST /api/webhook/token */
+async function handleWebhookToken(req, res) {
+  const header = req.headers.authorization || '';
+  let user;
   try {
-    ({ body } = await parseJsonBody(req, MAX_BODY_BYTES));
+    user = await verifyIdToken(header.startsWith('Bearer ') ? header.slice(7) : '');
   } catch {
-    return send(res, 400, { success: false, error: 'O corpo precisa ser um JSON de até 32 KB' });
+    return send(res, 401, { error: 'unauthenticated', message: 'Entre na sua conta para continuar.' });
   }
-
-  const ids = Array.isArray(body.leadIds) ? body.leadIds.filter(id => typeof id === 'string') : [];
+  if (!isServiceAccountConfigured()) {
+    return send(res, 503, { error: 'not_configured', message: 'O recebimento de contatos não está configurado neste servidor.' });
+  }
   try {
-    await leadInbox().acknowledge(inbox, ids.length === 0 ? null : ids.slice(0, 500));
-    send(res, 200, { success: true });
+    const token = req.method === 'POST' ? await leadIntake().issueToken(user) : await leadIntake().currentToken(user);
+    send(res, 200, { token });
   } catch (err) {
+    if (err instanceof IntakeError) return send(res, err.status, { error: 'forbidden', message: err.message });
     unavailable(res, err);
   }
 }
 
 module.exports = {
   handleIngestLead,
-  handleGetLeads,
-  handleAcknowledgeLeads
+  handleWebhookToken
 };

@@ -54,15 +54,15 @@ npm run test:rules
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
 - **Limites do plano** (oportunidades em aberto e pessoas com acesso): o aplicativo confere antes de criar, e o servidor reconta a cada mudança e grava na empresa se o plano está cheio (`usage.leadsFull`, `usage.seatsFull`). As regras leem essa marca e recusam novas oportunidades ou novas pessoas enquanto ela disser cheio. Como a recontagem vem depois da gravação, uma rajada de criações pode passar um pouco do limite antes de a porta fechar.
 - **E-mail confirmado**: uma empresa só é criada por uma conta com o e-mail confirmado (as regras conferem `email_verified`). Entrar por convite não exige confirmação, porque o código já veio de quem administra.
-- **Webhook de leads**: a caixa de entrada é separada por token, e o token fica guardado no navegador de quem configurou. Outro computador da mesma empresa tem outro token.
+- **Leads de formulários**: cada empresa tem um token, gerado pelo administrador em Ferramentas, Receber leads de formulários. O servidor guarda só a ligação do hash do token com a empresa (`webhook_tokens`) e o token em `webhook_config`, as duas coleções fechadas ao aplicativo. Cada contato que chega é gravado direto nas oportunidades da empresa dona do token, com a dona da empresa como responsável; nada passa pelo navegador. Um contato com o mesmo e-mail ou telefone de uma oportunidade existente vira uma anotação nela. Plano vencido ou cheio: o contato é recusado e o formulário recebe o motivo.
 
 ## Proteções do servidor
 
 - **Onde roda**: em produção o servidor é uma função do Firebase atrás de `/api` no endereço do próprio site; as páginas são entregues pelo Firebase Hosting, que só publica a pasta `dist/`. O item abaixo vale para `server.js`, usado no computador de quem desenvolve.
 - **Só arquivos públicos**: o servidor entrega as páginas, `js/`, `css/` e `assets/`. O código dele, a pasta de dados, configurações e arquivos ocultos respondem "não encontrado". A lista fica em `server/controllers/static-controller.js`.
-- **Rotas em uso**: cobrança (`/api/billing`), caixa de entrada de formulários (`/api/webhook/leads`) e `/health`. Qualquer outro endereço em `/api` responde 404.
+- **Rotas em uso**: cobrança (`/api/billing`), leads de formulários (`/api/webhook/leads`, e `/api/webhook/token` para o administrador) e `/health`. Qualquer outro endereço em `/api` responde 404.
 - **API antiga removida**: existia uma `/api/v1` que o aplicativo nunca usou, com uma rota de token que entregava sessão sem conferir quem pedia. O código e os testes dela saíram do repositório; o endereço responde 404, e `server/tests/server-surface.test.js` confere isso.
-- **Caixa de entrada de formulários**: fica na coleção `webhook_leads` do banco, fechada ao aplicativo pelas regras (só o servidor lê e grava). Cada token tem a sua; aceita até 60 envios por minuto por caixa e 120 por endereço, corpo de até 32 KB e 500 contatos aguardando. O que chega é guardado como texto simples, com tamanho limitado.
+- **Recebimento de formulários**: aceita até 60 envios por minuto por token e 120 por endereço de origem, corpo de até 32 KB, e guarda só texto simples com tamanho limitado.
 
 ## Proteções do banco
 
@@ -150,3 +150,17 @@ Os termos assumem estes compromissos, e o sistema não os cumpre sozinho:
 - **Mudou termos ou política?** Atualize a data nas páginas e `LEGAL_VERSION`, e avise os clientes com 15 dias de antecedência.
 
 Os textos descrevem o que o sistema faz de verdade e foram revisados com atenção ao CDC, à LGPD e ao Decreto 7.962/2013, mas não substituem a orientação de um advogado inscrito na OAB.
+
+## Revisão com quatro perfis (outubro de 2026)
+
+Uma cliente comum, um cliente avançado, um dev pleno e um dev sênior revisaram o sistema. O que foi fechado no servidor e nas regras:
+
+- **Cobrança**: troca de plano convertida pelo preço, estorno que devolve o plano anterior, e confirmação gravada em transação (duas cópias do servidor não somam dois períodos). Ver `docs/COBRANCA_PIX.md`.
+- **E-mails da manhã**: só para endereço confirmado de uma conta de login (ver `docs/EMAILS.md`).
+- **Leads de formulários**: gravados pelo servidor direto na empresa (acima). Antes o token ficava no navegador de quem configurou, e quem abrisse o CRM naquele navegador recolhia e apagava os contatos.
+- **Vendedor**: não apaga entradas do histórico, não muda a data de criação e só muda a data da venda junto com a etapa. O administrador continua podendo corrigir.
+- **Valor de oportunidade**: até 10 bilhões, para todos.
+- **Teste gratuito do Enterprise**: com os limites do Professional.
+- **Perfil novo**: só os campos que o aplicativo grava.
+
+Limite conhecido que continua: uma rajada de gravações feita por fora do aplicativo pode passar um pouco do limite do plano antes de o servidor marcar o plano como cheio.
