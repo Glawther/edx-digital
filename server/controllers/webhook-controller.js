@@ -13,6 +13,7 @@ const { parseJsonBody } = require('../middleware/body-parser');
 const { normalizeLeadPayload } = require('../services/lead-storage');
 const { createLeadIntake, firestoreLeadStore, IntakeError } = require('../services/lead-intake');
 const { verifyIdToken, isServiceAccountConfigured } = require('../billing/google-auth');
+const { clientAddress, createRateLimiter } = require('../middleware/rate-limit');
 
 let intake = null;
 function leadIntake() {
@@ -44,33 +45,9 @@ function unavailable(res, err) {
 }
 
 // A sender cannot flood the inbox: so many requests per minute for each address and each inbox
-const WINDOW_MS = 60000;
 const LIMITS = { ip: 120, inbox: 60 };
-const hits = new Map();
-
-function tooMany(kind, key) {
-  const now = Date.now();
-  const id = `${kind}:${key}`;
-  const recent = (hits.get(id) || []).filter(time => now - time < WINDOW_MS);
-  if (recent.length >= LIMITS[kind]) {
-    hits.set(id, recent);
-    return true;
-  }
-  recent.push(now);
-  hits.set(id, recent);
-  if (hits.size > 5000) {
-    for (const [entry, times] of hits) {
-      if (times.every(time => now - time >= WINDOW_MS)) hits.delete(entry);
-    }
-  }
-  return false;
-}
-
-function clientAddress(req) {
-  // Behind the host's proxy the caller's address is the first one in this header
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || (req.socket && req.socket.remoteAddress) || 'unknown';
-}
+const limiter = createRateLimiter({ windowMs: 60000 });
+const tooMany = (kind, key) => limiter.tooMany(`${kind}:${key}`, LIMITS[kind]);
 
 /** POST /api/webhook/leads */
 async function handleIngestLead(req, res) {
