@@ -78,6 +78,7 @@ export function normalizeCustomer(raw) {
     email: text(data.email, 320),
     phone: text(data.phone, 60),
     notes: text(data.notes, 20000),
+    proposalText: text(data.proposalText, 5000),
     dealValue: Number.isFinite(value) && value > 0 ? value : 0,
     stage: STAGE_IDS.includes(stage) ? stage : 'lead',
     priority: PRIORITIES.includes(data.priority) ? data.priority : 'medium',

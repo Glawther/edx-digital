@@ -1059,17 +1059,34 @@ export function renderAuthBadge(user) {
 /**
  * Updates Connection Pill in Header & Sidebar
  */
+// Writes still waiting for the server, and whether the browser has a connection
+const syncState = { pending: 0, online: typeof navigator === 'undefined' || navigator.onLine !== false, mode: null };
+
+export function setSyncState(change) {
+  Object.assign(syncState, change);
+  if (syncState.mode) renderConnectionStatus(syncState.mode);
+}
+
 export function renderConnectionStatus(mode) {
   const pill = document.getElementById('connection-status-pill');
+  syncState.mode = mode;
   if (!pill) return;
 
   if (mode === 'firestore') {
-    pill.className = 'connection-pill online';
-    pill.innerHTML = `
-      <span class="pulse-dot"></span>
-      <span>Sincronizado</span>
-    `;
-    pill.title = 'Os dados da empresa são salvos na nuvem e atualizados em tempo real';
+    const waiting = syncState.pending === 1 ? '1 alteração aguardando' : `${syncState.pending} alterações aguardando`;
+    if (!syncState.online) {
+      pill.className = 'connection-pill offline';
+      pill.innerHTML = `<span class="pulse-dot"></span><span>Sem conexão${syncState.pending > 0 ? `: ${waiting}` : ''}</span>`;
+      pill.title = 'As alterações são enviadas quando a conexão voltar. Não feche esta aba antes disso.';
+    } else if (syncState.pending > 0) {
+      pill.className = 'connection-pill saving';
+      pill.innerHTML = '<span class="pulse-dot"></span><span>Salvando…</span>';
+      pill.title = waiting;
+    } else {
+      pill.className = 'connection-pill online';
+      pill.innerHTML = '<span class="pulse-dot"></span><span>Sincronizado</span>';
+      pill.title = 'Os dados da empresa são salvos na nuvem e atualizados em tempo real';
+    }
   } else {
     pill.className = 'connection-pill local';
     pill.innerHTML = `

@@ -31,6 +31,9 @@ import {
 } from './shared.js';
 
 let activeLeadDetailsCustomerId = null;
+// the form as it was when an opportunity was opened for editing, and who had it then
+let editBaseline = null;
+let editingAssignee = null;
 
 // The funnels the opportunity can be in (the field only shows when the company has more than one)
 function fillPipelineSelect(selectedId) {
@@ -307,6 +310,53 @@ export function setupTasksEvents() {
   };
 }
 
+// What the opportunity form says right now, as it would be saved
+function readCustomerForm() {
+  const name = sanitizeInput(document.getElementById('input-customer-name').value);
+  const company = sanitizeInput(document.getElementById('input-customer-company').value);
+  const role = sanitizeInput(document.getElementById('input-customer-role').value);
+  const email = sanitizeInput(document.getElementById('input-customer-email').value);
+  const phone = sanitizeInput(document.getElementById('input-customer-phone').value);
+  const dealValue = parseSafeDealValue(document.getElementById('input-deal-value').value);
+  const stage = document.getElementById('input-deal-stage').value;
+  const priority = document.getElementById('input-deal-priority').value;
+  const expectedCloseDate = document.getElementById('input-deal-forecast').value;
+  const rawTags = document.getElementById('input-customer-tags').value;
+  const tags = rawTags.split(',').map(t => sanitizeInput(t)).filter(Boolean);
+  const notes = sanitizeInput(document.getElementById('input-customer-notes').value);
+
+  // Responsável pelo lead
+  const assignedSelect = document.getElementById('input-customer-assigned');
+  const members = getAssignableMembers();
+  const assignedMember = members.find(m => m.email === (assignedSelect ? assignedSelect.value : '')) || members[0];
+  // the person who had it and is no longer on the team, kept as chosen
+  const keep = assignedSelect && assignedSelect.selectedOptions[0] && assignedSelect.selectedOptions[0].dataset.keep === '1' && editingAssignee;
+
+  const customerPayload = {
+    name,
+    company,
+    role,
+    email,
+    phone,
+    dealValue,
+    stage,
+    priority,
+    expectedCloseDate,
+    tags,
+    notes,
+    recurring: document.getElementById('input-deal-recurring')?.checked === true,
+    pipelineId: document.getElementById('input-deal-pipeline')?.value || crmStore.getState().activePipelineId,
+    custom: collectCustomFieldValues(),
+    assignedTo: keep ? { id: editingAssignee.id || '', name: editingAssignee.name || '', email: editingAssignee.email || '' } : {
+      id: assignedMember.id,
+      name: assignedMember.name,
+      email: assignedMember.email
+    }
+  };
+  return customerPayload;
+
+}
+
 // ==========================================================================
 // Customer Dialog (Add / Edit)
 // ==========================================================================
@@ -332,6 +382,8 @@ export function setupDialogEvents() {
         return;
       }
     }
+    editBaseline = null;
+    editingAssignee = null;
     document.getElementById('dialog-customer-id').value = '';
     document.getElementById('customer-dialog-title').textContent = 'Nova oportunidade';
     customerForm.reset();
@@ -389,45 +441,8 @@ export function setupDialogEvents() {
     customerForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('dialog-customer-id').value;
-      const name = sanitizeInput(document.getElementById('input-customer-name').value);
-      const company = sanitizeInput(document.getElementById('input-customer-company').value);
-      const role = sanitizeInput(document.getElementById('input-customer-role').value);
-      const email = sanitizeInput(document.getElementById('input-customer-email').value);
-      const phone = sanitizeInput(document.getElementById('input-customer-phone').value);
-      const dealValue = parseSafeDealValue(document.getElementById('input-deal-value').value);
-      const stage = document.getElementById('input-deal-stage').value;
-      const priority = document.getElementById('input-deal-priority').value;
-      const expectedCloseDate = document.getElementById('input-deal-forecast').value;
-      const rawTags = document.getElementById('input-customer-tags').value;
-      const tags = rawTags.split(',').map(t => sanitizeInput(t)).filter(Boolean);
-      const notes = sanitizeInput(document.getElementById('input-customer-notes').value);
-
-      // Responsável pelo lead
-      const assignedSelect = document.getElementById('input-customer-assigned');
-      const members = getAssignableMembers();
-      const assignedMember = members.find(m => m.email === (assignedSelect ? assignedSelect.value : '')) || members[0];
-
-      const customerPayload = {
-        name,
-        company,
-        role,
-        email,
-        phone,
-        dealValue,
-        stage,
-        priority,
-        expectedCloseDate,
-        tags,
-        notes,
-        recurring: document.getElementById('input-deal-recurring')?.checked === true,
-        pipelineId: document.getElementById('input-deal-pipeline')?.value || crmStore.getState().activePipelineId,
-        custom: collectCustomFieldValues(),
-        assignedTo: {
-          id: assignedMember.id,
-          name: assignedMember.name,
-          email: assignedMember.email
-        }
-      };
+      const customerPayload = readCustomerForm();
+      const { name, company, email, phone, dealValue, stage } = customerPayload;
 
       // entering a stage (a new opportunity, or one that changes stage here) asks for what the company set
       const previous = id ? storage.getCustomer(id) : null;
@@ -439,8 +454,30 @@ export function setupDialogEvents() {
         }
       }
 
+      let toSave = customerPayload;
+      let askLossReason = false;
+      let movedTo = null;
       if (id) {
-        customerPayload.id = id;
+        // Only what was changed in the form is saved: a field someone else changed while the form
+        // was open (the stage, after a drag on the board) is not put back as it was.
+        const baseline = editBaseline ? JSON.parse(editBaseline) : {};
+        toSave = Object.fromEntries(Object.entries(customerPayload).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(baseline[key])));
+        // "Perdido" asks why, as on the board
+        if (toSave.stage === 'lost' && previous && previous.stage !== 'lost') {
+          delete toSave.stage;
+          askLossReason = true;
+        }
+        // another stage goes through the same path as the board: it enters the history
+        if (toSave.stage) {
+          movedTo = toSave.stage;
+          delete toSave.stage;
+        }
+        if (Object.keys(toSave).length === 0 && !askLossReason && !movedTo) {
+          customerDialog.close();
+          showToast('Nada foi alterado.', 'info');
+          return;
+        }
+        toSave.id = id;
       } else {
         const twin = findDuplicate(storage.getCustomers(), { email, phone });
         if (twin && !confirm(`Já existe uma oportunidade com este ${twin.email && twin.email.toLowerCase() === email.toLowerCase() && email ? 'e-mail' : 'telefone'}: ${twin.name}${twin.company ? `, ${twin.company}` : ''}, na etapa ${STAGES.find(st => st.id === twin.stage)?.name || twin.stage}.\n\nCadastrar outra mesmo assim?`)) {
@@ -449,8 +486,13 @@ export function setupDialogEvents() {
       }
 
       try {
-        await storage.saveCustomer(customerPayload);
+        if (Object.keys(toSave).length > 1 || !id) await storage.saveCustomer(toSave);
+        if (movedTo) await storage.updateStage(id, movedTo);
         customerDialog.close();
+        if (askLossReason) {
+          window.handleTriggerLossReason(id);
+          return;
+        }
         showToast(id ? "Oportunidade atualizada." : "Oportunidade criada.", "success");
 
         // Audit & Notification
@@ -499,12 +541,14 @@ window.handleOpenEditCustomer = function(customerId) {
   fillPipelineSelect(pipelineIdOf(customer, crmStore.getState().pipelines));
 
   const assignedSelect = document.getElementById('input-customer-assigned');
+  editingAssignee = customer.assignedTo || null;
   if (assignedSelect) {
-    fillAssigneeSelect(assignedSelect, customer.assignedTo?.email);
+    fillAssigneeSelect(assignedSelect, customer.assignedTo?.email, customer.assignedTo || null);
   }
   const more = document.getElementById('customer-form-more');
   if (more) more.open = true;
 
+  editBaseline = JSON.stringify(readCustomerForm());
   customerDialog.showModal();
 };
 

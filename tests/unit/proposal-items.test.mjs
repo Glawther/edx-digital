@@ -46,3 +46,12 @@ test('a quantidade aparece como uma pessoa escreveria', () => {
   assert.equal(formatQuantity(1.5), '1,5');
   assert.equal(formatQuantity(1000), '1.000');
 });
+
+test('preço com ponto de milhar é lido como no valor da oportunidade', async () => {
+  const { parseAmount } = await import('../../js/core/proposal-items.js');
+  assert.equal(parseAmount('1.250'), 1250);
+  assert.equal(parseAmount('1.250.000'), 1250000);
+  assert.equal(parseAmount('1.250,50'), 1250.5);
+  assert.equal(parseAmount('1.5'), 1.5);
+  assert.equal(parseAmount('2'), 2);
+});

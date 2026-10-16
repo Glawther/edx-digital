@@ -131,13 +131,35 @@ async function applyFirebaseUser(fbUser) {
   };
   sessionKind = SESSION_KINDS.CLOUD;
   localStorage.setItem(SESSION_STORAGE_KEY, 'cloud');
+  watchOwnProfile(db, fsMod, fbUser.uid);
 
   notifyRoleListeners();
   notifyListeners();
   return currentUser;
 }
 
+// A person blocked or removed while working is taken out at once, not on the next sign-in
+let stopProfileWatch = null;
+
+function watchOwnProfile(db, fsMod, uid) {
+  if (stopProfileWatch) stopProfileWatch();
+  stopProfileWatch = fsMod.onSnapshot(fsMod.doc(db, 'users', uid), (snap) => {
+    if (sessionKind !== SESSION_KINDS.CLOUD || !currentUser || currentUser.uid !== uid) return;
+    const profile = snap.exists() ? snap.data() : null;
+    if (profile && profile.status !== 'blocked') return;
+    logoutToPortal().then(() => {
+      if (typeof window.showToast === 'function') {
+        window.showToast(profile ? 'Seu acesso foi bloqueado por quem administra o CRM da sua empresa.' : 'Seu cadastro nesta empresa foi removido.', 'warning');
+      }
+    });
+  }, () => { /* without the profile the rules refuse everything anyway */ });
+}
+
 function clearSession() {
+  if (stopProfileWatch) {
+    stopProfileWatch();
+    stopProfileWatch = null;
+  }
   currentUser = null;
   currentRole = USER_ROLES.EMPLOYEE;
   sessionKind = SESSION_KINDS.NONE;
@@ -465,6 +487,11 @@ export async function setEmailDigest(wanted) {
 export async function deleteOwnAccount(password) {
   if (sessionKind !== SESSION_KINDS.CLOUD) throw authError('permission-denied');
   const fbUser = await confirmPassword(password);
+  // leaving on purpose: the profile disappearing is not news to show
+  if (stopProfileWatch) {
+    stopProfileWatch();
+    stopProfileWatch = null;
+  }
   const { db, authMod, fsMod } = await getFirebase();
 
   await fsMod.deleteDoc(fsMod.doc(db, 'user_private', fbUser.uid)).catch(() => {});
@@ -486,6 +513,11 @@ export async function deleteOwnAccount(password) {
 export async function deleteCompany(password) {
   if (sessionKind !== SESSION_KINDS.CLOUD || !isAdmin()) throw authError('permission-denied');
   const fbUser = await confirmPassword(password);
+  // leaving on purpose: the profile disappearing is not news to show
+  if (stopProfileWatch) {
+    stopProfileWatch();
+    stopProfileWatch = null;
+  }
   const { db, authMod, fsMod } = await getFirebase();
   const org = getSavedOrganization();
   const orgId = currentUser.orgId;

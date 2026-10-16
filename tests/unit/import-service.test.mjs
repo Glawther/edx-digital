@@ -15,7 +15,10 @@ test('valores no formato brasileiro e no formato com ponto', () => {
   assert.equal(parseMoney('90000'), 90000);
   assert.equal(parseMoney(''), 0);
   assert.equal(parseMoney('abc'), 0);
-  assert.equal(parseMoney('-50'), 50, 'o sinal é descartado junto com os outros símbolos');
+  assert.equal(parseMoney('-50'), 0, 'valor negativo não é valor de negócio');
+  assert.equal(parseMoney('R$ -1.234,56'), 0);
+  assert.equal(parseMoney('1,234.56'), 1234.56, 'formato americano: o último separador é o decimal');
+  assert.equal(parseMoney('12.345.678'), 12345678);
 });
 
 test('lê ponto e vírgula, vírgula e tabulação, com aspas e quebra de linha dentro da célula', () => {
@@ -100,4 +103,34 @@ test('sinais de menor e maior são retirados, e fórmulas são neutralizadas na 
   assert.equal(csvSafe('=HYPERLINK("http://x")'), '\'=HYPERLINK("http://x")');
   assert.equal(csvSafe('+55 11 98888-7777'), '\'+55 11 98888-7777');
   assert.equal(csvSafe('Ana'), 'Ana');
+});
+
+test('importação: limites do banco conferidos antes, valores estranhos avisados, cabeçalho pela palavra mais longa', async () => {
+  const { buildImportRows, guessMapping, parseDelimited } = await import('../../js/services/import-service.js');
+  const table = [
+    ['Nome do contato', 'Nome da empresa', 'Telefone', 'Valor', 'Etiquetas'],
+    ['Telefone longo', 'Alfa', '1'.repeat(70), '100', ''],
+    ['Muitas etiquetas', 'Beta', '', '200', Array.from({ length: 35 }, (_, i) => `t${i}`).join(',')],
+    ['Empresa longa', 'x'.repeat(400), '', '300', ''],
+    ['Negativo', 'Delta', '', '-500', ''],
+    ['Com letras', 'Gama', '', '3 mil', '']
+  ];
+  const mapping = guessMapping(table, true);
+  assert.equal(mapping.name, 0);
+  assert.equal(mapping.company, 1, '"Nome da empresa" é a empresa');
+  const rows = buildImportRows(table, mapping, { hasHeader: true });
+  assert.deepEqual(rows[0].problems, ['telefone longo demais']);
+  assert.equal(rows[1].lead.tags.length, 29);
+  assert.match(rows[1].notes.join(), /ficam as 29 primeiras/);
+  assert.equal(rows[2].lead.company.length, 300);
+  assert.equal(rows[3].lead.dealValue, 0);
+  assert.match(rows[3].notes.join(), /negativo/);
+  assert.equal(rows[4].lead.dealValue, 0);
+  assert.match(rows[4].notes.join(), /não reconhecido/);
+
+  // uma aspa aberta não engole o resto do arquivo
+  const parsed = parseDelimited('"Ana Paula;Alfa\nBruno;Beta\nCarla;Gama');
+  assert.equal(parsed.unclosedQuote, true);
+  assert.equal(parsed.length, 3);
+  assert.equal(parsed[1][0], 'Bruno');
 });

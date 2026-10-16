@@ -16,6 +16,27 @@ let fs = null;
 let activeOrgId = null;
 let unsubscribeCustomers = null;
 
+// Writes sent and not yet confirmed by the server (offline they wait in memory): the header
+// shows them, and closing the tab with some still waiting asks first
+let pendingWrites = 0;
+
+function announceSync() {
+  window.dispatchEvent(new CustomEvent('edx-sync', { detail: { pending: pendingWrites } }));
+}
+
+function tracked(promise) {
+  pendingWrites += 1;
+  announceSync();
+  return promise.finally(() => {
+    pendingWrites -= 1;
+    announceSync();
+  });
+}
+
+export function pendingWriteCount() {
+  return pendingWrites;
+}
+
 /**
  * Prepares Firestore for the signed-in session
  */
@@ -135,8 +156,22 @@ export async function addFirestoreCustomer(customerData) {
     updatedAt: new Date().toISOString()
   };
 
-  await fs.setDoc(fs.doc(db, 'customers', customId), withoutUndefined(payload));
+  await tracked(fs.setDoc(fs.doc(db, 'customers', customId), withoutUndefined(payload)));
   return { ...payload, id: customId, firestoreId: customId };
+}
+
+/**
+ * Adds many customers in one write (up to 500): all are saved, or none
+ */
+export async function addFirestoreCustomers(list) {
+  if (!db || !fs || !activeOrgId) throw new Error("Firestore não inicializado.");
+  const batch = fs.writeBatch(db);
+  const now = new Date().toISOString();
+  for (const item of list) {
+    const { firestoreId, ...clean } = item;
+    batch.set(fs.doc(db, 'customers', clean.id), withoutUndefined({ ...clean, orgId: activeOrgId, clientLeadId: clean.id, createdAt: clean.createdAt || now, updatedAt: now }));
+  }
+  await tracked(batch.commit());
 }
 
 /**
@@ -156,7 +191,7 @@ export async function updateFirestoreCustomer(id, partialData) {
   };
 
   // merge keeps the fields that were not sent; orgId goes along so the rules can check the company
-  await fs.setDoc(fs.doc(db, 'customers', id), withoutUndefined({ ...payload, orgId: activeOrgId }), { merge: true });
+  await tracked(fs.setDoc(fs.doc(db, 'customers', id), withoutUndefined({ ...payload, orgId: activeOrgId }), { merge: true }));
   return { id, firestoreId: id, ...payload };
 }
 
@@ -166,10 +201,43 @@ function withoutUndefined(value) {
 }
 
 /**
+ * Adds items to the end of lists of an opportunity (history, tasks) without rewriting them:
+ * what someone else added at the same moment stays. Works offline too (sent when back).
+ * @param {string} id
+ * @param {Object<string, Array>} lists - e.g. { activities: [activity], tasks: [task] }
+ * @param {Object} [fields] - other fields to change together (stage, wonAt...)
+ */
+export async function appendToFirestoreCustomer(id, lists, fields = {}) {
+  if (!db || !fs) throw new Error("Firestore não inicializado.");
+  const payload = withoutUndefined({ ...fields, updatedAt: fields.updatedAt || new Date().toISOString() });
+  for (const [field, items] of Object.entries(lists)) payload[field] = fs.arrayUnion(...items.map(withoutUndefined));
+  await tracked(fs.updateDoc(fs.doc(db, 'customers', id), payload));
+}
+
+/**
+ * Changes items already in a list (marks a task done, removes one) from the list as it is in the
+ * database now, not the copy on screen: read and written together, in a transaction.
+ * Needs the connection (a transaction cannot wait offline).
+ * @param {string} id
+ * @param {string} field - 'tasks' or 'activities'
+ * @param {(list: Array) => Array} change
+ */
+export async function changeFirestoreCustomerList(id, field, change) {
+  if (!db || !fs) throw new Error("Firestore não inicializado.");
+  const ref = fs.doc(db, 'customers', id);
+  await tracked(fs.runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const list = Array.isArray(snap.data()[field]) ? snap.data()[field] : [];
+    tx.update(ref, { [field]: withoutUndefined(change(list)), updatedAt: new Date().toISOString() });
+  }));
+}
+
+/**
  * Deletes a customer document
  */
 export async function deleteFirestoreCustomer(id) {
   if (!db || !fs) throw new Error("Firestore não inicializado.");
-  await fs.deleteDoc(fs.doc(db, 'customers', id));
+  await tracked(fs.deleteDoc(fs.doc(db, 'customers', id)));
   return true;
 }

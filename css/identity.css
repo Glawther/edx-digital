@@ -1680,3 +1680,9 @@ h1, h2, h3, .dialog-title, .section-title, .page-title { text-wrap: balance; }
   .link-btn::after, .toast-action::after { content: ''; position: absolute; inset: -12px -6px; }
   .task-checkbox { width: 24px; height: 24px; }
 }
+
+/* Saving and offline states of the header badge */
+.connection-pill.saving { color: var(--text-secondary); }
+.connection-pill.offline { color: var(--color-proposal); border-color: var(--color-proposal-border); background: var(--color-proposal-bg); }
+.connection-pill.offline .pulse-dot { background: var(--color-proposal); }
+.connection-pill.saving .pulse-dot { background: var(--text-muted); }

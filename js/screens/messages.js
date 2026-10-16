@@ -15,6 +15,7 @@ import {
   recordWhatsAppContact
 } from '../services/whatsapp-service.js';
 import { escapeHtml, formatBRL, showToast } from '../ui/ui-renderer.js';
+import { reportError } from './shared.js';
 
 let activeWhatsAppCustomerId = null;
 
@@ -293,6 +294,27 @@ export function setupProposalModalEvents() {
   if (btnClose) btnClose.addEventListener('click', closeDialog);
   if (btnCloseFooter) btnCloseFooter.addEventListener('click', closeDialog);
 
+  // The proposal shows its own text, never the opportunity's notes (those are internal)
+  function showProposalText(customer) {
+    const box = document.getElementById('prop-scope-text');
+    if (!box) return;
+    box.textContent = customer.proposalText || 'Nada escrito ainda. Abra "Texto da proposta", acima, e descreva o que está sendo proposto. Este aviso não sai na impressão.';
+    box.classList.toggle('is-placeholder', !customer.proposalText);
+  }
+
+  document.getElementById('btn-save-proposal-text')?.addEventListener('click', async () => {
+    const customer = storage.getCustomer(activeProposalCustomerId);
+    if (!customer) return;
+    const proposalText = String(document.getElementById('proposal-text-input')?.value || '').replace(/[<>]/g, '').trim().slice(0, 5000);
+    try {
+      const saved = await storage.saveCustomer({ id: customer.id, proposalText });
+      showProposalText(saved);
+      showToast('Texto da proposta salvo.', 'success');
+    } catch (err) {
+      reportError('Não foi possível salvar o texto', err);
+    }
+  });
+
   window.handleOpenProposalModal = function(customerId) {
     const customer = storage.getCustomer(customerId);
     if (!customer) return;
@@ -313,8 +335,14 @@ export function setupProposalModalEvents() {
     set('prop-client-role', customer.role ? `, ${customer.role}` : '');
     set('prop-client-company', customer.company || '');
     set('prop-client-contact', [customer.email, customer.phone].filter(Boolean).join(', '));
-    set('prop-scope-text', customer.notes || 'Nada escrito ainda. Edite a oportunidade e descreva em Anotações o que está sendo proposto: o texto aparece aqui. Este aviso não sai na impressão.');
-    document.getElementById('prop-scope-text')?.classList.toggle('is-placeholder', !customer.notes);
+    showProposalText(customer);
+    const textEditor = document.getElementById('proposal-text-editor');
+    if (textEditor) {
+      textEditor.open = !customer.proposalText && !isReadOnly();
+      textEditor.hidden = isReadOnly();
+    }
+    const textInput = document.getElementById('proposal-text-input');
+    if (textInput) textInput.value = customer.proposalText || '';
     editingItems = cleanItems(customer.items).map(item => ({ ...item }));
     renderItemRows();
     renderProposalItems(customer);

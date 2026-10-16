@@ -32,12 +32,21 @@ export function getAssignableMembers() {
   return [...active, { ...demoAdmin, jobTitle: 'Administrador' }];
 }
 
-export function fillAssigneeSelect(select, selectedEmail) {
+/**
+ * @param {HTMLSelectElement} select
+ * @param {string} selectedEmail
+ * @param {{id:string, name:string, email:string}|null} [current] - who has the opportunity now.
+ *   When that person is not among the assignable ones (blocked, removed, or the team list has not
+ *   loaded yet), they stay as an option, chosen: opening the form never hands the opportunity
+ *   to someone else by itself.
+ */
+export function fillAssigneeSelect(select, selectedEmail, current = null) {
   const members = getAssignableMembers();
+  const known = current && current.email && !members.some(m => m.email === current.email || (current.id && m.id === current.id));
   select.innerHTML = members.map(m => `
     <option value="${escapeHtml(m.email)}">${escapeHtml(m.name)} (${escapeHtml(m.jobTitle || 'Vendedor')})</option>
-  `).join('');
-  const wanted = members.find(m => m.email === selectedEmail);
+  `).join('') + (known ? `<option value="${escapeHtml(current.email)}" data-keep="1">${escapeHtml(current.name || current.email)} (sem acesso)</option>` : '');
+  const wanted = members.find(m => m.email === selectedEmail) || (known && current.email === selectedEmail ? current : null);
   select.value = wanted ? wanted.email : (members[0] ? members[0].email : '');
 }
 

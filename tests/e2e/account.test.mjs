@@ -365,3 +365,55 @@ test('texto hostil no banco (gravado por fora do aplicativo) aparece como texto 
   // e nenhuma tela quebrou por causa do texto estranho
   assert.deepEqual(problems, []);
 });
+test('duas sessões ao mesmo tempo: editar não desfaz a etapa mudada pela outra, e os dois registros no histórico ficam', async (t) => {
+  if (!world.dona) return t.skip('depende do cadastro');
+  const a = world.dona.page;
+  const second = await person('dona-2');
+  const b = second.page;
+  await b.goto(base);
+  await b.locator('#auth-portal-screen').waitFor({ state: 'visible', timeout: 20000 });
+  await b.fill('#form-auth-login input[type="email"]', world.dona.email);
+  await b.fill('#form-auth-login input[type="password"]', world.dona.password);
+  await b.click('#form-auth-login button[type="submit"]');
+  await b.locator('#today-content > *').first().waitFor({ timeout: 20000 });
+  if (await b.locator('.tour-card').count()) await b.click('[data-tour="skip"]');
+
+  const open = async (page) => {
+    await page.click('.nav-item[data-view="pipeline"]');
+    await page.locator('.lead-card', { hasText: 'Cliente da Dona' }).click();
+    await page.locator('#lead-details-dialog[open]').waitFor();
+  };
+
+  // A abre o formulário de edição; enquanto isso, B muda a etapa
+  await open(a);
+  await a.click('#lead-details-actions [data-click="handleOpenEditCustomer"]');
+  await a.locator('#customer-dialog[open]').waitFor();
+  await open(b);
+  await b.selectOption('#lead-details-stage', 'proposal');
+  await a.waitForFunction(() => document.querySelector('.lead-card') && true);
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  // A só muda o valor e salva
+  await a.fill('#input-deal-value', '9.500');
+  await a.click('#btn-submit-customer');
+  await a.locator('#customer-dialog[open]').waitFor({ state: 'detached' }).catch(() => {});
+  await b.waitForFunction(() => /9\.500/.test(document.querySelector('#lead-details-summary')?.textContent || ''), null, { timeout: 15000 });
+  assert.equal(await b.inputValue('#lead-details-stage'), 'proposal', 'a etapa mudada por B continua');
+
+  // os dois registram um contato quase ao mesmo tempo
+  if (!(await a.locator('#lead-details-dialog[open]').count())) await open(a);
+  await a.fill('#contact-log-text', 'Ligação registrada por A');
+  await b.fill('#contact-log-text', 'Mensagem registrada por B');
+  await Promise.all([
+    a.click('#contact-log-form button[type="submit"]'),
+    b.click('#contact-log-form button[type="submit"]')
+  ]);
+  for (const page of [a, b]) {
+    await page.waitForFunction(() => {
+      const text = document.querySelector('#lead-details-timeline')?.textContent || '';
+      return text.includes('Ligação registrada por A') && text.includes('Mensagem registrada por B');
+    }, null, { timeout: 15000 });
+  }
+  await a.click('#btn-close-lead-details');
+  await b.close();
+  assert.deepEqual(world.dona.problems, []);
+});
