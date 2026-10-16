@@ -119,8 +119,13 @@ function createBillingService({ store, gateway, now = () => Date.now(), onPlanCh
    */
   const inFlight = new Map();
 
-  // The webhook and the browser's status check can arrive together for the same payment.
-  // They share one run, so a period is never added twice.
+  // The changes to a payment and to its company are made together, in a database transaction:
+  // the webhook and the browser's status check can reach two copies of the server at once,
+  // and only one of them may release (or take back) a period. A store without transactions
+  // (the tests) runs the same steps one after the other.
+  const transact = store.transaction ? (fn) => store.transaction(fn) : (fn) => fn(store);
+
+  // Within one copy of the server, the webhook and the status check share one run
   function syncPayment(paymentId) {
     if (!inFlight.has(paymentId)) {
       inFlight.set(paymentId, applyPayment(paymentId).finally(() => inFlight.delete(paymentId)));
@@ -142,7 +147,7 @@ function createBillingService({ store, gateway, now = () => Date.now(), onPlanCh
 
     if (record.status === 'approved') {
       // A payment that had released a period and was later given back takes that period away
-      if (REVERSED.includes(payment.status)) return revokePayment(paymentId, record, payment.status);
+      if (REVERSED.includes(payment.status)) return revokePayment(paymentId, payment.status);
       return { status: 'approved', plan: record.plan, paidUntil: record.paidUntil || null, alreadyApplied: true };
     }
 
@@ -164,38 +169,70 @@ function createBillingService({ store, gateway, now = () => Date.now(), onPlanCh
       throw new BillingError('amount_mismatch', 'O valor pago não corresponde ao plano.', 409);
     }
 
-    const org = await store.getOrganization(record.orgId);
-    if (!org) throw new BillingError('no_company', 'Empresa não encontrada.', 404);
+    const outcome = await transact(async (tx) => {
+      // read again inside the transaction: another copy of the server may have applied it meanwhile
+      const fresh = await tx.getPayment(paymentId);
+      if (!fresh || fresh.status !== 'pending') {
+        return { result: { status: fresh ? fresh.status : 'unknown', plan: record.plan, paidUntil: (fresh && fresh.paidUntil) || null, alreadyApplied: true } };
+      }
+      const org = await tx.getOrganization(record.orgId);
+      if (!org) throw new BillingError('no_company', 'Empresa não encontrada.', 404);
 
-    // Paying early extends from the end of what is already paid, not from today
-    const current = now();
-    const paidUntilNow = org.planStatus === 'active' && org.paidUntil ? Date.parse(org.paidUntil) : 0;
-    const start = Math.max(current, paidUntilNow || 0);
-    const paidUntilMs = start + PERIOD_DAYS * DAY_MS;
-    const paidUntil = new Date(paidUntilMs).toISOString();
-    const approvedAt = payment.approvedAt || new Date(current).toISOString();
+      const current = now();
+      const paidUntilMs = periodEnd(org, record.plan, current);
+      const paidUntil = new Date(paidUntilMs).toISOString();
+      const approvedAt = payment.approvedAt || new Date(current).toISOString();
 
-    // The payment is marked first: if anything fails after this, a retry cannot add a second period
-    await store.updatePayment(paymentId, { status: 'approved', approvedAt, paidUntil });
-    await store.updateOrganization(record.orgId, {
-      plan: record.plan,
-      planStatus: 'active',
-      paidUntil,
-      // the number is what the database rules compare with the clock
-      paidUntilMs,
-      lastPaymentId: paymentId,
-      pendingPaymentId: null,
-      updatedAt: new Date(current).toISOString()
+      await tx.updatePayment(paymentId, {
+        status: 'approved', approvedAt, paidUntil,
+        // how the company stood before, so a refund of this payment can put it back
+        previousPlan: org.plan || null,
+        previousPlanStatus: org.planStatus || null,
+        previousPaidUntilMs: activeUntil(org) || null
+      });
+      await tx.updateOrganization(record.orgId, {
+        plan: record.plan,
+        planStatus: 'active',
+        paidUntil,
+        // the number is what the database rules compare with the clock
+        paidUntilMs,
+        lastPaymentId: paymentId,
+        // a newer charge still waiting to be paid stays where it is
+        ...(org.pendingPaymentId === paymentId || !org.pendingPaymentId ? { pendingPaymentId: null } : {}),
+        updatedAt: new Date(current).toISOString()
+      });
+      return { result: { status: 'approved', plan: record.plan, paidUntil }, planChanged: org.plan !== record.plan };
     });
 
     // The limits are the new plan's from now on. Whoever upgraded because the plan was full
     // must not stay locked out until the next change to the data; a failure here does not
     // undo the payment (the count is redone on the next change anyway).
-    if (onPlanChanged && org.plan !== record.plan) {
+    if (onPlanChanged && outcome.planChanged) {
       await Promise.resolve(onPlanChanged(record.orgId)).catch(err => console.error('[Billing] recontagem do plano:', err.message));
     }
+    return outcome.result;
+  }
 
-    return { status: 'approved', plan: record.plan, paidUntil };
+  // Until when the company's current plan is paid for (0 when it is not)
+  function activeUntil(org) {
+    if (org.planStatus !== 'active') return 0;
+    return Number(org.paidUntilMs) || (org.paidUntil ? Date.parse(org.paidUntil) : 0) || 0;
+  }
+
+  /**
+   * Where a new period of `plan` ends. Paying early extends from the end of what is already
+   * paid. When the plan changes, the days still paid are converted at the two prices: days of
+   * a cheaper plan become fewer days of a dearer one, and the other way round. Without this,
+   * months of the cheapest plan followed by one month of the dearest became months of the dearest.
+   */
+  function periodEnd(org, plan, current) {
+    let remaining = Math.max(0, activeUntil(org) - current);
+    const oldPrice = PLAN_PRICES[org.plan];
+    const newPrice = PLAN_PRICES[plan];
+    if (remaining > 0 && org.plan !== plan && oldPrice && newPrice) {
+      remaining = Math.floor(remaining * oldPrice / newPrice);
+    }
+    return current + remaining + PERIOD_DAYS * DAY_MS;
   }
 
   // The reference was written by this server when it created the charge. Charges from before
@@ -207,35 +244,57 @@ function createBillingService({ store, gateway, now = () => Date.now(), onPlanCh
   }
 
   /**
-   * Takes back the period a refunded (or charged back) payment had released.
-   * Other periods paid for stay; with none left, the company goes back to where the
-   * free trial stands, which usually means read-only mode.
+   * Takes back what a refunded (or charged back) payment had released.
+   * The company's latest payment puts it back exactly as it was before (plan included).
+   * An older one takes away the days it added, converted to the current plan's price.
+   * With nothing paid left, the company goes back to where the free trial stands, which
+   * usually means read-only mode.
    */
-  async function revokePayment(paymentId, record, providerStatus) {
-    const current = now();
-    // Marked first, so a repeated notice cannot take a second period away
-    await store.updatePayment(paymentId, { status: 'refunded', providerStatus, refundedAt: new Date(current).toISOString() });
+  async function revokePayment(paymentId, providerStatus) {
+    const outcome = await transact(async (tx) => {
+      const record = await tx.getPayment(paymentId);
+      // a repeated notice cannot take a second period away
+      if (!record || record.status !== 'approved') return { result: { status: 'refunded', plan: record && record.plan, alreadyApplied: true } };
+      const current = now();
+      const updatedAt = new Date(current).toISOString();
+      await tx.updatePayment(paymentId, { status: 'refunded', providerStatus, refundedAt: updatedAt });
 
-    const org = await store.getOrganization(record.orgId);
-    if (!org) return { status: 'refunded', plan: record.plan };
+      const org = await tx.getOrganization(record.orgId);
+      if (!org || org.planStatus !== 'active') return { result: { status: 'refunded', plan: record.plan } };
 
-    const paidUntilNow = Number(org.paidUntilMs) || (org.paidUntil ? Date.parse(org.paidUntil) : 0);
-    const remainingMs = paidUntilNow - PERIOD_DAYS * DAY_MS;
-    const updatedAt = new Date(current).toISOString();
-
-    if (org.planStatus === 'active' && remainingMs > current) {
-      await store.updateOrganization(record.orgId, { paidUntilMs: remainingMs, paidUntil: new Date(remainingMs).toISOString(), updatedAt });
-    } else if (org.planStatus === 'active') {
-      await store.updateOrganization(record.orgId, {
+      const backToTrial = {
         planStatus: 'trial',
         paidUntil: null,
         paidUntilMs: null,
         // a company from before the trial end was recorded would otherwise be free for good
         trialEndsAtMs: typeof org.trialEndsAtMs === 'number' ? org.trialEndsAtMs : current,
         updatedAt
-      });
+      };
+
+      if (org.lastPaymentId === paymentId && 'previousPlanStatus' in record) {
+        const before = Number(record.previousPaidUntilMs) || 0;
+        const plan = record.previousPlan || org.plan;
+        const change = record.previousPlanStatus === 'active' && before > current
+          ? { plan, paidUntilMs: before, paidUntil: new Date(before).toISOString(), updatedAt }
+          : { plan, ...backToTrial };
+        await tx.updateOrganization(record.orgId, change);
+        return { result: { status: 'refunded', plan: record.plan }, planChanged: plan !== org.plan };
+      }
+
+      const priceOfPaid = PLAN_PRICES[record.plan];
+      const priceNow = PLAN_PRICES[org.plan];
+      const added = priceOfPaid && priceNow ? Math.floor(PERIOD_DAYS * DAY_MS * priceOfPaid / priceNow) : PERIOD_DAYS * DAY_MS;
+      const remainingMs = activeUntil(org) - added;
+      await tx.updateOrganization(record.orgId, remainingMs > current
+        ? { paidUntilMs: remainingMs, paidUntil: new Date(remainingMs).toISOString(), updatedAt }
+        : backToTrial);
+      return { result: { status: 'refunded', plan: record.plan } };
+    });
+    if (onPlanChanged && outcome.planChanged) {
+      const record = await store.getPayment(paymentId);
+      await Promise.resolve(onPlanChanged(record.orgId)).catch(err => console.error('[Billing] recontagem do plano:', err.message));
     }
-    return { status: 'refunded', plan: record.plan };
+    return outcome.result;
   }
 
   /**

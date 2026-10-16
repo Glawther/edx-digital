@@ -123,7 +123,7 @@ function buildPlanNotice({ org, now }) {
 }
 
 /**
- * @param {Object} deps.store   - listOrganizations(), listUsers(orgId), listCustomers(orgId)
+ * @param {Object} deps.store   - listOrganizations(), listUsers(orgId), listCustomers(orgId), verifiedEmails(uids)
  * @param {Object} deps.mailer  - isConfigured(), sendEmail(message)
  * @param {Function} deps.loadToday - async () => ({ todayPanel, daysLabel })
  * @returns {Promise<{companies: number, digests: number, notices: number, failed: number, skipped?: string}>}
@@ -145,7 +145,13 @@ async function runDailyEmails({ store, mailer, loadToday, now = new Date(), log 
 
   for (const { id: orgId, data: org } of await store.listOrganizations()) {
     try {
-      const users = (await store.listUsers(orgId)).filter(({ data }) => data.status === 'active' && /@/.test(data.email || ''));
+      const active = (await store.listUsers(orgId)).filter(({ data }) => data.status === 'active' && /@/.test(data.email || ''));
+      if (active.length === 0) continue;
+      // A profile is only a record any administrator can write, with any address in it. Mail goes
+      // only where a sign-in account with that same address proved it is theirs: otherwise anyone
+      // could have this server send, every morning, text of their own to addresses of their choice.
+      const confirmed = await store.verifiedEmails(active.map(({ id }) => id));
+      const users = active.filter(({ id, data }) => confirmed.get(id) === String(data.email).toLowerCase());
       if (users.length === 0) continue;
       result.companies += 1;
 

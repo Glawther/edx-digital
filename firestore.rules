@@ -175,7 +175,10 @@ service cloud.firestore {
     }
 
     function validNewProfile(data) {
-      return data.orgId is string
+      // só os campos que o aplicativo grava num perfil novo
+      return data.keys().hasOnly(['orgId', 'role', 'name', 'email', 'status', 'inviteCode', 'termsVersion',
+               'termsAcceptedAt', 'createdAt', 'jobTitle', 'department', 'mustChangePassword', 'createdBy', 'updatedAt'])
+        && data.orgId is string
         && data.role in ['admin', 'employee']
         && data.status == 'active'
         && validName(data.name)

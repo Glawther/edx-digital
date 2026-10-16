@@ -439,6 +439,15 @@ export async function updateOwnName(name) {
   return clean;
 }
 
+/** Whether the signed-in person's address is confirmed (e-mail is sent only to confirmed addresses) */
+export async function isMyEmailVerified() {
+  if (sessionKind !== SESSION_KINDS.CLOUD) return true;
+  const { auth } = await getFirebase();
+  if (!auth.currentUser) return true;
+  await auth.currentUser.reload().catch(() => {});
+  return auth.currentUser.emailVerified === true;
+}
+
 /**
  * Whether the signed-in person wants the morning summary by e-mail
  */

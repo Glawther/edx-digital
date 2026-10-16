@@ -106,7 +106,9 @@ function mailWorld({ configured = true, failFor = null } = {}) {
   const store = {
     listOrganizations: async () => data.organizations,
     listUsers: async (orgId) => data.users[orgId] || [],
-    listCustomers: async (orgId) => data.customers[orgId] || []
+    listCustomers: async (orgId) => data.customers[orgId] || [],
+    // contas de login com o e-mail confirmado (a Dani nunca confirmou; o 'falso' não tem conta)
+    verifiedEmails: async (uids) => new Map(uids.filter(uid => uid !== 'dani' && uid !== 'falso').map(uid => [uid, Object.values(data.users).flat().find(user => user.id === uid).data.email.toLowerCase()]))
   };
   const mailer = {
     isConfigured: () => configured,
@@ -357,4 +359,18 @@ test('erro na tela: o dono é avisado por e-mail no máximo uma vez por hora', a
   } finally {
     delete process.env.OWNER_EMAILS;
   }
+});
+
+test('e-mails: perfil sem conta de login com o mesmo e-mail confirmado não recebe nada', async () => {
+  const world = mailWorld();
+  // um administrador grava um perfil com o endereço de outra pessoa e texto de golpe numa tarefa
+  world.data.users.org_a.push({ id: 'falso', data: { name: 'Vítima', email: 'vitima@fora.com', role: 'admin', status: 'active' } });
+  world.data.customers.org_a.push({ id: 'g1', data: { name: 'Acesse http://golpe.example', stage: 'lead', dealValue: 1, updatedAt: new Date(NOW.getTime() - 9 * DAY).toISOString(), tasks: [{ id: 'g', title: 'Acesse http://golpe.example', dueDate: '2000-01-01' }] } });
+  await world.run();
+  assert.equal(world.sent.filter(message => message.to.email === 'vitima@fora.com').length, 0);
+  // e quem tem conta, mas com outro endereço que não o do perfil, também não
+  world.data.users.org_b[0].data.email = 'outro@b.com';
+  world.sent.length = 0;
+  await world.run();
+  assert.equal(world.sent.filter(message => message.to.email === 'outro@b.com').length, 0);
 });

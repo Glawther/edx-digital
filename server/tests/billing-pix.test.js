@@ -348,3 +348,128 @@ test('dono do sistema: só o e-mail confirmado que está em OWNER_EMAILS', () =>
     if (before === undefined) delete process.env.OWNER_EMAILS; else process.env.OWNER_EMAILS = before;
   }
 });
+// ---------------------------------------------------------------- troca de plano e concorrência
+
+test('trocar de plano converte os dias já pagos pelo preço: meses de Starter não viram meses de Enterprise', async () => {
+  const { service, db, pay } = setup();
+  for (let i = 0; i < 6; i++) {
+    const charge = await service.createCharge(admin, 'starter');
+    pay(charge.paymentId);
+    await service.syncPayment(charge.paymentId);
+  }
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 180 * DAY);
+  const upgrade = await service.createCharge(admin, 'enterprise');
+  pay(upgrade.paymentId);
+  await service.syncPayment(upgrade.paymentId);
+  // 180 dias de Starter (R$ 97) valem cerca de 35 dias de Enterprise (R$ 497), mais os 30 pagos agora
+  const days = (db.organizations.org_a.paidUntilMs - NOW) / DAY;
+  assert.ok(Math.abs(days - (180 * 97 / 497 + 30)) < 0.01, `ficou com ${days} dias`);
+  assert.equal(db.organizations.org_a.plan, 'enterprise');
+
+  // o sentido contrário também é justo: o Enterprise que sobrou vira mais dias de Starter
+  const down = await service.createCharge(admin, 'starter');
+  pay(down.paymentId);
+  await service.syncPayment(down.paymentId);
+  const after = (db.organizations.org_a.paidUntilMs - NOW) / DAY;
+  assert.ok(Math.abs(after - ((days * 497 / 97) + 30)) < 0.01, `ficou com ${after} dias`);
+});
+
+test('estorno do último pagamento devolve a empresa como estava, plano incluído', async () => {
+  const { service, db, pay, remote } = setup();
+  const pro = await service.createCharge(admin, 'pro');
+  pay(pro.paymentId);
+  await service.syncPayment(pro.paymentId);
+  const upgrade = await service.createCharge(admin, 'enterprise');
+  pay(upgrade.paymentId);
+  await service.syncPayment(upgrade.paymentId);
+  assert.equal(db.organizations.org_a.plan, 'enterprise');
+
+  remote[upgrade.paymentId].status = 'refunded';
+  await service.syncPayment(upgrade.paymentId);
+  assert.equal(db.organizations.org_a.plan, 'pro');
+  assert.equal(db.organizations.org_a.planStatus, 'active');
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 30 * DAY);
+});
+
+test('estorno de um pagamento antigo tira os dias dele no preço do plano atual', async () => {
+  const { service, db, pay, remote } = setup();
+  const pro = await service.createCharge(admin, 'pro');
+  pay(pro.paymentId);
+  await service.syncPayment(pro.paymentId);
+  const upgrade = await service.createCharge(admin, 'enterprise');
+  pay(upgrade.paymentId);
+  await service.syncPayment(upgrade.paymentId);
+  const before = db.organizations.org_a.paidUntilMs;
+
+  remote[pro.paymentId].status = 'charged_back';
+  await service.syncPayment(pro.paymentId);
+  const taken = (before - db.organizations.org_a.paidUntilMs) / DAY;
+  assert.ok(Math.abs(taken - 30 * 197 / 497) < 0.01, `tirou ${taken} dias`);
+  assert.equal(db.organizations.org_a.plan, 'enterprise');
+});
+
+test('aprovar um pagamento antigo não apaga a cobrança mais nova que ainda espera pagamento', async () => {
+  const { service, db, pay } = setup();
+  const old = await service.createCharge(admin, 'pro');
+  const newer = await service.createCharge(admin, 'enterprise');
+  assert.equal(db.organizations.org_a.pendingPaymentId, newer.paymentId);
+  pay(old.paymentId);
+  await service.syncPayment(old.paymentId);
+  assert.equal(db.organizations.org_a.pendingPaymentId, newer.paymentId);
+});
+
+// Um banco falso com transações de verdade: quem leu um documento que outro mudou antes de
+// gravar é abortado e tenta de novo, como no Firestore
+function transactionalStore(db) {
+  const versions = new Map();
+  const version = (path) => versions.get(path) || 0;
+  const read = (path) => { const [col, id] = path.split('/'); return db[col][id] ? { ...db[col][id] } : null; };
+  const write = (path, data) => { const [col, id] = path.split('/'); Object.assign(db[col][id], data); versions.set(path, version(path) + 1); };
+  const pause = () => new Promise(resolve => setTimeout(resolve, 5));
+  return {
+    getUserProfile: async (uid) => db.users[uid] || null,
+    getOrganization: async (id) => read(`organizations/${id}`),
+    getPayment: async (id) => read(`payments/${id}`),
+    updateOrganization: async (id, data) => write(`organizations/${id}`, data),
+    updatePayment: async (id, data) => write(`payments/${id}`, data),
+    savePayment: async (id, data) => { db.payments[id] = { ...data }; },
+    transaction: async (fn) => {
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const seen = new Map();
+        const writes = [];
+        const tx = {
+          getPayment: async (id) => { await pause(); seen.set(`payments/${id}`, version(`payments/${id}`)); return read(`payments/${id}`); },
+          getOrganization: async (id) => { await pause(); seen.set(`organizations/${id}`, version(`organizations/${id}`)); return read(`organizations/${id}`); },
+          updatePayment: (id, data) => { writes.push([`payments/${id}`, data]); },
+          updateOrganization: (id, data) => { writes.push([`organizations/${id}`, data]); }
+        };
+        const result = await fn(tx);
+        await pause();
+        if ([...seen].some(([path, v]) => version(path) !== v)) continue; // ABORTED
+        for (const [path, data] of writes) write(path, data);
+        return result;
+      }
+      throw new Error('contenção demais');
+    }
+  };
+}
+
+test('duas cópias do servidor confirmando o mesmo pagamento juntas somam um período só', async () => {
+  const { db, gateway, pay } = setup();
+  const store = transactionalStore(db);
+  const a = createBillingService({ store, gateway, now: () => NOW });
+  const b = createBillingService({ store, gateway, now: () => NOW });
+  const charge = await a.createCharge(admin, 'pro');
+  pay(charge.paymentId);
+  const results = await Promise.all([a.syncPayment(charge.paymentId), b.syncPayment(charge.paymentId)]);
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 30 * DAY);
+  assert.equal(results.filter(result => result.alreadyApplied).length, 1);
+
+  // e o estorno, também em duas cópias, tira uma vez só
+  const second = await a.createCharge(admin, 'pro');
+  pay(second.paymentId);
+  await a.syncPayment(second.paymentId);
+  gateway.getPayment = async (id) => ({ ...(await (async () => ({ id, status: 'refunded', amount: 197, currency: 'BRL' }))()) });
+  await Promise.all([a.syncPayment(second.paymentId), b.syncPayment(second.paymentId)]);
+  assert.equal(db.organizations.org_a.paidUntilMs, NOW + 30 * DAY);
+});
