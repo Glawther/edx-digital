@@ -24,7 +24,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const { handleApi } = require('./server/api');
 const { firestoreStore } = require('./server/billing/firestore-store');
-const { createUsageService, customerChangeMatters, userChangeMatters } = require('./server/usage/usage-service');
+const { createUsageService, customerChangeMatters, userChangeMatters, organizationChangeMatters } = require('./server/usage/usage-service');
 const mailer = require('./server/mail/brevo');
 const { runDailyEmails } = require('./server/mail/daily-emails');
 const { cleanOrphanAttachments } = require('./server/storage/attachment-cleanup');
@@ -75,6 +75,14 @@ exports.usageOnUserChange = onDocumentWritten({ ...NEAR_DATABASE, document: 'use
   if (userChangeMatters(before, after)) await recount(before, after);
 });
 
+// The plan deadline is copied onto each profile for the file rules: a change to it (payment,
+// refund, or an edit in the console) is copied again
+exports.usageOnOrganizationChange = onDocumentWritten({ ...NEAR_DATABASE, document: 'organizations/{orgId}' }, async (event) => {
+  const before = dataOf(event.data && event.data.before);
+  const after = dataOf(event.data && event.data.after);
+  if (organizationChangeMatters(before, after)) await usage.refreshUsage(event.params.orgId);
+});
+
 exports.dailyEmails = onSchedule(
   {
     schedule: 'every day 08:00',
@@ -97,6 +105,18 @@ exports.dailyEmails = onSchedule(
       console.log(JSON.stringify({ message: '[Arquivos] limpeza dos anexos sem oportunidade', ...(await cleanOrphanAttachments()) }));
     } catch (err) {
       console.error('[Arquivos] limpeza:', err.message);
+    }
+    // recounts every company and copies its plan deadline onto the profiles, so companies that
+    // had no change since the deadline began to be copied get it too
+    try {
+      let companies = 0;
+      for (const org of await firestoreStore.listOrganizations()) {
+        await usage.refreshUsage(org.id).catch(err => console.error('[Plano] recontagem:', org.id, err.message));
+        companies++;
+      }
+      console.log(JSON.stringify({ message: '[Plano] recontagem da manhã', companies }));
+    } catch (err) {
+      console.error('[Plano] recontagem da manhã:', err.message);
     }
   }
 );

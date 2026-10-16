@@ -81,6 +81,7 @@ Os anexos das oportunidades ficam no Firebase Storage, em `orgs/{empresa}/custom
 - quem alcança um arquivo é quem alcança a oportunidade no banco (o administrador da empresa ou o vendedor responsável); a regra confere o perfil e a oportunidade no Firestore;
 - só entram PDF, imagem (PNG, JPG, WEBP), Word, Excel, CSV e texto, até 10 MB, e sempre marcados para download: nenhum arquivo é aberto como página;
 - o endereço usa um identificador sorteado, nunca o nome do arquivo; ninguém lista pastas nem troca um arquivo por outro;
+- com o plano vencido não se anexa arquivo novo, mas os que existem continuam abrindo e podendo ser excluídos. Como a regra só pode ler dois documentos do banco, o servidor copia em cada perfil até quando a empresa pode gravar (`planWritableUntilMs`), a cada mudança de plano e toda manhã;
 - quando a oportunidade (ou a empresa) é excluída, a função `dailyEmails` apaga os arquivos dela na manhã seguinte.
 
 Os testes ficam em `tests/rules/storage-rules.test.mjs` e rodam com `npm run test:rules`.

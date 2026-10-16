@@ -7,25 +7,33 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 
-const { createUsageService, customerChangeMatters, userChangeMatters } = require('../usage/usage-service');
+const { createUsageService, customerChangeMatters, userChangeMatters, organizationChangeMatters, writableUntilMs } = require('../usage/usage-service');
 const { runDailyEmails, buildPlanNotice, daysUntil } = require('../mail/daily-emails');
 const { scrub } = require('../controllers/error-controller');
 
 // ---------------------------------------------------------------- limites do plano
 
-function usageWorld({ plan = 'starter', openLeads = 0, seats = 1, usage } = {}) {
-  const org = { name: 'A', plan, ...(usage ? { usage } : {}) };
+function usageWorld({ plan = 'starter', openLeads = 0, seats = 1, usage, planFields = {}, users = [] } = {}) {
+  const org = { name: 'A', plan, ...planFields, ...(usage ? { usage } : {}) };
   const writes = [];
   const counted = [];
   const warnings = [];
   const counts = { openLeads, seats };
+  const profileWrites = [];
   const store = {
     getOrganization: async (id) => (id === 'org_a' ? { ...org } : null),
     updateOrganization: async (id, data) => { writes.push(data); Object.assign(org, data); },
-    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? counts.openLeads : counts.seats; }
+    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? counts.openLeads : counts.seats; },
+    listUsers: async (orgId) => users.filter(u => u.data.orgId === orgId).map(u => ({ id: u.id, data: { ...u.data } })),
+    updateUserProfile: async (uid, data) => {
+      profileWrites.push({ uid, data });
+      const user = users.find(u => u.id === uid);
+      if (!user || user.data.gone) throw new Error('perfil sumiu');
+      Object.assign(user.data, data);
+    }
   };
   const log = { warn: (line) => warnings.push(line) };
-  return { org, writes, counted, warnings, counts, service: createUsageService({ store, log, now: () => 1000 }) };
+  return { org, writes, counted, warnings, counts, profileWrites, users, service: createUsageService({ store, log, now: () => 1000 }) };
 }
 
 test('limites: abaixo do limite nada é gravado; ao encher, a empresa é marcada', async () => {
@@ -53,6 +61,44 @@ test('limites: o plano sem limite nem conta; empresa que não existe é ignorada
   assert.equal(world.counted.length, 0);
   assert.equal(await world.service.refreshUsage('org_sumiu'), null);
   assert.equal(await world.service.refreshUsage(''), null);
+});
+
+test('prazo do plano: o servidor copia em cada perfil até quando a empresa pode gravar', async () => {
+  const PAID = 1_800_000_000_000;
+  const GRACE = 3 * 24 * 60 * 60 * 1000;
+  assert.equal(writableUntilMs({ planStatus: 'active', paidUntilMs: PAID }), PAID + GRACE);
+  assert.equal(writableUntilMs({ planStatus: 'active', paidUntilMs: null }), 0, 'reembolsado: vencido');
+  assert.equal(writableUntilMs({ planStatus: 'trial', trialEndsAtMs: PAID }), PAID);
+  assert.equal(writableUntilMs({ planStatus: 'trial' }), null, 'empresa antiga, sem prazo');
+
+  const world = usageWorld({
+    planFields: { planStatus: 'active', paidUntilMs: PAID },
+    users: [
+      { id: 'u1', data: { orgId: 'org_a' } },
+      { id: 'u2', data: { orgId: 'org_a', planWritableUntilMs: PAID + GRACE } }
+    ]
+  });
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.profileWrites, [{ uid: 'u1', data: { planWritableUntilMs: PAID + GRACE } }], 'só grava onde mudou');
+  await world.service.refreshUsage('org_a');
+  assert.equal(world.profileWrites.length, 1, 'a segunda vez não grava de novo');
+
+  // um perfil que sumiu no meio não impede os outros
+  const gone = usageWorld({ planFields: { planStatus: 'trial', trialEndsAtMs: PAID }, users: [{ id: 'u1', data: { orgId: 'org_a', gone: true } }, { id: 'u2', data: { orgId: 'org_a' } }] });
+  const original = console.error; console.error = () => {};
+  try {
+    await gone.service.refreshUsage('org_a');
+  } finally { console.error = original; }
+  assert.equal(gone.users[1].data.planWritableUntilMs, PAID);
+});
+
+test('prazo do plano: só copia de novo quando a situação ou as datas da empresa mudam', () => {
+  const org = { planStatus: 'trial', trialEndsAtMs: 1, name: 'A' };
+  assert.equal(organizationChangeMatters(null, org), true);
+  assert.equal(organizationChangeMatters(org, null), false);
+  assert.equal(organizationChangeMatters(org, { ...org, name: 'B', usage: { leadsFull: true } }), false);
+  assert.equal(organizationChangeMatters(org, { ...org, trialEndsAtMs: 2 }), true);
+  assert.equal(organizationChangeMatters(org, { ...org, planStatus: 'active', paidUntilMs: 3 }), true);
 });
 
 test('limites: só recontam as mudanças que mexem na contagem', () => {
