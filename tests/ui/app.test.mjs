@@ -164,6 +164,38 @@ test('arrastar um cartão para outra coluna muda a etapa', async (t) => {
   assert.deepEqual(problems, []);
 });
 
+test('soltar o cartão fora das colunas não deixa o arraste preso, e o arraste seguinte funciona', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  const card = page.locator('[data-drop="lead"] .lead-card').first();
+  const id = await card.getAttribute('data-id');
+
+  // passes over a column (lights it up) and lets go outside every column
+  const from = await card.boundingBox();
+  const over = await page.locator('[data-drop="proposal"]').boundingBox();
+  const outside = await page.locator('.pipeline-column').first().evaluate(column => {
+    const top = column.getBoundingClientRect().top;
+    return { x: 650, y: Math.max(2, top - 30) };
+  });
+  assert.equal(await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[data-drop]'), outside), false, 'o ponto de soltar não pode estar numa coluna');
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(over.x + over.width / 2, over.y + 60, { steps: 5 });
+  await page.mouse.move(outside.x, outside.y, { steps: 5 });
+  await page.mouse.up();
+
+  await page.waitForFunction(() => !document.querySelector('.lead-card.dragging'));
+  assert.equal(await page.locator('.lead-card.dragging').count(), 0);
+  assert.equal(await page.locator('[data-drop].is-drop-target').count(), 0);
+  assert.equal(await stageOf(page, id), 'lead');
+
+  await card.dragTo(page.locator('[data-drop="negotiation"]'));
+  await page.waitForFunction(cardId => document.querySelector(`.lead-card[data-id="${cardId}"]`)?.closest('[data-drop]')?.dataset.drop === 'negotiation', id);
+  assert.equal(await page.locator('.lead-card.dragging').count(), 0);
+  assert.deepEqual(problems, []);
+});
+
 test('nova oportunidade: aparece no funil e na lista de clientes', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
