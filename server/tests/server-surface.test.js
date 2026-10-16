@@ -51,14 +51,20 @@ test('código do servidor, dados, configuração e arquivos ocultos não são en
   }
 });
 
-test('os leads recebidos não ficam acessíveis pelo endereço do arquivo', async () => {
+test('sem banco configurado, o servidor local recusa o lead em vez de guardá-lo em arquivo', async () => {
   const sent = await fetch(`${base}/api/webhook/leads`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-token': TOKEN },
     body: JSON.stringify({ nome: 'Pessoa Reservada', email: 'reservada@teste.local' })
   });
-  assert.equal(sent.status, 201);
+  assert.equal(sent.status, 503);
   const leaked = await (await get('/data/webhook_leads.json')).text();
   assert.ok(!leaked.includes('Pessoa Reservada'));
+});
+
+test('ninguém lê nem apaga leads pelo endereço: a caixa de entrada antiga não existe mais', async () => {
+  assert.equal((await fetch(`${base}/api/webhook/leads`, { headers: { 'x-webhook-token': TOKEN } })).status, 404);
+  assert.equal((await fetch(`${base}/api/webhook/leads/ack`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-token': TOKEN }, body: '{}' })).status, 404);
+  assert.equal((await fetch(`${base}/api/webhook/token`)).status, 401, 'o token da empresa exige a conta do administrador');
 });
 
 test('a API antiga não responde: ninguém obtém token sem se identificar', async () => {
@@ -83,29 +89,6 @@ test('lead vazio, corpo inválido e corpo grande demais são recusados', async (
   assert.equal((await post(JSON.stringify({ nome: 'x'.repeat(40000) }))).status, 400);
 });
 
-test('o que chega é guardado como texto simples, com tamanho limitado', async () => {
-  const token = 'edxwh_' + 'd'.repeat(40);
-  await fetch(`${base}/api/webhook/leads`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-token': token },
-    body: JSON.stringify({ nome: '<script>alert(1)</script>Ana & Cia', telefone: 11988887777, valor: 'abc', mensagem: 'm'.repeat(5000), campo_estranho: { a: 1 } })
-  });
-  const { leads } = await (await fetch(`${base}/api/webhook/leads`, { headers: { 'x-webhook-token': token } })).json();
-  assert.equal(leads[0].name, 'scriptalert(1)/scriptAna & Cia');
-  assert.equal(leads[0].phone, '11988887777');
-  assert.equal(leads[0].value, 0);
-  assert.equal(leads[0].notes.length, 2000);
-  assert.ok(!('campo_estranho' in leads[0]));
-});
-
-test('envios simultâneos não se perdem', async () => {
-  const token = 'edxwh_' + 'e'.repeat(40);
-  await Promise.all(Array.from({ length: 25 }, (_, i) => fetch(`${base}/api/webhook/leads`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-webhook-token': token }, body: JSON.stringify({ nome: `Contato ${i}` })
-  })));
-  const { count } = await (await fetch(`${base}/api/webhook/leads`, { headers: { 'x-webhook-token': token } })).json();
-  assert.equal(count, 25);
-});
-
 test('uma caixa de entrada não aceita enxurrada', async () => {
   const token = 'edxwh_' + 'f'.repeat(40);
   const statuses = [];
@@ -115,6 +98,7 @@ test('uma caixa de entrada não aceita enxurrada', async () => {
     });
     statuses.push(res.status);
   }
-  assert.equal(statuses.filter(s => s === 201).length, 60);
+  // os 60 primeiros passam pelo limite (e param no banco, que aqui não existe); o resto, não
+  assert.equal(statuses.filter(s => s === 503).length, 60);
   assert.equal(statuses.filter(s => s === 429).length, 10);
 });

@@ -337,7 +337,8 @@ export function setupEmployeeManagementEvents() {
     if (!emp) return;
 
     const action = emp.status === 'active' ? 'bloquear' : 'liberar';
-    if (!confirm(`Deseja ${action} o acesso de ${emp.name}?`)) {
+    // o e-mail junto do nome: o nome cada pessoa troca no próprio perfil
+    if (!confirm(`Deseja ${action} o acesso de ${emp.name} (${emp.email})?`)) {
       return;
     }
 
@@ -409,7 +410,7 @@ export function setupEmployeeManagementEvents() {
 
     const open = openLeadsOf(empId);
     const portfolio = open === 0 ? '' : ` ${open === 1 ? 'A oportunidade em aberto dela passa' : `As ${open} oportunidades em aberto dela passam`} para você.`;
-    if (!confirm(`Excluir o cadastro de ${emp.name}? A pessoa perde o acesso aos dados da empresa.${portfolio}`)) {
+    if (!confirm(`Excluir o cadastro de ${emp.name} (${emp.email})? A pessoa perde o acesso aos dados da empresa.${portfolio}`)) {
       return;
     }
 

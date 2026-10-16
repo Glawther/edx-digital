@@ -21,6 +21,9 @@ const PLAN_LIMITS = {
 const OPEN_STAGES = ['lead', 'contact', 'contacted', 'proposal', 'negotiation'];
 
 function limitsOf(org) {
+  // The free trial never has unlimited room: an Enterprise trial holds what Professional does
+  // (without this, a free account had no ceiling on what it stored, at the owner's cost)
+  if (org && org.plan === 'enterprise' && org.planStatus === 'trial') return PLAN_LIMITS.pro;
   return PLAN_LIMITS[org && org.plan] || PLAN_LIMITS.pro;
 }
 
@@ -67,4 +70,4 @@ function userChangeMatters(before, after) {
   return counts(before) !== counts(after) || before.orgId !== after.orgId;
 }
 
-module.exports = { createUsageService, customerChangeMatters, userChangeMatters, PLAN_LIMITS, OPEN_STAGES };
+module.exports = { createUsageService, customerChangeMatters, userChangeMatters, limitsOf, PLAN_LIMITS, OPEN_STAGES };

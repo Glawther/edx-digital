@@ -20,13 +20,13 @@ js/
   ui/                    desenho das telas e o despachante de eventos (actions.js)
 server/
   billing/               cobrança por PIX e conferência do pagamento
-  controllers/           arquivos públicos e caixa de entrada de formulários
+  controllers/           arquivos públicos e leads de formulários
 tests/
   unit/                  lógica do aplicativo (importação, relatório, lembretes, escape)
   rules/                 regras do banco, contra o emulador
   ui/                    o aplicativo aberto num navegador de verdade, na demonstração
   e2e/                   uma conta de verdade, do cadastro ao bloqueio, contra os emuladores
-server/tests/            cobrança, caixa de entrada e o que o servidor expõe
+server/tests/            cobrança, leads de formulários e o que o servidor expõe
 scripts/build.mjs        gera dist/, a versão compactada que é publicada
 scripts/screens.mjs      salva imagens das telas da demonstração, para conferir uma mudança
 ```

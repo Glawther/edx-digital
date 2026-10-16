@@ -991,7 +991,7 @@ export function renderLeadTimeline(customer) {
         <div class="timeline-dot ${dotClass}"></div>
         <div class="timeline-item-header">
           <span class="timeline-item-title">${escapeHtml(act.title || 'Interação')}</span>
-          <span class="timeline-item-date">${dateFormatted}, ${escapeHtml(act.author || 'Você')}${canWrite && isManual(act)
+          <span class="timeline-item-date">${dateFormatted}, ${escapeHtml(act.author || 'Você')}${canWrite && isManual(act) && isAdmin()
             ? ` <button type="button" class="link-btn danger" data-click="handleDeleteActivity" data-a="${escapeHtml(customer.id)}" data-b="${escapeHtml(act.id)}" aria-label="Excluir este registro">Excluir</button>` : ''}</span>
         </div>
         <div class="timeline-item-text">${escapeHtml(act.text || '')}</div>

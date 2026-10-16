@@ -7,7 +7,7 @@
  * a query without them is refused.
  */
 
-import { getFirebase } from './firebase-app.js';
+import { getFirebase } from './firebase-app.js';
 import { isSafeId } from '../core/html.js';
 import { normalizeCustomer } from '../core/normalize.js';
 
@@ -72,9 +72,18 @@ export async function subscribeToFirestoreCustomers(onData, onError, scope) {
   }
   const customersQuery = fs.query(fs.collection(db, 'customers'), ...constraints);
 
+  let firstSnapshot = true;
   unsubscribeCustomers = fs.onSnapshot(
     customersQuery,
     (snapshot) => {
+      // contacts the server wrote from a form after the screen opened: the screen tells the person
+      if (!firstSnapshot) {
+        const fromForm = snapshot.docChanges()
+          .filter(change => change.type === 'added' && !change.doc.metadata.hasPendingWrites && change.doc.data().fromForm === true)
+          .map(change => String(change.doc.data().name || 'Contato sem nome').slice(0, 80));
+        if (fromForm.length > 0) window.dispatchEvent(new CustomEvent('edx-form-lead', { detail: { names: fromForm } }));
+      }
+      firstSnapshot = false;
       const customers = [];
       snapshot.forEach((doc) => {
         // Ids are used to find and open records on screen. One with characters this app never

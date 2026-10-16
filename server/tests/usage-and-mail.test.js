@@ -374,3 +374,11 @@ test('e-mails: perfil sem conta de login com o mesmo e-mail confirmado não rece
   await world.run();
   assert.equal(world.sent.filter(message => message.to.email === 'outro@b.com').length, 0);
 });
+
+test('teste gratuito do Enterprise tem os limites do Professional; pago, não tem limite', () => {
+  const { PLAN_LIMITS } = require('../usage/usage-service');
+  const { limitsOf } = require('../usage/usage-service');
+  assert.deepEqual(limitsOf({ plan: 'enterprise', planStatus: 'trial' }), PLAN_LIMITS.pro);
+  assert.deepEqual(limitsOf({ plan: 'enterprise', planStatus: 'active' }), PLAN_LIMITS.enterprise);
+  assert.deepEqual(limitsOf({ plan: 'starter', planStatus: 'trial' }), PLAN_LIMITS.starter);
+});

@@ -719,3 +719,29 @@ test('hierarquia: o vendedor não se promove, não mexe no plano, não vê cobra
   assert.equal(await patch(ana, `customers/a-bruno-${RUN}`, { assignedTo: { id: ana.uid, name: 'x', email: ana.email } }), DENIED);
   assert.equal(await del(ana, `customers/a-ana-${RUN}`), DENIED);
 });
+
+test('o vendedor não reescreve o passado da oportunidade; o administrador ainda corrige', async () => {
+  const c = await registerCompany('passado');
+  const vend = await join('vendpassado', c);
+  const id = `passado-${RUN}`;
+  const history = [{ id: 'a1', type: 'stage', title: 'Etapa alterada' }, { id: 'a2', type: 'note', title: 'Responsável alterado' }];
+  const wonAt = '2026-01-10T12:00:00.000Z';
+  assert.equal(await put(c.owner, `customers/${id}`, lead(c.orgId, vend, { stage: 'won', wonAt, createdAt: '2026-01-01T00:00:00.000Z', activities: history })), OK);
+
+  assert.equal(await patch(vend, `customers/${id}`, { activities: [history[0]] }), DENIED, 'apagar entradas do histórico');
+  assert.equal(await patch(vend, `customers/${id}`, { activities: [] }), DENIED);
+  assert.equal(await patch(vend, `customers/${id}`, { wonAt: new Date().toISOString() }), DENIED, 'trazer a venda para o mês da meta');
+  assert.equal(await patch(vend, `customers/${id}`, { createdAt: new Date().toISOString() }), DENIED);
+  assert.equal(await patch(vend, `customers/${id}`, { activities: [...history, { id: 'a3', type: 'note', title: 'Ligação' }] }), OK, 'acrescentar continua');
+  assert.equal(await patch(vend, `customers/${id}`, { notes: 'anotação nova' }), OK);
+  // mudar de etapa leva a data junto, como o aplicativo faz
+  assert.equal(await patch(vend, `customers/${id}`, { stage: 'negotiation', wonAt: null }), OK);
+  assert.equal(await patch(c.owner, `customers/${id}`, { activities: [] }), OK, 'o administrador corrige');
+});
+
+test('valor absurdo numa oportunidade é recusado para todos', async () => {
+  const c = await registerCompany('absurdo');
+  assert.equal(await put(c.owner, `customers/absurdo-${RUN}`, lead(c.orgId, c.owner, { dealValue: 1e15 })), DENIED);
+  assert.equal(await put(c.owner, `customers/absurdo-${RUN}`, lead(c.orgId, c.owner, { dealValue: 10000000000 })), OK);
+  assert.equal(await patch(c.owner, `customers/absurdo-${RUN}`, { dealValue: 10000000001 }), DENIED);
+});

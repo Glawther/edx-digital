@@ -87,7 +87,8 @@ service cloud.firestore {
     function validCustomer(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 300
         && data.stage in validStages()
-        && (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0))
+        // até 10 bilhões: um valor absurdo gravado por fora do aplicativo estragaria os relatórios da empresa
+        && (!('dealValue' in data) || (data.dealValue is number && data.dealValue >= 0 && data.dealValue <= 10000000000))
         && data.orgId is string
         && optText(data, 'company', 300) && optText(data, 'role', 300)
         && optText(data, 'email', 320) && optText(data, 'phone', 60)
@@ -98,6 +99,16 @@ service cloud.firestore {
         && optList(data, 'items', 30) && optList(data, 'attachments', 10)
         && (!('assignedTo' in data) || data.assignedTo == null || data.assignedTo is map)
         && (!('custom' in data) || data.custom is map);
+    }
+
+    // O vendedor não reescreve o passado da oportunidade: o histórico só cresce, a data de criação
+    // não muda, e a data da venda só muda junto com a etapa (sem isso, uma venda antiga podia ser
+    // trazida para o mês da meta, e as entradas "Etapa alterada" e "Responsável alterado" sumiam).
+    // O administrador continua podendo corrigir.
+    function sellerKeepsRecord(before, after) {
+      return after.get('activities', []).size() >= before.get('activities', []).size()
+        && (!('createdAt' in before) || after.get('createdAt', null) == before.createdAt)
+        && (after.stage != before.stage || after.get('wonAt', null) == before.get('wonAt', null));
     }
 
     function isClosed(stage) {
@@ -313,7 +324,8 @@ service cloud.firestore {
           isOrgAdmin(resource.data.orgId)
           || (isMember(resource.data.orgId)
               && assignedToMe(resource.data)
-              && assignedToMe(request.resource.data))
+              && assignedToMe(request.resource.data)
+              && sellerKeepsRecord(resource.data, request.resource.data))
         );
 
       // Só o administrador exclui (continua valendo com o plano vencido: o dado é da empresa)

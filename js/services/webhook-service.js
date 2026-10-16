@@ -1,198 +1,54 @@
 /**
- * EDX Digital - Webhook Integration Service
- * Manages webhook endpoints, API tokens, and automatic lead ingestion.
+ * EDX Digital - Leads from forms: the company's address token
+ * The server writes each lead straight into the company's opportunities; here the
+ * administrator only reads the token, issues a new one, and sends a test lead.
  */
 
-import { storage } from '../core/storage-manager.js';
-import { crmStore } from '../core/crm-store.js';
-import { notify } from './notification-service.js';
-import { logAudit, AUDIT_ACTIONS } from './audit-service.js';
+import { getIdToken } from './auth-service.js';
 
-const WEBHOOK_CONFIG_KEY = 'edx_webhook_config';
+// Before, the token lived only in the browser that created it. It is no longer used.
+const OLD_CONFIG_KEY = 'edx_webhook_config';
 
-/**
- * Gets or initializes the webhook configuration
- */
-function newWebhookToken() {
-  const bytes = new Uint8Array(20);
-  crypto.getRandomValues(bytes);
-  return 'nxwh_' + Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
-}
-
-export function getWebhookConfig() {
+export function forgetOldWebhookToken() {
   try {
-    const raw = localStorage.getItem(WEBHOOK_CONFIG_KEY);
-    if (raw) {
-      const saved = JSON.parse(raw);
-      // Older tokens were short and guessable; they are replaced on first use
-      if (!/^nxwh_[0-9a-f]{40}$/.test(saved.token || '')) {
-        saved.token = newWebhookToken();
-        saveWebhookConfig(saved);
-      }
-      return saved;
-    }
-  } catch (e) {
-    console.warn('[Webhook] Error loading config:', e);
-  }
-
-  // Default configuration
-  const defaultConfig = {
-    enabled: true,
-    token: newWebhookToken(),
-    autoAssignRole: 'employee',
-    notifyOnIngest: true,
-    lastIngestCheck: null
-  };
-  saveWebhookConfig(defaultConfig);
-  return defaultConfig;
+    localStorage.removeItem(OLD_CONFIG_KEY);
+  } catch { /* storage blocked: nothing to forget */ }
 }
 
-/**
- * Saves webhook configuration
- */
-export function saveWebhookConfig(config) {
-  localStorage.setItem(WEBHOOK_CONFIG_KEY, JSON.stringify(config));
+function apiBase() {
+  return typeof window.getApiBaseUrl === 'function' ? window.getApiBaseUrl() : '';
 }
 
-/**
- * Generates a new webhook token
- */
-export function regenerateWebhookToken() {
-  const cfg = getWebhookConfig();
-  cfg.token = newWebhookToken();
-  saveWebhookConfig(cfg);
-  logAudit(AUDIT_ACTIONS.SECURITY_ALERT, { action: 'webhook_token_regenerated' });
-  return cfg.token;
+async function tokenRequest(method) {
+  const session = await getIdToken();
+  const res = await fetch(`${apiBase()}/api/webhook/token`, { method, headers: { Authorization: `Bearer ${session}` } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Não foi possível falar com o servidor. Tente de novo em instantes.');
+  return data.token || null;
 }
 
-function getBase() {
-  if (typeof window !== 'undefined' && typeof window.getApiBaseUrl === 'function') {
-    return window.getApiBaseUrl();
-  }
-  return '';
-}
+/** The company's token, or null when none was issued yet */
+export const fetchWebhookToken = () => tokenRequest('GET');
 
-/**
- * Fetches pending leads from the local backend server endpoint
- */
-export async function pollWebhookInbox() {
-  try {
-    const token = getWebhookConfig().token;
-    const res = await fetch(getBase() + '/api/webhook/leads', { headers: { 'x-webhook-token': token } });
-    if (!res.ok) return { count: 0, leads: [] };
-    const data = await res.json();
-    if (!data.leads || data.leads.length === 0) return { count: 0, leads: [] };
+/** A new token; the previous one stops working at once */
+export const issueWebhookToken = () => tokenRequest('POST');
 
-    const unreadLeads = data.leads.filter(l => l.status === 'unread');
-    if (unreadLeads.length === 0) return { count: 0, leads: [] };
-
-    // Ingest each unread lead into CRM Store via StorageManager
-    const currentLeads = storage.getCustomers();
-    const existingPhones = new Set(currentLeads.map(l => (l.phone || '').replace(/\D/g, '')));
-    const existingEmails = new Set(currentLeads.map(l => (l.email || '').toLowerCase()));
-
-    const newlyIngested = [];
-    const acknowledgedIds = [];
-
-    for (const item of unreadLeads) {
-      acknowledgedIds.push(item.id);
-      
-      // Prevent duplicates if already present
-      const cleanP = (item.phone || '').replace(/\D/g, '');
-      const cleanE = (item.email || '').toLowerCase();
-      if ((cleanP && existingPhones.has(cleanP)) || (cleanE && existingEmails.has(cleanE))) {
-        continue;
-      }
-
-      const newCustomer = {
-        id: 'wh-lead-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-        name: item.name || 'Contato sem nome',
-        email: item.email || '',
-        phone: item.phone || '',
-        company: item.company || '',
-        dealValue: Number(item.value) || 0,
-        stage: 'lead',
-        priority: 'medium',
-        tags: [item.source ? item.source.split(' ')[0] : 'Formulário'],
-        notes: item.notes || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        activities: [
-          {
-            id: 'act-' + Date.now(),
-            type: 'note',
-            title: 'Recebido por formulário',
-            text: item.source ? `Origem: ${item.source}.` : '',
-            author: 'Integração',
-            timestamp: new Date().toISOString()
-          }
-        ],
-        tasks: []
-      };
-
-      await storage.saveCustomer(newCustomer);
-      newlyIngested.push(newCustomer);
-
-      notify('Novo contato recebido', `${newCustomer.name}${newCustomer.company ? ', ' + newCustomer.company : ''} entrou no funil${item.source ? ' por ' + item.source : ''}.`, { view: 'pipeline' });
-
-      // Audit log
-      logAudit(AUDIT_ACTIONS.LEAD_CREATED, {
-        method: 'webhook_api',
-        leadName: item.name,
-        source: item.source,
-        value: item.value
-      });
-    }
-
-    if (newlyIngested.length > 0 && crmStore) {
-      crmStore.emitChange();
-    }
-
-    // Acknowledge processed leads to backend
-    if (acknowledgedIds.length > 0) {
-      fetch(getBase() + '/api/webhook/leads/ack', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-webhook-token': token },
-        body: JSON.stringify({ leadIds: acknowledgedIds })
-      }).catch(e => console.warn('[Webhook] ACK failed:', e));
-    }
-
-    return { count: newlyIngested.length, leads: newlyIngested };
-  } catch (err) {
-    // Quietly ignore if offline or server not running endpoints
-    return { count: 0, leads: [] };
-  }
-}
-
-/**
- * Sends a test lead payload to verify the webhook integration
- */
+/** Sends a sample lead through the same address a form uses */
 export async function sendTestWebhookLead(token) {
-  const testPayload = {
-    name: 'Dra. Camila Vasconcelos',
-    email: 'camila.vasconcelos@clinicaestetica.com.br',
-    phone: '(11) 99123-4567',
-    company: 'Clínica Vasconcelos Dermatologia',
-    value: 12500,
-    source: 'Meta Ads (Instagram Formulário)',
-    notes: 'Interessada no plano Enterprise para equipe de 8 atendentes.'
-  };
-
-  const response = await fetch(getBase() + '/api/webhook/leads', {
+  const res = await fetch(`${apiBase()}/api/webhook/leads`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-webhook-token': token || getWebhookConfig().token
-    },
-    body: JSON.stringify(testPayload)
+    headers: { 'Content-Type': 'application/json', 'x-webhook-token': token },
+    body: JSON.stringify({
+      name: 'Contato de teste',
+      email: `teste.${Date.now().toString(36)}@exemplo.com.br`,
+      phone: '(11) 99123-4567',
+      company: 'Empresa de teste',
+      value: 1000,
+      source: 'Teste do EDX Digital',
+      notes: 'Enviado pelo botão de teste. Pode excluir.'
+    })
   });
-
-  if (!response.ok) {
-    throw new Error(`Falha ao disparar webhook: HTTP ${response.status}`);
-  }
-
-  const result = await response.json();
-  // Immediately poll inbox to reflect in CRM
-  await pollWebhookInbox();
-  return result;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
 }
