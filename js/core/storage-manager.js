@@ -459,7 +459,12 @@ class StorageManager {
 
       if (this.mode === 'firestore') {
         try {
-          await firestoreService.updateFirestoreCustomer(docId, merged);
+          // only what this change touched: a field someone else changed meanwhile is not put back
+          const touched = new Set([...Object.keys(customerData), 'updatedAt', 'updatedBy', 'wonAt', 'assignedTo']);
+          touched.delete('id');
+          touched.delete('firestoreId');
+          const changes = Object.fromEntries(Object.entries(merged).filter(([key]) => touched.has(key)));
+          await firestoreService.updateFirestoreCustomer(docId, changes);
         } catch (fsErr) {
           warnCloudWriteFailed(fsErr);
         }
@@ -555,12 +560,25 @@ class StorageManager {
     const failed = [];
     let done = 0;
     if (this.mode === 'firestore') {
-      const BATCH = 8;
-      for (let i = 0; i < prepared.length; i += BATCH) {
-        const slice = prepared.slice(i, i + BATCH);
-        const results = await Promise.allSettled(slice.map(lead => firestoreService.addFirestoreCustomer(lead)));
-        results.forEach((result, index) => { if (result.status === 'rejected') failed.push(slice[index]); });
-        done += slice.length;
+      // In blocks written as one: a few writes instead of one per line, and the screen redraws
+      // once per block. A block the database refuses is written again line by line, so only the
+      // lines really refused stay out, each with the reason.
+      const BLOCK = 200;
+      for (let i = 0; i < prepared.length; i += BLOCK) {
+        const block = prepared.slice(i, i + BLOCK);
+        try {
+          await firestoreService.addFirestoreCustomers(block);
+        } catch {
+          for (const lead of block) {
+            try {
+              await firestoreService.addFirestoreCustomer(lead);
+            } catch (err) {
+              const denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
+              failed.push({ lead, reason: denied ? 'recusada pelo banco: confira o limite do plano e o tamanho dos campos' : 'sem conexão' });
+            }
+          }
+        }
+        done += block.length;
         onProgress(done, prepared.length);
       }
     } else {
@@ -599,8 +617,13 @@ class StorageManager {
     // 1. Optimistic update (instant visual response on Kanban)
     // The closing date is what the reports by period count
     const wonAt = newStage === 'won' ? updatedAt : null;
+    // reopening a lost opportunity takes the loss away with it
+    const leavingLost = oldStage === 'lost' && newStage !== 'lost'
+      ? { lossReason: null, lossDetails: '', lostAt: null }
+      : {};
 
     if (customer) {
+      Object.assign(customer, leavingLost);
       customer.stage = newStage;
       customer.wonAt = wonAt;
       customer.updatedAt = updatedAt;
@@ -615,13 +638,12 @@ class StorageManager {
     if (this.mode === 'firestore') {
       try {
         const docId = customer?.firestoreId || customer?.id || customerId;
-        const updatedActivities = customer && customer.activities ? [...customer.activities] : [activity];
-        await firestoreService.updateFirestoreCustomer(docId, { 
-          stage: newStage, 
+        await firestoreService.appendToFirestoreCustomer(docId, { activities: [activity] }, {
+          stage: newStage,
           wonAt,
+          ...leavingLost,
           updatedAt,
-          updatedBy: user.name,
-          activities: updatedActivities 
+          updatedBy: user.name
         });
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
@@ -668,16 +690,14 @@ class StorageManager {
     if (this.mode === 'firestore') {
       try {
         const docId = customer?.firestoreId || customer?.id || customerId;
-        const updatedActivities = customer && customer.activities ? [...customer.activities] : [activity];
-        await firestoreService.updateFirestoreCustomer(docId, {
+        await firestoreService.appendToFirestoreCustomer(docId, { activities: [activity] }, {
           stage: 'lost',
           wonAt: null,
           lossReason,
           lossDetails: lossDetails || '',
           lostAt: updatedAt,
           updatedAt,
-          updatedBy: user.name,
-          activities: updatedActivities
+          updatedBy: user.name
         });
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
@@ -711,10 +731,7 @@ class StorageManager {
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
       try {
-        await firestoreService.updateFirestoreCustomer(docId, {
-          activities: customer.activities,
-          updatedAt
-        });
+        await firestoreService.appendToFirestoreCustomer(docId, { activities: [activity] }, { updatedAt });
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
       }
@@ -739,10 +756,8 @@ class StorageManager {
 
     if (this.mode === 'firestore') {
       try {
-        await firestoreService.updateFirestoreCustomer(customer.firestoreId || customer.id || customerId, {
-          activities: customer.activities,
-          updatedAt: customer.updatedAt
-        });
+        await firestoreService.changeFirestoreCustomerList(customer.firestoreId || customer.id || customerId, 'activities',
+          list => list.filter(activity => activity.id !== activityId));
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
       }
@@ -786,11 +801,7 @@ class StorageManager {
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
       try {
-        await firestoreService.updateFirestoreCustomer(docId, {
-          tasks: customer.tasks,
-          activities: customer.activities,
-          updatedAt
-        });
+        await firestoreService.appendToFirestoreCustomer(docId, { tasks: [task], activities: [activity] }, { updatedAt });
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
       }
@@ -819,10 +830,10 @@ class StorageManager {
     if (this.mode === 'firestore') {
       const docId = customer.firestoreId || customer.id || customerId;
       try {
-        await firestoreService.updateFirestoreCustomer(docId, {
-          tasks: customer.tasks,
-          updatedAt
-        });
+        // the value on screen, not a toggle of the stored one: two clicks never cancel each other out
+        const { completed, completedAt } = task;
+        await firestoreService.changeFirestoreCustomerList(docId, 'tasks',
+          list => list.map(item => (item.id === taskId ? { ...item, completed, completedAt } : item)));
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
       }
@@ -846,7 +857,8 @@ class StorageManager {
 
     if (this.mode === 'firestore') {
       try {
-        await firestoreService.updateFirestoreCustomer(customer.firestoreId || customer.id, { tasks: customer.tasks, updatedAt: customer.updatedAt });
+        await firestoreService.changeFirestoreCustomerList(customer.firestoreId || customer.id, 'tasks',
+          list => list.filter(task => task.id !== taskId));
       } catch (fsErr) {
         warnCloudWriteFailed(fsErr);
       }
@@ -901,17 +913,49 @@ class StorageManager {
   async restoreCustomer(snapshot) {
     assertCanWrite();
     if (!snapshot || !snapshot.id) return;
-    const restored = {
-      ...snapshot,
-      // A move to "lost" adds these; clearing them here undoes it fully
-      lossReason: snapshot.lossReason ?? null,
-      lossDetails: snapshot.lossDetails ?? '',
-      lostAt: snapshot.lostAt ?? null
-    };
+    const current = this.getCustomer(snapshot.id);
+    const user = getCurrentUser() || { name: 'Operador' };
 
-    const index = this.currentData.findIndex(c => c.id === snapshot.id);
-    if (index !== -1) this.currentData[index] = restored;
-    else this.currentData.unshift(restored);
+    if (current) {
+      // Undoing a change of stage: only the stage and what goes with it come back. The rest of the
+      // opportunity is as it is now (someone may have changed it meanwhile), and the history keeps
+      // the move and says it was undone.
+      const updatedAt = new Date().toISOString();
+      const back = {
+        stage: snapshot.stage,
+        wonAt: snapshot.wonAt ?? null,
+        lossReason: snapshot.lossReason ?? null,
+        lossDetails: snapshot.lossDetails ?? '',
+        lostAt: snapshot.lostAt ?? null,
+        updatedAt,
+        updatedBy: user.name
+      };
+      const note = {
+        id: 'act-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        type: 'stage_change',
+        title: 'Mudança desfeita',
+        text: `Voltou para "${getStageName(snapshot.stage)}".`,
+        author: user.name,
+        timestamp: updatedAt
+      };
+      Object.assign(current, back);
+      if (!Array.isArray(current.activities)) current.activities = [];
+      current.activities.push(note);
+      this.saveLocalData();
+      this.notifyListeners();
+      if (this.mode === 'firestore') {
+        try {
+          await firestoreService.appendToFirestoreCustomer(current.firestoreId || current.id, { activities: [note] }, back);
+        } catch (fsErr) {
+          warnCloudWriteFailed(fsErr);
+        }
+      }
+      return;
+    }
+
+    // Undoing a deletion: the opportunity comes back whole
+    const restored = { ...snapshot };
+    this.currentData.unshift(restored);
     this.saveLocalData();
     this.notifyListeners();
 
@@ -978,31 +1022,37 @@ class StorageManager {
   }
 
   /**
-   * DISPONIBILIDADE (D): Restauração de Snapshot de Backup
+   * Restores what a plan (backup-restore.js) chose: what was missing and what the backup has newer.
+   * Each record on its own: one refused does not stop the others.
+   * @returns {Promise<{restored: number, failed: Array<{name: string, reason: string}>}>}
    */
-  async restoreBackupSnapshot(snapshotData) {
+  async restoreBackup(plan) {
     assertCanWrite();
     if (!isAdmin()) {
-      throw new Error("Apenas o perfil Administrador pode restaurar backups de contingência.");
+      throw new Error("Só administradores podem restaurar uma cópia de segurança.");
     }
-    if (!snapshotData || !Array.isArray(snapshotData.customers)) {
-      throw new Error("Arquivo de backup inválido ou corrompido.");
-    }
-
+    const records = [...plan.toAdd, ...plan.toReplace];
+    const failed = [];
     if (this.mode === 'firestore') {
-      // Each record is written to this company's database; the live listener brings them back
-      for (const customer of snapshotData.customers) {
-        if (!customer || !customer.name) continue;
-        const { firestoreId, clientLeadId, orgId, ...rest } = customer;
-        await firestoreService.addFirestoreCustomer(rest);
+      // the live listener brings them to the screen
+      for (const customer of records) {
+        try {
+          await firestoreService.addFirestoreCustomer(customer);
+        } catch (err) {
+          const denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message || ''));
+          failed.push({ name: customer.name, reason: denied ? 'recusada pelo banco' : 'sem conexão' });
+        }
       }
     } else {
-      this.currentData = snapshotData.customers;
+      const byId = new Map(this.currentData.map(customer => [customer.id, customer]));
+      records.forEach(customer => byId.set(customer.id, customer));
+      this.currentData = [...byId.values()];
       this.saveLocalData();
     }
-    crmStore.addAuditLog('Restauração de Banco Realizada', `Banco restaurado com sucesso a partir de snapshot (${snapshotData.customers.length} registros recuperados).`);
+    const restored = records.length - failed.length;
+    crmStore.addAuditLog('Restauração de cópia de segurança', `${restored} oportunidades restauradas${failed.length ? `, ${failed.length} recusadas` : ''}.`);
     this.notifyListeners();
-    return true;
+    return { restored, failed };
   }
 }
 

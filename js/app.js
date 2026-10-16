@@ -18,6 +18,7 @@ import {
   onAuthChange
 } from './services/auth-service.js';
 import { forgetOldWebhookToken } from './services/webhook-service.js';
+import { pendingWriteCount } from './services/firebase-service.js';
 import { notify } from './services/notification-service.js';
 import { registerActions, setupActions } from './ui/actions.js';
 import { setupCustomizeDialog } from './ui/customize-dialog.js';
@@ -25,6 +26,7 @@ import { setupImportDialog } from './ui/import-dialog.js';
 import {
   renderAuthBadge,
   renderConnectionStatus,
+  setSyncState,
   renderDetailedMetrics,
   renderToday,
   renderPipelineSwitch,
@@ -141,6 +143,18 @@ async function initApp() {
     setupWebhookModalEvents();
     setupAccountDialog();
     setupIdleSignOut();
+
+    // What the header says about saving follows the writes and the connection; closing the tab
+    // with changes not yet confirmed by the server asks first (they would be lost)
+    window.addEventListener('edx-sync', (event) => setSyncState({ pending: event.detail.pending }));
+    window.addEventListener('online', () => setSyncState({ online: true }));
+    window.addEventListener('offline', () => setSyncState({ online: false }));
+    window.addEventListener('beforeunload', (event) => {
+      if (pendingWriteCount() > 0) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    });
 
     // Leads from forms are written by the server straight into the company: a word when one arrives
     forgetOldWebhookToken();

@@ -14,7 +14,9 @@ export function parseAmount(value) {
   if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value : 0;
   const text = String(value ?? '').trim().replace(/[^\d.,-]/g, '');
   if (!text) return 0;
-  const normal = text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text;
+  // the Brazilian way, as in the opportunity's value: "1.250" is one thousand two hundred and fifty
+  const normal = text.includes(',') ? text.replace(/\./g, '').replace(',', '.')
+    : /^-?\d{1,3}(\.\d{3})+$/.test(text) ? text.replace(/\./g, '') : text;
   const number = Number(normal);
   return Number.isFinite(number) && number > 0 ? number : 0;
 }

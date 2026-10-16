@@ -94,7 +94,7 @@ service cloud.firestore {
         && optText(data, 'email', 320) && optText(data, 'phone', 60)
         && optText(data, 'notes', 20000) && optText(data, 'priority', 20)
         && optText(data, 'expectedCloseDate', 40) && optText(data, 'lossDetails', 2000)
-        && optText(data, 'pipelineId', 40)
+        && optText(data, 'pipelineId', 40) && optText(data, 'proposalText', 5000)
         && optList(data, 'tags', 30) && optList(data, 'tasks', 500) && optList(data, 'activities', 2000)
         && optList(data, 'items', 30) && optList(data, 'attachments', 10)
         && (!('assignedTo' in data) || data.assignedTo == null || data.assignedTo is map)

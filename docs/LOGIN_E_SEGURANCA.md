@@ -163,4 +163,13 @@ Uma cliente comum, um cliente avançado, um dev pleno e um dev sênior revisaram
 - **Teste gratuito do Enterprise**: com os limites do Professional.
 - **Perfil novo**: só os campos que o aplicativo grava.
 
+No aplicativo, também da mesma revisão:
+
+- **Duas pessoas na mesma oportunidade**: histórico e tarefas são acrescentados sem reescrever a lista (o que outra pessoa gravou no mesmo instante fica); concluir e excluir tarefa leem a lista do banco na hora. Editar uma oportunidade grava só os campos alterados no formulário, e uma mudança de etapa feita ali entra no histórico como no funil. "Desfazer" uma mudança de etapa devolve só a etapa e registra que foi desfeita.
+- **Sem conexão**: o cabeçalho mostra "Sem conexão" e quantas alterações aguardam; fechar a aba com alterações não confirmadas pede confirmação.
+- **Bloqueio em plena sessão**: quem é bloqueado ou removido sai do sistema na hora.
+- **Proposta**: tem texto próprio; as anotações da oportunidade são internas e não aparecem nela.
+- **Importação de planilha**: confere os mesmos limites do banco antes de importar, lê o CSV do Excel em português (Windows-1252), avisa valores negativos ou com letras, não deixa uma aspa aberta engolir o arquivo, reconhece "Nome da empresa" como a empresa, e grava em blocos.
+- **Restaurar cópia de segurança**: mostra o que vai acontecer e pergunta antes; não substitui o que mudou depois da cópia; um registro recusado não interrompe os outros.
+
 Limite conhecido que continua: uma rajada de gravações feita por fora do aplicativo pode passar um pouco do limite do plano antes de o servidor marcar o plano como cheio.

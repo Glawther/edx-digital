@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.24.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.24.0">
-  <link rel="stylesheet" href="css/components.css?v=3.24.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.24.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.24.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.25.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.25.0">
+  <link rel="stylesheet" href="css/components.css?v=3.25.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.25.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.25.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.24.0"></script>
+  <script src="js/theme-boot.js?v=3.25.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -793,7 +793,7 @@
 
           <div class="form-group full-width">
             <label for="input-customer-notes">Anotações</label>
-            <textarea id="input-customer-notes" class="form-textarea" placeholder="O que o cliente precisa, o que foi combinado e o próximo passo. Este texto vai para a proposta."></textarea>
+            <textarea id="input-customer-notes" class="form-textarea" placeholder="O que o cliente precisa, o que foi combinado e o próximo passo. Fica só para a equipe: não aparece na proposta."></textarea>
           </div>
         </div>
 
@@ -1082,6 +1082,14 @@
     </div>
 
     <div class="dialog-body" style="padding: 1.5rem;">
+      <details class="form-more proposal-items-editor" id="proposal-text-editor">
+        <summary>Texto da proposta</summary>
+        <p class="empty-note" style="margin: 0.6rem 0;">O que o cliente lê em "O que está sendo proposto". As anotações da oportunidade são internas e não entram na proposta.</p>
+        <textarea id="proposal-text-input" class="form-textarea" maxlength="5000" rows="4" aria-label="Texto da proposta" placeholder="Por exemplo: fornecimento e montagem de 12 estações de trabalho, com entrega em 20 dias."></textarea>
+        <div class="proposal-items-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="btn-save-proposal-text">Salvar texto</button>
+        </div>
+      </details>
       <details class="form-more proposal-items-editor" id="proposal-items-editor">
         <summary>Itens da proposta (opcional)</summary>
         <p class="empty-note" style="margin: 0.6rem 0;">Liste o que está sendo vendido. A proposta passa a mostrar a tabela com quantidade, preço e total. Sem itens, ela mostra só o valor da oportunidade.</p>
@@ -1935,7 +1943,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.24.0"></script>
+  <script type="module" src="js/app.js?v=3.25.0"></script>
 
 </body>
 </html>

@@ -27,8 +27,13 @@ const plain = (text) => String(text || '').normalize('NFD').replace(/[̀-ͯ]/g, 
 export function parseMoney(val) {
   if (val === null || val === undefined || val === '') return 0;
   if (typeof val === 'number') return val < 0 || isNaN(val) ? 0 : Math.min(val, 1000000000);
+  // a negative amount is not a deal value (the sign used to be dropped: -500 became 500)
+  if (/^\s*(r\$\s*)?-|-\s*(r\$\s*)?\d/i.test(String(val))) return 0;
   let text = String(val).replace(/[^\d.,]/g, '');
-  if (text.includes(',')) {
+  if (text.includes(',') && text.includes('.') && text.lastIndexOf('.') > text.lastIndexOf(',')) {
+    // 1,234.56: written the American way, the last mark is the decimal one
+    text = text.replace(/,/g, '');
+  } else if (text.includes(',')) {
     // comma is the decimal mark; dots are thousands separators
     text = text.replace(/\./g, '').replace(',', '.');
   } else if (/^\d{1,3}(\.\d{3})+$/.test(text)) {
@@ -43,7 +48,7 @@ export function parseMoney(val) {
  * Splits pasted or file text into rows of cells. Handles ; , and tab, quoted cells,
  * quotes inside quotes ("") and line breaks inside a quoted cell.
  */
-export function parseDelimited(text) {
+export function parseDelimited(text, { quotes = true } = {}) {
   const source = String(text || '').replace(/^﻿/, '');
   const firstLine = source.split(/\r?\n/).find(line => line.trim()) || '';
   const count = (ch) => firstLine.split(ch).length - 1;
@@ -59,7 +64,7 @@ export function parseDelimited(text) {
       if (ch === '"' && source[i + 1] === '"') { cell += '"'; i++; }
       else if (ch === '"') quoted = false;
       else cell += ch;
-    } else if (ch === '"' && cell.trim() === '') {
+    } else if (quotes && ch === '"' && cell.trim() === '') {
       quoted = true;
       cell = '';
     } else if (ch === delimiter) {
@@ -75,6 +80,9 @@ export function parseDelimited(text) {
       cell += ch;
     }
   }
+  // A quote opened and never closed would swallow every line after it into one cell: read
+  // the text again treating quotes as ordinary characters, and say so
+  if (quoted) return Object.assign(parseDelimited(text, { quotes: false }), { unclosedQuote: true });
   row.push(cell.trim());
   if (row.some(value => value !== '')) rows.push(row);
   return rows;
@@ -101,11 +109,23 @@ export function guessMapping(rows, hasHeader) {
   const width = Math.max(...rows.map(row => row.length));
 
   if (hasHeader) {
-    rows[0].forEach((title, index) => {
-      const key = plain(title);
-      const field = IMPORT_FIELDS.find(f => mapping[f.id] === -1 && f.words.includes(key))
-        || IMPORT_FIELDS.find(f => mapping[f.id] === -1 && f.words.some(word => key.includes(word) && word.length > 3));
+    // Exact titles first, in every column; then the longest word found in a title decides
+    // ("Nome da empresa" is the company, not the contact's name)
+    const titles = rows[0].map(plain);
+    titles.forEach((key, index) => {
+      const field = IMPORT_FIELDS.find(f => mapping[f.id] === -1 && f.words.includes(key));
       if (field) mapping[field.id] = index;
+    });
+    titles.forEach((key, index) => {
+      if (Object.values(mapping).includes(index)) return;
+      let best = null;
+      for (const field of IMPORT_FIELDS) {
+        if (mapping[field.id] !== -1) continue;
+        for (const word of field.words) {
+          if (word.length > 3 && key.includes(word) && (!best || word.length > best.length)) best = { field, length: word.length };
+        }
+      }
+      if (best) mapping[best.field.id] = index;
     });
     return mapping;
   }
@@ -187,11 +207,30 @@ export function buildImportRows(rows, mapping, { hasHeader = false, existing = [
     const rawValue = cell(row, 'dealValue');
     const rawStage = cell(row, 'stage');
 
+    // the same limits the database applies: a row passing here is not refused when saved
     if (!name) problems.push('sem nome');
     if (name.length > 300) problems.push('nome longo demais');
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push('e-mail inválido');
-    if (phone && digitsOf(phone).length < 8) notes.push('telefone parece incompleto');
-    if (rawValue && !/\d/.test(rawValue)) notes.push('valor não reconhecido, ficou R$ 0');
+    if (email.length > 320) problems.push('e-mail longo demais');
+    if (phone.length > 60) problems.push('telefone longo demais');
+    if (phone && digitsOf(phone).length < 8 && phone.length <= 60) notes.push('telefone parece incompleto');
+    if (/\uFFFD/.test(row.join(''))) notes.push('acentos ilegíveis: salve a planilha como "CSV UTF-8"');
+    let valueOk = true;
+    if (rawValue && (!/\d/.test(rawValue) || /[a-z]/i.test(rawValue.replace(/^\s*r\$/i, '')))) {
+      notes.push('valor não reconhecido, ficou R$ 0');
+      valueOk = false;
+    } else if (rawValue && parseMoney(rawValue) === 0 && /-/.test(rawValue)) {
+      notes.push('valor negativo, ficou R$ 0');
+    }
+    const company = cell(row, 'company');
+    const role = cell(row, 'role');
+    const noteText = cell(row, 'notes');
+    if (company.length > 300) notes.push('empresa cortada em 300 caracteres');
+    if (role.length > 300) notes.push('cargo cortado em 300 caracteres');
+    if (noteText.length > 20000) notes.push('anotações cortadas');
+    const tags = cell(row, 'tags').split(/[;,|]/).map(tag => tag.trim().slice(0, 60)).filter(Boolean);
+    // one tag ("Importado") is added on import
+    if (tags.length > 29) notes.push(`${tags.length} etiquetas: ficam as 29 primeiras`);
 
     let stage = readStage(rawStage);
     if (stage === null) {
@@ -214,15 +253,15 @@ export function buildImportRows(rows, mapping, { hasHeader = false, existing = [
       duplicate,
       lead: {
         name,
-        company: cell(row, 'company'),
+        company: company.slice(0, 300),
         phone,
         email,
-        role: cell(row, 'role'),
-        dealValue: parseMoney(rawValue),
+        role: role.slice(0, 300),
+        dealValue: valueOk ? parseMoney(rawValue) : 0,
         stage,
         priority: 'medium',
-        notes: cell(row, 'notes'),
-        tags: cell(row, 'tags').split(/[;,|]/).map(tag => tag.trim()).filter(Boolean)
+        notes: noteText.slice(0, 20000),
+        tags: tags.slice(0, 29)
       }
     };
   });

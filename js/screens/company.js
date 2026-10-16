@@ -6,6 +6,7 @@ import { getSavedOrganization, saveOrganization } from '../core/config.js';
 import { crmStore } from '../core/crm-store.js';
 import { safeImageUrl } from '../core/html.js';
 import { storage } from '../core/storage-manager.js';
+import { describeRestore, planRestore } from '../core/backup-restore.js';
 import { AUDIT_ACTIONS, AUDIT_SEVERITY, logAudit } from '../services/audit-service.js';
 import { isAdmin, isCloudSession } from '../services/auth-service.js';
 import { exportCustomersToCSV } from '../services/export-service.js';
@@ -352,11 +353,22 @@ export function setupBackupEvents() {
       reader.onload = async (event) => {
         try {
           const data = JSON.parse(event.target.result);
-          await storage.restoreBackupSnapshot(data);
-          logAudit(AUDIT_ACTIONS.BACKUP_RESTORED, { restoredCustomers: data?.customers?.length || 0 }, AUDIT_SEVERITY.WARNING);
-          showToast("Banco restaurado com sucesso a partir do snapshot!", "success");
+          if (!data || !Array.isArray(data.customers)) throw new Error('o arquivo não é uma cópia de segurança do EDX Digital.');
+          // first what would happen, then the question: nothing is overwritten without it
+          const plan = planRestore(data.customers, storage.getCustomers());
+          if (plan.toAdd.length + plan.toReplace.length === 0) {
+            showToast(`Nada a restaurar: ${describeRestore(plan)}`, 'info');
+            return;
+          }
+          if (!confirm(`Restaurar a cópia de segurança?\n\n${describeRestore(plan)}`)) return;
+          const result = await storage.restoreBackup(plan);
+          logAudit(AUDIT_ACTIONS.BACKUP_RESTORED, { restoredCustomers: result.restored, refused: result.failed.length }, AUDIT_SEVERITY.WARNING);
+          showToast(result.failed.length === 0
+            ? `${result.restored} ${result.restored === 1 ? 'oportunidade restaurada' : 'oportunidades restauradas'}.`
+            : `${result.restored} restauradas; ${result.failed.length} não entraram (${result.failed.slice(0, 3).map(item => item.name).join(', ')}${result.failed.length > 3 ? ' e outras' : ''}: ${result.failed[0].reason}).`,
+            result.failed.length === 0 ? 'success' : 'warning');
         } catch (err) {
-          showToast("Falha na restauração do backup: " + err.message, "error");
+          showToast("Não foi possível restaurar: " + (err instanceof SyntaxError ? "o arquivo não é um JSON válido." : err.message), "error");
         } finally {
           backupFileInput.value = '';
         }

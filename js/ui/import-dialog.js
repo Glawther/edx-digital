@@ -64,6 +64,7 @@ export function setupImportDialog() {
   function readSource() {
     table = parseDelimited(textarea.value);
     btnNext.disabled = table.length === 0;
+    if (table.unclosedQuote) showToast('Uma aspa (") foi aberta e não fechada na planilha. Li as aspas como texto comum; confira as linhas na conferência.', 'warning');
   }
 
   function loadFile(file) {
@@ -73,8 +74,16 @@ export function setupImportDialog() {
       return;
     }
     const reader = new FileReader();
+    let encoding = 'utf-8';
     reader.onload = () => {
-      textarea.value = String(reader.result || '');
+      const text = String(reader.result || '');
+      // Excel in Portuguese saves "CSV" in Windows-1252, not UTF-8: read again if accents broke
+      if (encoding === 'utf-8' && /\uFFFD/.test(text)) {
+        encoding = 'windows-1252';
+        reader.readAsText(file, encoding);
+        return;
+      }
+      textarea.value = text;
       readSource();
       if (table.length > 0) startReview();
       else showToast('Não encontrei linhas nesse arquivo. Ele precisa ser um .csv ou texto, não .xlsx.', 'error');
@@ -181,7 +190,7 @@ export function setupImportDialog() {
       showToast(
         failed === 0
           ? `${result.imported} ${result.imported === 1 ? 'oportunidade importada' : 'oportunidades importadas'}, com a etiqueta Importado.`
-          : `${result.imported} importadas e ${failed} não foram salvas (sem conexão ou sem permissão). Importe o arquivo de novo: as que já entraram serão reconhecidas como repetidas.`,
+          : `${result.imported} importadas e ${failed} não foram salvas: ${result.failed.slice(0, 3).map(item => item.lead.name).join(', ')}${failed > 3 ? ' e outras' : ''} (${result.failed[0].reason}). As outras já entraram; confira essas à mão.`,
         failed === 0 ? 'success' : 'warning'
       );
     } catch (err) {
