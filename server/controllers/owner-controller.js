@@ -56,6 +56,19 @@ function planState(org, now = Date.now()) {
   return { state: now < org.trialEndsAtMs ? 'trial' : 'trial_ended', endsAtMs: org.trialEndsAtMs };
 }
 
+/** Only the numbers, so a malformed record cannot reach the screen as anything else */
+function overLimitOf(org) {
+  const over = org.usage && org.usage.overLimit;
+  if (!over || typeof over !== 'object') return null;
+  const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+  const result = {
+    leads: num(over.leads), maxLeads: num(over.maxLeads),
+    seats: num(over.seats), maxUsers: num(over.maxUsers),
+    sinceMs: num(over.sinceMs)
+  };
+  return result.leads !== null || result.seats !== null ? result : null;
+}
+
 /**
  * @param {Object} store - listOrganizations, listAllUsers, listAllPayments, countDocs
  */
@@ -85,7 +98,9 @@ async function buildOverview(store, now = Date.now()) {
       ownerEmail: team.emails.get(org.ownerUid) || '',
       createdAt: typeof org.createdAt === 'string' ? org.createdAt : '',
       opportunities: await store.countDocs('customers', [['orgId', id]]),
-      full: Boolean(org.usage && (org.usage.leadsFull || org.usage.seatsFull))
+      full: Boolean(org.usage && (org.usage.leadsFull || org.usage.seatsFull)),
+      // well past the plan's limit (usage-service.js): a burst sent around the app, or a plan moved down
+      overLimit: overLimitOf(org)
     });
   }
   // what needs attention first: about to end, then the newest

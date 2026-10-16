@@ -8,6 +8,11 @@
  *
  * It runs after each change, so a burst of writes can pass the limit by a little before the
  * door closes. What it guarantees is that the door does close.
+ *
+ * A burst sent straight to the database (not through the app) can pass it by a lot. The rules
+ * cannot count a batch, so instead, when the count goes well past the limit (OVER_MARGIN), the
+ * company is marked with usage.overLimit and a line is logged: the owner's panel shows it, and
+ * nothing is deleted. A plan moved down to a smaller one shows up the same way.
  */
 
 // Keep in step with js/services/billing-service.js
@@ -20,6 +25,14 @@ const PLAN_LIMITS = {
 // 'contacted' is the older name of 'contact'
 const OPEN_STAGES = ['lead', 'contact', 'contacted', 'proposal', 'negotiation'];
 
+// How far past the limit counts as "well past": 10% of it, and at least one. Below this, the
+// difference is what the ordinary delay between a write and the recount can leave.
+function overMargin(limit) {
+  return Math.max(1, Math.floor(limit * 0.1));
+}
+
+const isWellPast = (count, limit) => limit !== Infinity && count > limit + overMargin(limit);
+
 function limitsOf(org) {
   // The free trial never has unlimited room: an Enterprise trial holds what Professional does
   // (without this, a free account had no ceiling on what it stored, at the owner's cost)
@@ -30,10 +43,10 @@ function limitsOf(org) {
 /**
  * @param {Object} deps.store - getOrganization, updateOrganization, countDocs(collection, filters)
  */
-function createUsageService({ store }) {
+function createUsageService({ store, log = console, now = Date.now }) {
   /**
    * Counts and, only when the answer changed, records it on the company
-   * @returns {Promise<{leadsFull: boolean, seatsFull: boolean, changed: boolean}|null>} null when the company is gone
+   * @returns {Promise<{leadsFull: boolean, seatsFull: boolean, changed: boolean, overLimit?: Object}|null>} null when the company is gone
    */
   async function refreshUsage(orgId) {
     if (!orgId || typeof orgId !== 'string') return null;
@@ -47,8 +60,26 @@ function createUsageService({ store }) {
 
     const usage = { leadsFull: openLeads >= limits.maxLeads, seatsFull: seats >= limits.maxUsers };
     const before = org.usage || {};
-    const changed = Boolean(before.leadsFull) !== usage.leadsFull || Boolean(before.seatsFull) !== usage.seatsFull;
+    const wasOver = before.overLimit || {};
+
+    const leadsOver = isWellPast(openLeads, limits.maxLeads);
+    const seatsOver = isWellPast(seats, limits.maxUsers);
+    if (leadsOver || seatsOver) {
+      usage.overLimit = {
+        ...(leadsOver ? { leads: openLeads, maxLeads: limits.maxLeads } : {}),
+        ...(seatsOver ? { seats, maxUsers: limits.maxUsers } : {}),
+        // when it first went well past; kept while it stays there
+        sinceMs: typeof wasOver.sinceMs === 'number' ? wasOver.sinceMs : now()
+      };
+    }
+    // the counts inside overLimit are not compared: rewriting the company at every change of a
+    // burst would cost a write each; only going past or coming back is recorded
+    const overChanged = Boolean(wasOver.leads) !== leadsOver || Boolean(wasOver.seats) !== seatsOver;
+    const changed = Boolean(before.leadsFull) !== usage.leadsFull || Boolean(before.seatsFull) !== usage.seatsFull || overChanged;
     if (changed) await store.updateOrganization(orgId, { usage });
+    if (overChanged && usage.overLimit) {
+      log.warn(`[Limites] empresa ${orgId} passou muito do limite do plano: ${openLeads}/${limits.maxLeads} oportunidades em aberto, ${seats}/${limits.maxUsers} pessoas`);
+    }
     return { ...usage, changed };
   }
 
@@ -70,4 +101,4 @@ function userChangeMatters(before, after) {
   return counts(before) !== counts(after) || before.orgId !== after.orgId;
 }
 
-module.exports = { createUsageService, customerChangeMatters, userChangeMatters, limitsOf, PLAN_LIMITS, OPEN_STAGES };
+module.exports = { createUsageService, customerChangeMatters, userChangeMatters, limitsOf, overMargin, PLAN_LIMITS, OPEN_STAGES };
