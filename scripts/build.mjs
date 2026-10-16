@@ -58,6 +58,9 @@ await build({
 // The theme script runs before the page is drawn, so it is a file of its own
 await fs.writeFile(to('js', 'theme-boot.js'), (await transform(await fs.readFile(from('js', 'theme-boot.js'), 'utf8'), { minify: true, legalComments: 'none' })).code);
 
+// The help page's search is a module of its own: the public pages do not load the app
+await fs.writeFile(to('js', 'help-search.js'), (await transform(await fs.readFile(from('js', 'help-search.js'), 'utf8'), { format: 'esm', charset: 'ascii', minify: true, legalComments: 'none' })).code);
+
 // 2. Stylesheets, each under its own name so the pages need no change
 for (const file of (await fs.readdir(from('css'))).filter(name => name.endsWith('.css'))) {
   const { code } = await transform(await fs.readFile(from('css', file), 'utf8'), { loader: 'css', minify: true, legalComments: 'none' });
@@ -73,6 +76,10 @@ for (const page of PAGES) {
     .replace(/(\r?\n){3,}/g, '\n\n');
   if (/<script(?![^>]*\ssrc=)/i.test(clean) || /\son[a-z]+\s*=\s*["']/i.test(clean)) throw new Error(`${page}: script ou evento embutido no HTML`);
   if (/<style[\s>]/i.test(clean)) throw new Error(`${page}: bloco <style> na página; o estilo vai num arquivo em css/`);
+  // every script a page loads from js/ has to be in dist/, or it would answer 404 in production
+  for (const [, file] of clean.matchAll(/<script[^>]*\ssrc="(js\/[^"?]+)/g)) {
+    await fs.access(to(file)).catch(() => { throw new Error(`${page}: ${file} não foi gerado pelo build`); });
+  }
   await fs.writeFile(to(page), clean);
 }
 

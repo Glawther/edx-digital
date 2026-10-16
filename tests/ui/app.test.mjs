@@ -553,6 +553,68 @@ test('páginas públicas: desenhadas pelos arquivos de estilo, sem nada recusado
   }
 });
 
+test('ajuda: a busca mostra só as perguntas com as palavras, avisa quando nada bate e volta tudo ao limpar', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const problems = [];
+  await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`)));
+  page.on('console', message => { if (message.type() === 'error' && /^CSP (style|script)/.test(message.text())) problems.push(message.text()); });
+  page.on('pageerror', error => problems.push(`erro: ${error.message}`));
+  await page.goto(base + '/ajuda');
+
+  const field = page.getByLabel('Buscar na ajuda');
+  await field.waitFor({ state: 'visible' });
+  const all = await page.locator('main details').count();
+  const visible = () => page.locator('main details:visible summary').allTextContents();
+  const visibleSections = () => page.locator('main h2:visible').allTextContents();
+
+  // only the keyboard: the field is reached with Tab from the top of the page
+  await page.keyboard.press('Tab');
+  for (let step = 0; step < 10 && !(await field.evaluate(el => el === document.activeElement)); step++) await page.keyboard.press('Tab');
+  assert.equal(await field.evaluate(el => el === document.activeElement), true, 'o campo de busca não é alcançado pelo teclado');
+
+  // accents and case ignored: "codigo CONVITE" finds "código de convite"
+  await page.keyboard.type('codigo CONVITE');
+  assert.deepEqual(await visible(), ['Como coloco minha equipe no sistema?', 'Um vendedor saiu da empresa. O que faço?', 'O código de convite não funciona.']);
+  assert.deepEqual(await visibleSections(), ['Equipe e permissões', 'Problemas comuns']);
+  assert.equal(await page.locator('main details[open]').count(), 3, 'as perguntas encontradas abrem');
+  assert.equal(await page.locator('main nav.index').isVisible(), false);
+  assert.equal(await page.locator('#help-search-status').getAttribute('aria-live'), 'polite');
+  assert.equal(await page.textContent('#help-search-status'), '3 perguntas encontradas');
+
+  await field.fill('pix');
+  assert.deepEqual(await visible(), ['Como pago?']);
+  assert.equal(await page.textContent('#help-search-status'), '1 pergunta encontrada');
+
+  await field.fill('helicóptero');
+  assert.deepEqual(await visible(), []);
+  assert.deepEqual(await visibleSections(), []);
+  assert.match(await page.textContent('#help-search-status'), /Nenhuma pergunta com "helicóptero"\. Tente outra palavra/);
+  assert.equal(await page.locator('.contact').isVisible(), true, 'o contato continua à vista');
+
+  // Escape clears, and everything is back as it was: all questions, all closed, the subjects list
+  await page.keyboard.press('Escape');
+  assert.equal(await field.inputValue(), '');
+  assert.equal((await visible()).length, all);
+  assert.equal(await page.locator('main details[open]').count(), 0);
+  assert.equal(await page.locator('main nav.index').isVisible(), true);
+  assert.equal(await page.textContent('#help-search-status'), '');
+  assert.deepEqual(problems, []);
+});
+
+test('ajuda: sem JavaScript a página continua inteira e a busca não aparece', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', javaScriptEnabled: false });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  await page.goto(base + '/ajuda');
+  assert.equal(await page.locator('#help-search').isVisible(), false);
+  assert.ok(await page.locator('main details:visible').count() > 30);
+  assert.equal(await page.locator('main nav.index').isVisible(), true);
+});
+
 test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mostra só o que é seu', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
