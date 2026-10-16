@@ -767,3 +767,53 @@ test('proposta pelo WhatsApp: o WhatsApp abre mesmo quando o histórico não ace
   assert.match(opened[0], /^https:\/\/wa\.me\//);
   assert.deepEqual(problems, []);
 });
+
+test('conta real com a rede lenta: espera a conexão em vez de mostrar a tela de entrada', async (t) => {
+  if (!browser) {
+    t.skip('Edge ou Chrome não encontrado nesta máquina');
+    return;
+  }
+  // the service worker would fetch the SDK on its own, out of reach of page.route
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', serviceWorkers: 'block' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', error => problems.push(`erro: ${error.message}`));
+  // the last session on this browser was a real account
+  await page.addInitScript(() => localStorage.setItem('edx_session_active', 'cloud'));
+  // the Firebase SDK never arrives, like a phone on a weak signal
+  const held = [];
+  await page.route('https://www.gstatic.com/firebasejs/**', route => { held.push(route); });
+
+  await page.goto(base + '/');
+  await page.locator('#auth-offline-screen').waitFor({ state: 'visible', timeout: 20000 });
+  assert.match(await page.textContent('#auth-offline-screen'), /Sem conexão com o servidor/);
+  assert.equal(await page.locator('#btn-auth-offline-retry').isVisible(), true);
+  assert.equal(await page.locator('#auth-portal-screen').isVisible(), false);
+  assert.equal(await page.locator('#form-auth-login').isVisible(), false);
+  // nothing was forgotten: the session is still marked as a real account
+  assert.equal(await page.evaluate(() => localStorage.getItem('edx_session_active')), 'cloud');
+
+  // trying again while still without the server keeps the waiting screen
+  await page.click('#btn-auth-offline-retry');
+  await page.locator('#auth-offline-status', { hasText: 'Ainda sem conexão' }).waitFor({ timeout: 20000 });
+  assert.equal(await page.locator('#form-auth-login').isVisible(), false);
+  if (process.env.EDX_SHOTS) await page.screenshot({ path: process.env.EDX_SHOTS + '/espera-conexao.png' });
+  assert.deepEqual(problems, []);
+  await page.unroute('https://www.gstatic.com/firebasejs/**');
+  await Promise.all(held.map(route => route.abort().catch(() => {})));
+});
+
+test('quem nunca entrou e tem a rede lenta continua vendo a tela de entrada', async (t) => {
+  if (!browser) {
+    t.skip('Edge ou Chrome não encontrado nesta máquina');
+    return;
+  }
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', serviceWorkers: 'block' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  await page.route('https://www.gstatic.com/firebasejs/**', () => { /* never answers */ });
+  await page.goto(base + '/');
+  await page.locator('#form-auth-login').waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal(await page.locator('#auth-offline-screen').isVisible(), false);
+});
