@@ -7,7 +7,7 @@ import { messagesFor } from '../core/message-templates.js';
 import { getStageName } from '../core/crm-store.js';
 import { getSavedOrganization } from '../core/config.js';
 import { storage } from '../core/storage-manager.js';
-import { getCurrentUser, isReadOnly } from '../services/auth-service.js';
+import { getCurrentUser, isAdmin, isReadOnly } from '../services/auth-service.js';
 import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from '../services/gemini-service.js';
 import {
   buildWhatsAppLink,
@@ -268,7 +268,9 @@ window.handleAnalyzeWithAI = async function(customerId) {
   } catch (err) {
     // No key, or Google refused: say so instead of showing an analysis nobody made
     document.getElementById('gemini-unavailable-text').textContent = err.code === 'no-key'
-      ? 'A análise é feita pelo Google Gemini com a sua própria chave, que é gratuita para começar. Informe a chave para usar este recurso.'
+      ? (isAdmin()
+        ? 'A análise usa o Gemini, a inteligência artificial do Google, e precisa de uma chave da sua empresa. Ela é gratuita para começar e se informa em Ferramentas, Inteligência artificial. Sem a chave, o resto do CRM funciona normalmente.'
+        : 'A análise com inteligência artificial ainda não foi ligada na sua empresa. Quem administra o CRM pode ligar em Ferramentas.')
       : err.message;
     show('gemini-unavailable');
   }

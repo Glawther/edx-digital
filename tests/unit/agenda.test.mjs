@@ -75,3 +75,11 @@ test('o arquivo de calendário leva só as tarefas pendentes com data, com o tex
   assert.equal(ics.includes('Já feita'), false);
   assert.ok(lines.every(line => line.length <= 75), 'nenhuma linha passa do tamanho que os calendários aceitam');
 });
+
+test('o arquivo .ics nunca tem linha com mais de 75 bytes, nem com acentos', async () => {
+  const { tasksToIcs } = await import('../../js/core/agenda.js');
+  const ics = tasksToIcs([{ id: 't1', title: 'Ligação de negociação: ação, atenção e decisão sobre a proposta comercial já enviada', dueDate: '2026-10-20', dueTime: '10:00', customerName: 'João Conceição' }]);
+  for (const line of ics.split('\r\n')) assert.ok(new TextEncoder().encode(line).length <= 75, `${new TextEncoder().encode(line).length}: ${line}`);
+  // desdobrado, o texto é o mesmo
+  assert.match(ics.replace(/\r\n /g, ''), /Ligação de negociação: ação\\, atenção e decisão/);
+});

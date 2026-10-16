@@ -88,6 +88,6 @@ export function checkFile(file, existing = []) {
   const ext = extensionOf(file.name);
   if (!ATTACHMENT_TYPES[ext]) return { ok: false, message: 'Este tipo de arquivo não é aceito. Use PDF, imagem (PNG, JPG, WEBP), Word, Excel, CSV ou texto.' };
   if (!(file.size > 0)) return { ok: false, message: 'O arquivo está vazio.' };
-  if (file.size > MAX_ATTACHMENT_BYTES) return { ok: false, message: `O arquivo tem ${formatBytes(file.size)}; o limite é ${formatBytes(MAX_ATTACHMENT_BYTES)}.` };
+  if (file.size > MAX_ATTACHMENT_BYTES) return { ok: false, message: `O arquivo passa de ${formatBytes(MAX_ATTACHMENT_BYTES)}, o limite de cada anexo.` };
   return { ok: true, ext, contentType: ATTACHMENT_TYPES[ext] };
 }

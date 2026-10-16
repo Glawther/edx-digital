@@ -95,15 +95,24 @@ export function googleCalendarUrl(task) {
 // Text inside a calendar file: these four characters have a meaning of their own there
 const icsText = (value) => String(value ?? '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
 
-// Lines longer than 75 bytes continue on the next one, which starts with a space
+// Lines longer than 75 bytes continue on the next one, which starts with a space. Bytes, not
+// letters: an accented letter takes two, and a letter is never split in half.
+const encoder = new TextEncoder();
 function fold(line) {
   const parts = [];
-  let rest = line;
-  while (rest.length > 73) {
-    parts.push(rest.slice(0, 73));
-    rest = ' ' + rest.slice(73);
+  let current = '';
+  let bytes = 0;
+  for (const ch of line) {
+    const size = encoder.encode(ch).length;
+    if (bytes + size > 75) {
+      parts.push(current);
+      current = ' ';
+      bytes = 1;
+    }
+    current += ch;
+    bytes += size;
   }
-  parts.push(rest);
+  parts.push(current);
   return parts.join('\r\n');
 }
 

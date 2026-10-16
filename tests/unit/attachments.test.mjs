@@ -17,7 +17,7 @@ test('só documentos e imagens entram; nada que o navegador executaria', () => {
 
 test('tamanho e quantidade têm limite, e a mensagem diz qual', () => {
   assert.match(checkFile({ name: 'a.pdf', size: 0 }).message, /vazio/);
-  assert.match(checkFile({ name: 'a.pdf', size: MAX_ATTACHMENT_BYTES + 1 }).message, /limite é 10 MB/);
+  assert.match(checkFile({ name: 'a.pdf', size: MAX_ATTACHMENT_BYTES + 1 }).message, /passa de 10 MB/);
   assert.equal(checkFile({ name: 'a.pdf', size: MAX_ATTACHMENT_BYTES }).ok, true);
   const full = Array.from({ length: MAX_ATTACHMENTS }, (_, i) => ({ id: `a_arquivo${i}` }));
   assert.match(checkFile({ name: 'a.pdf', size: 10 }, full).message, /até 10 arquivos/);

@@ -257,6 +257,8 @@ export function setupTasksEvents() {
     pill.addEventListener('click', () => {
       filterPills.forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
+      // the week needs the whole width: the form for a new task goes below it
+      document.querySelector('.tasks-layout')?.classList.toggle('is-week', pill.dataset.taskFilter === 'week');
       crmStore.setTaskFilter(pill.dataset.taskFilter);
     });
   });
@@ -304,6 +306,14 @@ export function setupTasksEvents() {
   window.handleToggleTask = async function(customerId, taskId) {
     try {
       await storage.toggleTask(customerId, taskId);
+      const task = (storage.getCustomer(customerId)?.tasks || []).find(item => item.id === taskId);
+      // a done task leaves the lists at once: a way back, as when moving a card
+      if (task && task.completed) {
+        showToast('Tarefa concluída.', 'success', {
+          label: 'Desfazer',
+          onClick: () => storage.toggleTask(customerId, taskId).catch(err => reportError('Não foi possível desfazer', err))
+        });
+      }
     } catch (err) {
       reportError("Não foi possível atualizar a tarefa", err);
     }
@@ -433,9 +443,21 @@ export function setupDialogEvents() {
   if (btnNewLead) btnNewLead.addEventListener('click', openNewLead);
   if (btnBottomRightLead) btnBottomRightLead.addEventListener('click', openNewLead);
 
-  const closeDialog = () => customerDialog && customerDialog.close();
+  // Something typed and not saved? Esc, Cancel and the X ask before throwing it away
+  const typedSomething = () => {
+    if (editBaseline) return JSON.stringify(readCustomerForm()) !== editBaseline;
+    return ['input-customer-name', 'input-customer-company', 'input-customer-phone', 'input-customer-email', 'input-customer-notes', 'input-deal-value']
+      .some(id => (document.getElementById(id)?.value || '').trim() !== '');
+  };
+  const mayDiscard = () => !typedSomething() || confirm('Descartar o que foi digitado? O que não foi salvo se perde.');
+  const closeDialog = () => {
+    if (customerDialog && mayDiscard()) customerDialog.close();
+  };
   if (btnCloseDialog) btnCloseDialog.addEventListener('click', closeDialog);
   if (btnCancelDialog) btnCancelDialog.addEventListener('click', closeDialog);
+  customerDialog?.addEventListener('cancel', (event) => {
+    if (!mayDiscard()) event.preventDefault();
+  });
 
   if (customerForm) {
     customerForm.addEventListener('submit', async (e) => {
