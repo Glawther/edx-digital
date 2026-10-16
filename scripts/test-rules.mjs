@@ -53,7 +53,7 @@ if (await allOpen()) {
 }
 
 const given = process.argv.slice(2);
-const files = given.length > 0 ? given : ['tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs', 'tests/rules/storage-rules.test.mjs'];
+const files = given.length > 0 ? given : ['tests/rules/firestore-rules.test.mjs', 'tests/rules/lead-inbox.test.mjs', 'tests/rules/storage-rules.test.mjs', 'tests/rules/server-store.test.mjs'];
 // files given by hand share accounts between their tests: they run in order
 const tests = spawnSync(process.execPath, ['--test', ...(given.length > 0 ? ['--test-concurrency=1'] : []), ...files], { stdio: 'inherit' });
 stop(emulators);

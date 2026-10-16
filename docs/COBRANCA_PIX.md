@@ -127,3 +127,11 @@ npx firebase functions:log --only api --project nexuscrm-d8e13
 ```
 
 ou, no console do Firebase, Functions, Registros. Se um pagamento foi feito e nenhuma linha apareceu, o Mercado Pago não está avisando: confira no painel dele, em Webhooks, o endereço e o evento **Order (Mercado Pago)**.
+
+## Troca de plano e estorno
+
+- **Pagar o mesmo plano antes do vencimento** soma 30 dias ao fim do período em curso.
+- **Pagar outro plano** converte os dias que ainda faltam pelo preço dos dois planos e soma 30 dias do plano novo. Exemplo: 60 dias de Starter (R$ 97) que sobravam viram cerca de 12 dias de Enterprise (R$ 497). No sentido contrário, os dias de Enterprise que sobravam viram mais dias de Starter.
+- **Estorno do último pagamento** devolve a empresa exatamente como estava antes dele, plano incluído (o registro do pagamento guarda `previousPlan`, `previousPlanStatus` e `previousPaidUntilMs`).
+- **Estorno de um pagamento mais antigo** tira os dias dele, convertidos para o preço do plano atual.
+- A confirmação e o estorno gravam o pagamento e a empresa juntos, e só se nenhum dos dois mudou desde a leitura. Se o aviso do Mercado Pago e a consulta da tela chegarem a duas cópias do servidor ao mesmo tempo, só uma libera o período.

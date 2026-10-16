@@ -126,7 +126,7 @@ async function getAccessToken() {
   const encode = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
   const unsigned = `${encode({ alg: 'RS256', typ: 'JWT' })}.${encode({
     iss: account.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope: 'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/cloud-platform',
     aud: tokenUri,
     iat: now,
     exp: now + 3600
@@ -159,6 +159,32 @@ async function machineAccessToken() {
   return tokenCache.token;
 }
 
+/**
+ * The confirmed address of each sign-in account, by uid (accounts without a confirmed address,
+ * disabled or missing are left out). Used to send e-mail only to whom proved the address is theirs.
+ * @param {string[]} uids
+ * @returns {Promise<Map<string, string>>} uid -> address in lower case
+ */
+async function verifiedEmailsOf(uids) {
+  const found = new Map();
+  const emulator = authEmulatorHost();
+  for (let i = 0; i < uids.length; i += 100) {
+    const url = `${emulator ? `http://${emulator}/` : 'https://'}identitytoolkit.googleapis.com/v1/projects/${projectId()}/accounts:lookup`;
+    const token = emulator ? 'owner' : await getAccessToken();
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ localId: uids.slice(i, i + 100) })
+    });
+    if (!res.ok) throw new Error(`Consulta de contas: ${res.status}`);
+    const body = await res.json();
+    for (const user of body.users || []) {
+      if (user.emailVerified && !user.disabled && user.email) found.set(user.localId, String(user.email).toLowerCase());
+    }
+  }
+  return found;
+}
+
 function isServiceAccountConfigured() {
   return Boolean(firestoreEmulatorHost() || loadServiceAccount() || onGoogleCloud());
 }
@@ -169,5 +195,6 @@ module.exports = {
   firestoreEmulatorHost,
   verifyIdToken,
   getAccessToken,
-  isServiceAccountConfigured
+  isServiceAccountConfigured,
+  verifiedEmailsOf
 };

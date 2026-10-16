@@ -60,3 +60,9 @@ No console do Google Cloud, em Cloud Scheduler, a tarefa da função `dailyEmail
 ## Desenvolvimento
 
 A lógica está em `server/mail/daily-emails.js` e o envio em `server/mail/brevo.js`. Os testes (`server/tests/usage-and-mail.test.js`) usam um banco e um Brevo de mentira: conferem quem recebe o quê, que os dados dos clientes não viram marcação dentro do HTML e que uma falha de envio não interrompe as demais.
+
+## Quem recebe
+
+Os e-mails da manhã (resumo do dia e avisos de plano) só vão para quem tem conta de login com o mesmo endereço do perfil, e com esse endereço confirmado. Um perfil é um registro que qualquer administrador grava, com qualquer endereço; sem essa conferência, alguém poderia fazer o sistema mandar, todo dia, texto escrito por ele para endereços escolhidos por ele.
+
+Quem foi cadastrado pelo administrador com senha temporária ainda não confirmou o endereço: em Conta, abaixo da opção do resumo, aparece "Enviar o link de confirmação".

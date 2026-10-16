@@ -22,6 +22,8 @@ import {
   markActivity,
   registerCompany,
   setEmailDigest,
+  isMyEmailVerified,
+  sendMyEmailVerification,
   resendEmailVerification,
   sendPasswordReset,
   signIn,
@@ -64,6 +66,11 @@ export function setupAccountDialog() {
     show('account-profile-block', cloud);
     const digestBox = document.getElementById('account-email-digest');
     if (digestBox) digestBox.checked = !user || user.emailDigest !== false;
+    const unverified = document.getElementById('account-digest-unverified');
+    if (unverified) {
+      unverified.hidden = true;
+      if (cloud) isMyEmailVerified().then(ok => { unverified.hidden = ok; }).catch(() => {});
+    }
     const nameInput = document.getElementById('account-name');
     if (nameInput) nameInput.value = user ? user.name : '';
     document.getElementById('form-account-password')?.reset();
@@ -91,6 +98,15 @@ export function setupAccountDialog() {
       showToast('Nome atualizado.', 'success');
     } catch (err) {
       showToast(err.code ? describeAuthError(err) : err.message, 'error');
+    }
+  });
+
+  document.getElementById('btn-account-verify-email')?.addEventListener('click', async () => {
+    try {
+      const email = await sendMyEmailVerification();
+      showToast(`Enviamos um link de confirmação para ${email}. Depois de clicar nele, o resumo passa a chegar.`, 'success');
+    } catch (err) {
+      showToast(describeAuthError(err), 'error');
     }
   });
 

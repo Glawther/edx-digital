@@ -4,7 +4,7 @@
  * this is the only place allowed to change a company's plan.
  */
 
-const { projectId, firestoreEmulatorHost, getAccessToken } = require('./google-auth');
+const { projectId, firestoreEmulatorHost, getAccessToken, verifiedEmailsOf } = require('./google-auth');
 
 function baseUrl() {
   const emulator = firestoreEmulatorHost();
@@ -151,6 +151,49 @@ async function listDocs(collection, pageSize = 300, maxPages = 200) {
   return docs;
 }
 
+function documentName(path) {
+  return `projects/${projectId()}/databases/(default)/documents/${path}`;
+}
+
+/**
+ * Reads and writes as one, optimistically: every write is committed together, and only if
+ * each document read is still exactly as it was read (its update time). If another writer
+ * changed one of them first, nothing is written and the whole thing runs again with fresh reads.
+ * (No locks: this works the same on the emulator, where locking transactions can stall.)
+ * @param {(tx: {get: Function, update: Function}) => Promise<any>} fn
+ */
+async function runTransaction(fn, attempts = 6) {
+  for (let attempt = 1; ; attempt++) {
+    const readAt = new Map(); // path -> update time of the version read
+    const writes = [];
+    const tx = {
+      get: async (path) => {
+        const doc = await request('GET', path);
+        readAt.set(path, doc ? doc.updateTime : null);
+        return doc && doc.fields ? fromFields(doc.fields) : null;
+      },
+      // only the given fields
+      update: (path, data) => {
+        const seen = readAt.get(path);
+        writes.push({
+          update: { name: documentName(path), fields: toFields(data) },
+          updateMask: { fieldPaths: Object.keys(data) },
+          currentDocument: seen ? { updateTime: seen } : { exists: true }
+        });
+      }
+    };
+    const result = await fn(tx);
+    if (writes.length === 0) return result;
+    const commit = await post(':commit', { writes });
+    if (commit.ok) return result;
+    const detail = await commit.text().catch(() => '');
+    // FAILED_PRECONDITION: someone else changed what was read; read again and decide again
+    const contended = commit.status === 409 || /FAILED_PRECONDITION|ABORTED/.test(detail);
+    if (!contended || attempt >= attempts) throw new Error(`Firestore commit: ${commit.status} ${detail.slice(0, 200)}`);
+    await new Promise(resolve => setTimeout(resolve, 40 * attempt + Math.floor(Math.random() * 60)));
+  }
+}
+
 /**
  * The storage interface the billing service depends on
  */
@@ -161,6 +204,13 @@ const firestoreStore = {
   getPayment: (paymentId) => getDoc(`payments/${paymentId}`),
   savePayment: (paymentId, data) => setDoc(`payments/${paymentId}`, data),
   updatePayment: (paymentId, data) => updateDoc(`payments/${paymentId}`, data),
+  // a payment and its company, changed together (billing-service.js)
+  transaction: (fn) => runTransaction(tx => fn({
+    getPayment: (paymentId) => tx.get(`payments/${paymentId}`),
+    getOrganization: (orgId) => tx.get(`organizations/${orgId}`),
+    updatePayment: (paymentId, data) => tx.update(`payments/${paymentId}`, data),
+    updateOrganization: (orgId, data) => tx.update(`organizations/${orgId}`, data)
+  })),
   countDocs,
   // for the morning e-mails
   listOrganizations: () => listDocs('organizations'),
@@ -170,7 +220,9 @@ const firestoreStore = {
   getState: (name) => getDoc(`system_state/${name}`),
   setState: (name, data) => setDoc(`system_state/${name}`, data),
   listUsers: (orgId) => queryDocs('users', [['orgId', orgId]], 1000),
+  // the morning e-mails go only to confirmed addresses of real sign-in accounts
+  verifiedEmails: verifiedEmailsOf,
   listCustomers: (orgId) => queryDocs('customers', [['orgId', orgId]], 10000)
 };
 
-module.exports = { firestoreStore, toFields, fromFields, getDoc, setDoc, deleteDoc, queryDocs, countDocs, listDocs };
+module.exports = { firestoreStore, toFields, fromFields, getDoc, setDoc, deleteDoc, queryDocs, countDocs, listDocs, runTransaction };

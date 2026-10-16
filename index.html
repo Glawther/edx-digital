@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.22.1">
-  <link rel="stylesheet" href="css/layout.css?v=3.22.1">
-  <link rel="stylesheet" href="css/components.css?v=3.22.1">
-  <link rel="stylesheet" href="css/animations.css?v=3.22.1">
-  <link rel="stylesheet" href="css/identity.css?v=3.22.1">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.23.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.23.0">
+  <link rel="stylesheet" href="css/components.css?v=3.23.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.23.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.23.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.22.1"></script>
+  <script src="js/theme-boot.js?v=3.23.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -1517,6 +1517,10 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
           <input type="checkbox" id="account-email-digest">
           <span>Receber por e-mail, de manhã, o resumo do que há para fazer no dia. Só é enviado quando há algo pendente.</span>
         </label>
+        <p class="auth-note" id="account-digest-unverified" hidden>
+          O resumo só é enviado para e-mail confirmado, e o seu ainda não foi.
+          <button type="button" class="link-btn" id="btn-account-verify-email">Enviar o link de confirmação</button>
+        </p>
       </div>
 
       <div class="account-block" id="account-export-block">
@@ -1930,7 +1934,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.22.1"></script>
+  <script type="module" src="js/app.js?v=3.23.0"></script>
 
 </body>
 </html>
