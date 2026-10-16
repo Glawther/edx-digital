@@ -351,7 +351,13 @@ test('relatório por vendedor: o administrador vê as duas tabelas e exporta; o 
 });
 
 test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alterado', async (t) => {
-  for (const [role, viewport] of [['admin', { width: 1300, height: 800 }], ['employee', { width: 375, height: 800 }]]) {
+  const runs = [
+    ['admin', { width: 1300, height: 800 }],
+    ['admin', { width: 390, height: 844 }],
+    ['employee', { width: 1300, height: 800 }],
+    ['employee', { width: 375, height: 800 }]
+  ];
+  for (const [role, viewport] of runs) {
     const demo = await openDemo(t, role, viewport);
     if (!demo) return;
     const { page, problems } = demo;
@@ -361,7 +367,8 @@ test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alte
     await page.click('#btn-menu-tour');
     await page.waitForFunction(() => /^Passo 1 de/.test(document.getElementById('tour-progress')?.textContent || ''));
     const total = Number((await page.textContent('#tour-progress')).match(/de (\d+)/)[1]);
-    assert.ok(total >= 10, `${role}: ${total} passos`);
+    // short on purpose: a long tour is skipped half way
+    assert.equal(total, role === 'admin' ? 8 : 7, `${role}: ${total} passos`);
 
     const titles = [];
     for (let step = 1; step <= total; step++) {
@@ -375,8 +382,7 @@ test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alte
         const lit = await spot.boundingBox();
         const overlapX = Math.min(box.x + box.width, lit.x + lit.width) - Math.max(box.x, lit.x);
         const overlapY = Math.min(box.y + box.height, lit.y + lit.height) - Math.max(box.y, lit.y);
-        // a card over what it explains is accepted only when that thing takes most of the screen
-        if (overlapX > 8 && overlapY > 8) assert.ok(lit.height > viewport.height * 0.4 || lit.width > viewport.width * 0.8, `${role}, passo ${step} (${titles.at(-1)}): o cartão cobre o que explica`);
+        assert.ok(overlapX <= 0 || overlapY <= 0, `${role} ${viewport.width}px, passo ${step} (${titles.at(-1)}): o cartão cobre o que explica`);
       }
       await page.click('[data-tour="next"]');
     }

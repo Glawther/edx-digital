@@ -11,23 +11,26 @@
  *   A step without target is shown in the middle of the screen.
  */
 export function tourSteps({ isAdmin = false } = {}) {
+  // Kept short on purpose: only what someone needs on the first day. Every screen left out
+  // (Clientes, Tarefas, Relatórios, Auditoria, the search) is explained in ajuda.html.
   const steps = [
     {
       id: 'welcome',
       title: 'Bem-vindo ao EDX Digital',
       text: [
-        'Este passeio mostra, em poucos minutos, onde fica cada coisa e para que serve.',
-        'Nada do que aparece aqui é alterado: é só uma apresentação. Você pode sair a qualquer momento e refazer depois, em Ferramentas.'
+        'Alguns passos rápidos pelo que você vai usar todo dia. Nada é alterado: é só uma apresentação.',
+        'Você pode sair a qualquer momento e refazer depois, em Ferramentas.'
       ]
     },
     {
       id: 'today',
       view: 'today',
-      target: '.nav-item[data-view="today"]',
+      // the first block of the screen (tasks, when there are any), not the whole screen
+      target: '#today-content .settings-section, #today-content',
       title: 'Hoje: por onde começar o dia',
       text: [
-        'É a primeira tela ao entrar. Ela junta o que precisa de você agora: tarefas atrasadas e do dia, oportunidades perto de fechar, as que estão paradas e as que ficaram sem próximo passo.',
-        'Clique numa linha para abrir a oportunidade. Uma tarefa pode ser concluída ali mesmo, marcando a caixa.'
+        'É a primeira tela ao entrar. Primeiro vêm as tarefas atrasadas e as do dia; marque a caixa para concluir.',
+        'Mais abaixo ficam as oportunidades perto de fechar, as paradas e as que estão sem próximo passo. Clique numa linha para abri-la.'
       ]
     },
     {
@@ -36,118 +39,55 @@ export function tourSteps({ isAdmin = false } = {}) {
       target: '#pipeline-columns, #pipeline-empty, #view-pipeline',
       title: 'Funil: cada venda em andamento',
       text: [
-        'Cada coluna é uma etapa da venda, do primeiro contato ao fechamento. Cada cartão é uma oportunidade, com o valor, o responsável e o que está pendente.',
-        'Para mudar de etapa, arraste o cartão para outra coluna ou use a lista de etapas dentro dele. Ao marcar como perdida, o sistema pergunta o motivo, que depois aparece nos relatórios.'
-      ]
-    },
-    {
-      id: 'focus',
-      view: 'pipeline',
-      target: '#focus-filter-pills',
-      title: 'Filtro de atenção',
-      text: [
-        'Mostra só as oportunidades que pedem cuidado: as paradas há 3 dias ou mais, as sem próxima tarefa e as com tarefa atrasada.',
-        'O número ao lado de cada opção é quantas existem agora.'
+        'Cada coluna é uma etapa e cada cartão é uma oportunidade. Para mudar de etapa, arraste o cartão ou use a lista de etapas dentro dele.',
+        'O filtro de atenção, acima das colunas, mostra só as que pedem cuidado: paradas, sem próxima tarefa ou com tarefa atrasada.'
       ]
     },
     {
       id: 'new',
       view: 'pipeline',
-      target: '#btn-new-lead',
+      target: '#btn-new-lead, #btn-bottom-right-lead',
       title: 'Nova oportunidade',
       text: [
-        'É por aqui que entra um cliente novo. O essencial é o nome e o valor; empresa, telefone, previsão de fechamento e etiquetas ajudam depois.',
-        'Se o telefone ou o e-mail já existir, o sistema avisa, para ninguém cadastrar o mesmo contato duas vezes. A tecla N abre este formulário de qualquer tela.'
+        'É por aqui que entra um cliente novo. Nome e valor bastam para começar; se o telefone ou o e-mail já existir, o sistema avisa.',
+        'A tecla N abre este formulário de qualquer tela.'
       ]
     },
     {
       id: 'card',
       view: 'pipeline',
       target: '.lead-card, #pipeline-columns, #pipeline-empty',
-      title: 'Dentro de uma oportunidade',
+      title: 'Abrir uma oportunidade e agendar o próximo passo',
       text: [
-        'Um clique no cartão abre a janela da oportunidade. Nela você agenda tarefas, registra cada contato (ligação, WhatsApp, e-mail, reunião) com a data em que aconteceu, e vê o histórico completo.',
-        'Também é dali que saem a mensagem pelo WhatsApp, a proposta e a análise com inteligência artificial.'
-      ]
-    },
-    {
-      id: 'customers',
-      view: 'customers',
-      target: '.nav-item[data-view="customers"]',
-      title: 'Clientes: a lista completa',
-      text: [
-        'As mesmas oportunidades do funil, em tabela. Serve para procurar alguém, filtrar por etapa e ordenar por valor, nome ou data.',
-        'Cada linha tem os atalhos para o histórico, a proposta, o WhatsApp e a edição.'
-      ]
-    },
-    {
-      id: 'tasks',
-      view: 'tasks',
-      target: '.nav-item[data-view="tasks"]',
-      title: 'Tarefas: os próximos passos',
-      text: [
-        'Tudo o que foi agendado, de todas as oportunidades, num lugar só. Uma oportunidade sem tarefa é a que acaba esquecida, por isso vale sempre deixar o próximo passo marcado.',
-        'Se você permitir as notificações do navegador, o sistema avisa no horário da tarefa.'
-      ]
-    },
-    {
-      id: 'metrics',
-      view: 'metrics',
-      target: '.nav-item[data-view="metrics"]',
-      title: 'Relatórios: como as vendas estão indo',
-      text: [
-        'Vendas fechadas, novas oportunidades, taxa de conversão, ticket médio e conversas registradas, no período que você escolher.',
-        isAdmin
-          ? 'Como administrador, você também vê o resultado de cada vendedor, a carteira de cada um agora, os motivos de perda e o andamento da meta do mês.'
-          : 'Os números são os da sua carteira. Mais abaixo estão os motivos de perda e o valor em aberto por etapa.'
+        'Um clique no cartão abre a oportunidade. Nela você marca o próximo passo, com data e horário, e registra cada ligação, mensagem ou reunião.',
+        'Toda oportunidade em aberto deveria ter um próximo passo: é o que evita que ela seja esquecida.'
       ]
     }
   ];
 
   if (isAdmin) {
-    steps.push(
-      {
-        id: 'team',
-        view: 'team',
-        target: '.nav-item[data-view="team"]',
-        title: 'Equipe: quem tem acesso',
-        text: [
-          'Aqui fica o código de convite. Quem recebe o código cria a própria conta como vendedor da sua empresa; você pode enviá-lo por e-mail ou WhatsApp, e gerar outro se ele vazar.',
-          'Na lista você vê quantas oportunidades cada pessoa tem, transfere a carteira de uma para outra, bloqueia ou exclui um acesso. Cada vendedor só enxerga a própria carteira.'
-        ]
-      },
-      {
-        id: 'audit',
-        view: 'audit',
-        target: '.nav-item[data-view="audit"]',
-        title: 'Auditoria e Segurança',
-        text: [
-          'A Auditoria registra o que cada pessoa da equipe fez e quando: entradas, cadastros, alterações e exclusões.',
-          'Em Segurança ficam as permissões de cada papel e a cópia dos dados da empresa, que você pode baixar quando quiser.'
-        ]
-      }
-    );
+    steps.push({
+      id: 'team',
+      view: 'team',
+      target: '.nav-item[data-view="team"]',
+      title: 'Equipe: quem tem acesso',
+      text: [
+        'Aqui fica o código de convite: quem o recebe cria a própria conta como vendedor da sua empresa. Cada vendedor só enxerga a própria carteira.',
+        'Também é aqui que você transfere a carteira de uma pessoa para outra e bloqueia um acesso.'
+      ]
+    });
   }
 
   steps.push(
     {
-      id: 'search',
-      target: '.search-box-large, .header-center',
-      title: 'Busca e atalhos',
-      text: [
-        'Digite um nome, uma empresa ou um telefone para ir direto à oportunidade.',
-        'Ctrl+K abre a lista de comandos, com tudo o que o sistema faz. A tecla ? mostra os atalhos de teclado.'
-      ]
-    },
-    {
       id: 'tools',
       target: '#btn-header-tools',
-      title: 'Ferramentas',
+      title: 'Ferramentas e ajuda',
       text: [
         isAdmin
-          ? 'Reúne as configurações: nome, logotipo e cor da empresa; nomes das etapas, campos extras e meta do mês; plano e uso; importar contatos de uma planilha; exportar os dados; e receber contatos de formulários e anúncios.'
-          : 'Reúne o que é seu: a chave da inteligência artificial, a exportação das suas oportunidades e a sua conta.',
-        'Em Minha conta e privacidade você troca o nome e a senha. Este passeio também fica aqui, em "Conhecer o sistema".'
+          ? 'Em Ferramentas ficam as configurações da empresa, o plano, a importação de contatos de uma planilha e a sua conta.'
+          : 'Em Ferramentas ficam a sua conta, a exportação das suas oportunidades e a chave da inteligência artificial.',
+        'Ali também estão a Ajuda, com respostas para as dúvidas comuns, e "Conhecer o sistema", que refaz este passeio.'
       ]
     },
     {
@@ -156,7 +96,7 @@ export function tourSteps({ isAdmin = false } = {}) {
       title: 'Pronto',
       text: [
         isAdmin
-          ? 'O próximo passo é cadastrar a primeira oportunidade, ou importar seus contatos de uma planilha em Ferramentas. Depois, convide a equipe na tela Equipe.'
+          ? 'O próximo passo é cadastrar a primeira oportunidade, ou importar seus contatos em Ferramentas. Depois, convide a equipe na tela Equipe.'
           : 'O próximo passo é cadastrar a sua primeira oportunidade e agendar a primeira tarefa para ela.',
         'Bom trabalho.'
       ]
@@ -166,20 +106,53 @@ export function tourSteps({ isAdmin = false } = {}) {
   return steps;
 }
 
+const overlaps = (a, b) => a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
+
 /**
- * Where the card of a step goes: below the thing it points at when it fits, otherwise above,
- * to the right or to the left; in the middle of the screen when there is nothing to point at.
+ * The part of the target that stays lit once the card is in place: all of it when the card is
+ * beside it, otherwise the largest piece left uncovered (a funnel can be taller than the screen).
+ * Null when nothing useful is left.
+ */
+function uncovered(target, card, gap) {
+  const box = { top: card.top - gap, left: card.left - gap, width: card.width + gap * 2, height: card.height + gap * 2 };
+  if (!overlaps(target, box)) return target;
+  const bottom = target.top + target.height;
+  const right = target.left + target.width;
+  const pieces = [
+    { top: target.top, left: target.left, width: target.width, height: box.top - target.top },
+    { top: box.top + box.height, left: target.left, width: target.width, height: bottom - (box.top + box.height) },
+    { top: target.top, left: target.left, width: box.left - target.left, height: target.height },
+    { top: target.top, left: box.left + box.width, width: right - (box.left + box.width), height: target.height }
+  ].filter(piece => piece.width >= 24 && piece.height >= 24);
+  if (!pieces.length) return null;
+  return pieces.reduce((best, piece) => piece.width * piece.height > best.width * best.height ? piece : best);
+}
+
+/**
+ * Where the card of a step goes, never on top of what it explains. On a wide screen: below the
+ * thing it points at when it fits, otherwise above, to the right or to the left. On a phone the
+ * card sits against the bottom or the top edge, whichever is farther from the thing. In the middle
+ * of the screen when there is nothing to point at.
  * @param {{top:number,left:number,width:number,height:number}|null} target
  * @param {{width:number,height:number}} card
  * @param {{width:number,height:number}} screen
- * @returns {{top:number,left:number,placement:string}}
+ * @returns {{top:number,left:number,placement:string,spot:object|null}} spot: the part of the target to light
  */
 export function placeCard(target, card, screen, gap = 12, margin = 12) {
   const clamp = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));
   const maxLeft = screen.width - card.width - margin;
   const maxTop = screen.height - card.height - margin;
   const center = { top: clamp((screen.height - card.height) / 2, margin, maxTop), left: clamp((screen.width - card.width) / 2, margin, maxLeft), placement: 'center' };
-  if (!target) return center;
+  if (!target) return { ...center, spot: null };
+
+  const atBottom = { top: Math.max(margin, maxTop), left: center.left, placement: 'bottom' };
+  const atTop = { top: margin, left: center.left, placement: 'top' };
+  // whichever edge is farther from the target's middle
+  const awayEdge = target.top + target.height / 2 < screen.height / 2 ? atBottom : atTop;
+  const finish = (place) => ({ ...place, spot: uncovered(target, { ...place, ...card }, gap) });
+
+  // a card nearly as wide as the screen cannot go beside anything
+  if (card.width + margin * 2 >= screen.width * 0.8) return finish(awayEdge);
 
   const alignedLeft = clamp(target.left, margin, maxLeft);
   const alignedTop = clamp(target.top, margin, maxTop);
@@ -188,10 +161,10 @@ export function placeCard(target, card, screen, gap = 12, margin = 12) {
   const right = target.left + target.width + gap;
   const left = target.left - gap - card.width;
 
-  if (below + card.height + margin <= screen.height) return { top: below, left: alignedLeft, placement: 'below' };
-  if (above >= margin) return { top: above, left: alignedLeft, placement: 'above' };
-  if (right + card.width + margin <= screen.width) return { top: alignedTop, left: right, placement: 'right' };
-  if (left >= margin) return { top: alignedTop, left, placement: 'left' };
-  // a target that takes the whole screen: the card sits at the bottom, over it
-  return { top: maxTop < margin ? margin : maxTop, left: center.left, placement: 'over' };
+  if (below + card.height + margin <= screen.height) return finish({ top: below, left: alignedLeft, placement: 'below' });
+  if (above >= margin) return finish({ top: above, left: alignedLeft, placement: 'above' });
+  if (right + card.width + margin <= screen.width) return finish({ top: alignedTop, left: right, placement: 'right' });
+  if (left >= margin) return finish({ top: alignedTop, left, placement: 'left' });
+  // a target bigger than the screen: the card goes to an edge and only the rest of it is lit
+  return finish({ ...awayEdge, placement: 'over' });
 }
