@@ -17,12 +17,15 @@ function usageWorld({ plan = 'starter', openLeads = 0, seats = 1, usage } = {}) 
   const org = { name: 'A', plan, ...(usage ? { usage } : {}) };
   const writes = [];
   const counted = [];
+  const warnings = [];
+  const counts = { openLeads, seats };
   const store = {
     getOrganization: async (id) => (id === 'org_a' ? { ...org } : null),
     updateOrganization: async (id, data) => { writes.push(data); Object.assign(org, data); },
-    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? openLeads : seats; }
+    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? counts.openLeads : counts.seats; }
   };
-  return { org, writes, counted, service: createUsageService({ store }) };
+  const log = { warn: (line) => warnings.push(line) };
+  return { org, writes, counted, warnings, counts, service: createUsageService({ store, log, now: () => 1000 }) };
 }
 
 test('limites: abaixo do limite nada é gravado; ao encher, a empresa é marcada', async () => {
@@ -66,6 +69,38 @@ test('limites: só recontam as mudanças que mexem na contagem', () => {
   assert.equal(userChangeMatters(active, { ...active, status: 'blocked' }), true);
   assert.equal(userChangeMatters(active, { ...active, name: 'Outro' }), false);
   assert.equal(userChangeMatters({ ...active, status: 'blocked' }, null), false);
+});
+
+test('limites: a folga do atraso normal não marca; passar muito do limite marca e registra, sem apagar nada', async () => {
+  // até 10% acima (550 de 500) é o que a demora da recontagem pode deixar: só "cheio"
+  const slack = usageWorld({ openLeads: 550, seats: 3 });
+  assert.deepEqual(await slack.service.refreshUsage('org_a'), { leadsFull: true, seatsFull: true, changed: true });
+  assert.equal(slack.warnings.length, 0);
+
+  // uma rajada por fora do aplicativo: 2.000 de 500
+  const world = usageWorld({ openLeads: 2000, seats: 2 });
+  const first = await world.service.refreshUsage('org_a');
+  assert.deepEqual(first.overLimit, { leads: 2000, maxLeads: 500, sinceMs: 1000 });
+  assert.deepEqual(world.writes, [{ usage: { leadsFull: true, seatsFull: true, overLimit: { leads: 2000, maxLeads: 500, sinceMs: 1000 } } }]);
+  assert.equal(world.warnings.length, 1);
+  assert.match(world.warnings[0], /org_a.*2000\/500/);
+
+  // a rajada continua: a contagem muda, mas a empresa não é regravada a cada criação
+  world.counts.openLeads = 2600;
+  assert.equal((await world.service.refreshUsage('org_a')).changed, false);
+  assert.equal(world.writes.length, 1);
+
+  // pessoas também: 4 de 2 passa da folga de uma pessoa; a data de quando começou fica
+  world.counts.seats = 4;
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.org.usage.overLimit, { leads: 2600, maxLeads: 500, seats: 4, maxUsers: 2, sinceMs: 1000 });
+
+  // a empresa voltou para dentro do limite: a marca sai
+  world.counts.openLeads = 300;
+  world.counts.seats = 2;
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.org.usage, { leadsFull: false, seatsFull: true });
+  assert.equal(world.warnings.length, 2);
 });
 
 // ---------------------------------------------------------------- e-mails da manhã
@@ -286,7 +321,7 @@ test('painel do dono: uma linha por empresa, quem precisa de atenção primeiro,
       { id: 'org_paga', data: { name: 'Paga', plan: 'pro', planStatus: 'active', paidUntilMs: now + 20 * DAY, ownerUid: 'u1', createdAt: '2026-09-01T00:00:00Z' } },
       { id: 'org_teste', data: { name: 'Teste', plan: 'starter', planStatus: 'trial', trialEndsAtMs: now + 2 * DAY, ownerUid: 'u2', createdAt: '2026-10-01T00:00:00Z', usage: { seatsFull: true } } },
       { id: 'org_tol', data: { name: 'Tolerância', plan: 'enterprise', planStatus: 'active', paidUntilMs: now - DAY, ownerUid: 'u3', createdAt: '2026-08-01T00:00:00Z' } },
-      { id: 'org_fim', data: { name: 'Acabou', plan: 'pro', planStatus: 'trial', trialEndsAtMs: now - 9 * DAY, ownerUid: 'u4', createdAt: '2026-09-15T00:00:00Z' } }
+      { id: 'org_fim', data: { name: 'Acabou', plan: 'pro', planStatus: 'trial', trialEndsAtMs: now - 9 * DAY, ownerUid: 'u4', createdAt: '2026-09-15T00:00:00Z', usage: { leadsFull: true, overLimit: { leads: 9000, maxLeads: 5000, sinceMs: now - DAY, extra: '<b>x</b>' } } } }
     ],
     listAllUsers: async () => [
       { id: 'u1', data: { orgId: 'org_paga', status: 'active', email: 'a@a.com' } },
@@ -308,6 +343,9 @@ test('painel do dono: uma linha por empresa, quem precisa de atenção primeiro,
   const teste = overview.companies[1];
   assert.deepEqual({ people: teste.people, owner: teste.ownerEmail, days: teste.daysLeft, opportunities: teste.opportunities, full: teste.full }, { people: 2, owner: 't@t.com', days: 2, opportunities: 3, full: true });
   assert.equal(overview.companies[2].people, 1, 'quem está bloqueado não conta');
+  // acima do limite: só os números chegam ao painel
+  assert.equal(teste.overLimit, null);
+  assert.deepEqual(overview.companies[3].overLimit, { leads: 9000, maxLeads: 5000, seats: null, maxUsers: null, sinceMs: now - DAY });
   assert.deepEqual(overview.totals, { companies: 4, trial: 1, paying: 2, grace: 1, ended: 1, people: 4, monthlyValue: 197 + 497, received30d: 197, receivedAll: 694 });
 });
 

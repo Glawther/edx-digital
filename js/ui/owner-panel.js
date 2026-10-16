@@ -42,6 +42,23 @@ function when(company) {
   return `${date} (há ${Math.max(1, -company.daysLeft + 1)} ${-company.daysLeft + 1 === 1 ? 'dia' : 'dias'})`;
 }
 
+// Well past the plan's limit (server/usage/usage-service.js): nothing was deleted, the owner decides
+function overLimitNote(company) {
+  const over = company.overLimit;
+  if (!over) return company.full ? '<div class="cell-sub">Plano cheio</div>' : '';
+  const parts = [];
+  if (over.leads !== null) parts.push(`${over.leads} de ${over.maxLeads} oportunidades em aberto`);
+  if (over.seats !== null) parts.push(`${over.seats} de ${over.maxUsers} pessoas`);
+  const since = over.sinceMs ? `, desde ${new Date(over.sinceMs).toLocaleDateString('pt-BR')}` : '';
+  return `<div class="cell-sub is-warning">Acima do limite do plano: ${parts.join(', ')}${since}</div>`;
+}
+
+function overLimitText(company) {
+  const over = company.overLimit;
+  if (!over) return '';
+  return [over.leads !== null ? `${over.leads}/${over.maxLeads} oportunidades` : '', over.seats !== null ? `${over.seats}/${over.maxUsers} pessoas` : ''].filter(Boolean).join(', ');
+}
+
 function render(overview) {
   const { totals, companies } = overview;
   const figure = (label, value, note = '') => `<div class="figure-box"><div class="figure-label">${label}</div><div class="figure-value">${value}</div><div class="figure-note">${note}</div></div>`;
@@ -61,7 +78,7 @@ function render(overview) {
           ${companies.map(company => `
             <tr>
               <td><strong>${escapeHtml(company.name || 'Sem nome')}</strong><div class="cell-sub">${escapeHtml(company.ownerEmail)}</div></td>
-              <td><span class="${STATES[company.state]?.warn ? 'is-warning' : ''}">${STATES[company.state]?.label || escapeHtml(company.state)}</span>${company.full ? '<div class="cell-sub">Plano cheio</div>' : ''}</td>
+              <td><span class="${STATES[company.state]?.warn ? 'is-warning' : ''}">${STATES[company.state]?.label || escapeHtml(company.state)}</span>${overLimitNote(company)}</td>
               <td>${PLAN_NAMES[company.plan] || escapeHtml(company.plan)}</td>
               <td>${when(company)}</td>
               <td class="num">${company.people}</td>
@@ -89,12 +106,13 @@ async function open() {
 
 function exportCsv() {
   if (!lastOverview || lastOverview.companies.length === 0) return showToast('Não há empresas para exportar.', 'info');
-  const rows = [['Empresa', 'E-mail de quem criou', 'Situação', 'Plano', 'Termina em', 'Pessoas', 'Oportunidades', 'Criada em']];
+  const rows = [['Empresa', 'E-mail de quem criou', 'Situação', 'Plano', 'Termina em', 'Pessoas', 'Oportunidades', 'Criada em', 'Acima do limite']];
   for (const company of lastOverview.companies) {
     rows.push([
       company.name, company.ownerEmail, STATES[company.state]?.label || company.state, PLAN_NAMES[company.plan] || company.plan,
       company.endsAtMs ? new Date(company.endsAtMs).toLocaleDateString('pt-BR') : '', String(company.people), String(company.opportunities),
-      company.createdAt ? new Date(company.createdAt).toLocaleDateString('pt-BR') : ''
+      company.createdAt ? new Date(company.createdAt).toLocaleDateString('pt-BR') : '',
+      overLimitText(company)
     ]);
   }
   downloadCsv(rows, 'edx-digital-empresas.csv');
