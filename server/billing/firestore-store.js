@@ -220,6 +220,8 @@ const firestoreStore = {
   getState: (name) => getDoc(`system_state/${name}`),
   setState: (name, data) => setDoc(`system_state/${name}`, data),
   listUsers: (orgId) => queryDocs('users', [['orgId', orgId]], 1000),
+  // the plan deadline copied onto each profile, for the file rules (usage-service.js)
+  updateUserProfile: (uid, data) => updateDoc(`users/${uid}`, data),
   // the morning e-mails go only to confirmed addresses of real sign-in accounts
   verifiedEmails: verifiedEmailsOf,
   listCustomers: (orgId) => queryDocs('customers', [['orgId', orgId]], 10000)

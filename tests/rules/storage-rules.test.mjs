@@ -31,6 +31,7 @@ async function signUp(label) {
 
 function toValue(v) {
   if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'number') return { integerValue: String(v) };
   return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
 }
 
@@ -138,4 +139,26 @@ test('ninguém lista pastas, e fora da pasta de anexos nada é aceito', async ()
   assert.equal(await upload(people.admin, `orgs/${orgA}/logo.png`, { contentType: 'image/png' }), 403);
   assert.equal(await upload(people.admin, `solto/a_arquivo001.pdf`), 403);
   assert.equal(await upload(people.admin, file(orgA, `nao-existe-${RUN}`)), 403, 'oportunidade que não existe');
+});
+
+// O servidor copia em cada perfil até quando a empresa pode gravar (planWritableUntilMs)
+test('plano vencido: a empresa não anexa arquivo novo, mas abre e exclui os que tem; em dia, anexa', async () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const orgC = `orgC_${RUN}`;
+  const leadC = `lead-c-${RUN}`;
+  const dona = await signUp('donaC');
+  await seed(`users/${dona.uid}`, { orgId: orgC, role: 'admin', status: 'active', name: 'Dona C', planWritableUntilMs: Date.now() + 10 * DAY });
+  await seed(`customers/${leadC}`, { orgId: orgC, name: 'Cliente da C', stage: 'lead', assignedTo: { id: dona.uid } });
+
+  assert.equal(await upload(dona, file(orgC, leadC, 'a_emdia00001.pdf')), 200, 'em dia');
+  assert.equal(await upload(dona, file(orgC, leadC, 'a_emdia00002.pdf')), 200, 'em dia');
+
+  await seed(`users/${dona.uid}`, { orgId: orgC, role: 'admin', status: 'active', name: 'Dona C', planWritableUntilMs: Date.now() - DAY });
+  assert.equal(await upload(dona, file(orgC, leadC, 'a_vencido001.pdf')), 403, 'vencido: não anexa');
+  assert.equal(await download(dona, file(orgC, leadC, 'a_emdia00001.pdf')), 200, 'vencido: abre');
+  assert.equal(await remove(dona, file(orgC, leadC, 'a_emdia00001.pdf')), 204, 'vencido: exclui');
+
+  // sem prazo nenhum (empresa antiga) continua anexando
+  await seed(`users/${dona.uid}`, { orgId: orgC, role: 'admin', status: 'active', name: 'Dona C' });
+  assert.equal(await upload(dona, file(orgC, leadC, 'a_semprazo01.pdf')), 200, 'sem prazo');
 });

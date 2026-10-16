@@ -259,6 +259,9 @@ test('o vendedor não muda o próprio papel, empresa ou situação', async () =>
   assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { role: 'admin' }), DENIED);
   assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { orgId: world.b.orgId }), DENIED);
   assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { status: 'active', role: 'admin' }), DENIED);
+  // o prazo do plano copiado no perfil (lido pelas regras dos arquivos) é só do servidor
+  assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { planWritableUntilMs: Date.now() + 365 * DAY }), DENIED);
+  assert.equal(await patch(world.a.owner, `users/${world.ana.uid}`, { planWritableUntilMs: Date.now() + 365 * DAY }), DENIED);
   assert.equal(await patch(world.ana, `users/${world.ana.uid}`, { name: 'Ana Maria' }), OK);
 });
 

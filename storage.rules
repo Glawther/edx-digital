@@ -21,6 +21,16 @@ service firebase.storage {
       return firestore.get(/databases/(default)/documents/customers/$(customerId)).data;
     }
 
+    // Plano vencido: a empresa não anexa arquivo novo (como no banco), mas abre e exclui os seus.
+    // Estas regras só podem ler dois documentos do banco por pedido (o perfil e a oportunidade já
+    // são dois), então não leem a empresa: o servidor copia em cada perfil até quando a empresa
+    // pode gravar (planWritableUntilMs, server/usage/usage-service.js), e o aplicativo não mexe
+    // nesse campo. Sem prazo (empresa antiga) ou perfil ainda sem a cópia: segue liberado.
+    function planAllowsUploads() {
+      let until = profile().get('planWritableUntilMs', null);
+      return until == null || request.time.toMillis() < until;
+    }
+
     function reaches(orgId, customerId) {
       return request.auth != null
         && profile().orgId == orgId
@@ -36,6 +46,7 @@ service firebase.storage {
 
       // Só documentos e imagens, até 10 MB, sempre entregues como download (nunca abertos como página)
       allow create: if reaches(orgId, customerId)
+        && planAllowsUploads()
         && resource == null
         && fileName.matches('^a_[a-z0-9]{6,16}[.](pdf|png|jpg|jpeg|webp|doc|docx|xls|xlsx|csv|txt)$')
         && request.resource.size > 0

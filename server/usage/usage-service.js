@@ -20,6 +20,21 @@ const PLAN_LIMITS = {
 // 'contacted' is the older name of 'contact'
 const OPEN_STAGES = ['lead', 'contact', 'contacted', 'proposal', 'negotiation'];
 
+// Keep in step with planAllowsWrites in firestore.rules
+const GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Until when the company may write, as one number the file rules can compare with the clock.
+ * The file rules may read only two documents (the profile and the opportunity), not the company,
+ * so this deadline is copied onto each profile (users/{uid}.planWritableUntilMs).
+ * @returns {number|null} null when there is no deadline (companies from before the trial rule)
+ */
+function writableUntilMs(org) {
+  if (org.planStatus === 'active') return typeof org.paidUntilMs === 'number' ? org.paidUntilMs + GRACE_MS : 0;
+  if (!('trialEndsAtMs' in org)) return null;
+  return typeof org.trialEndsAtMs === 'number' ? org.trialEndsAtMs : 0;
+}
+
 function limitsOf(org) {
   // The free trial never has unlimited room: an Enterprise trial holds what Professional does
   // (without this, a free account had no ceiling on what it stored, at the owner's cost)
@@ -28,7 +43,8 @@ function limitsOf(org) {
 }
 
 /**
- * @param {Object} deps.store - getOrganization, updateOrganization, countDocs(collection, filters)
+ * @param {Object} deps.store - getOrganization, updateOrganization, countDocs(collection, filters),
+ *   listUsers(orgId), updateUserProfile(uid, data)
  */
 function createUsageService({ store }) {
   /**
@@ -49,7 +65,19 @@ function createUsageService({ store }) {
     const before = org.usage || {};
     const changed = Boolean(before.leadsFull) !== usage.leadsFull || Boolean(before.seatsFull) !== usage.seatsFull;
     if (changed) await store.updateOrganization(orgId, { usage });
+    await syncPlanMarks(orgId, org);
     return { ...usage, changed };
+  }
+
+  /** Copies the company's deadline onto each profile whose copy is missing or out of date */
+  async function syncPlanMarks(orgId, org) {
+    const until = writableUntilMs(org);
+    const people = await store.listUsers(orgId);
+    for (const { id, data } of people) {
+      if (data.planWritableUntilMs === until) continue;
+      // a profile removed meanwhile must not stop the others
+      await store.updateUserProfile(id, { planWritableUntilMs: until }).catch(err => console.error('[Plano] marca no perfil:', err.message));
+    }
   }
 
   return { refreshUsage };
@@ -70,4 +98,10 @@ function userChangeMatters(before, after) {
   return counts(before) !== counts(after) || before.orgId !== after.orgId;
 }
 
-module.exports = { createUsageService, customerChangeMatters, userChangeMatters, limitsOf, PLAN_LIMITS, OPEN_STAGES };
+/** Does this change to a company move its deadline? (the owner may edit it in the console) */
+function organizationChangeMatters(before, after) {
+  if (!before || !after) return Boolean(after);
+  return ['planStatus', 'paidUntilMs', 'trialEndsAtMs'].some(key => before[key] !== after[key]);
+}
+
+module.exports = { createUsageService, customerChangeMatters, userChangeMatters, organizationChangeMatters, writableUntilMs, limitsOf, PLAN_LIMITS, OPEN_STAGES };
