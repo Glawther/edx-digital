@@ -1714,3 +1714,53 @@ h1, h2, h3, .dialog-title, .section-title, .page-title { text-wrap: balance; }
 .command-item-icon { font-size: 0.75rem; font-weight: 600; }
 /* "Esc to close" is already in the footer */
 .command-palette-badge { display: none; }
+
+/* Opportunity window actions: one outlined style with icons (never read as tabs),
+   editing slightly stronger, and deleting in its own group, apart from the rest */
+.lead-details-actions { align-items: flex-start; justify-content: space-between; gap: 0.75rem 1rem; }
+.lead-actions-main { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+.lead-actions-danger { display: flex; margin-left: auto; padding-left: 1rem; border-left: 1px solid var(--border-subtle); }
+.lead-action .lead-action-icon { flex: none; }
+.lead-action-edit { color: var(--text-primary); border-color: var(--border-strong); font-weight: 600; }
+body.is-read-only .lead-details-actions .lead-action-edit { display: none !important; }
+@media (max-width: 768px) {
+  .lead-details-actions { flex-direction: column; align-items: stretch; }
+  .lead-actions-danger {
+    margin-left: 0; padding-left: 0; border-left: 0; justify-content: flex-end;
+    margin-top: 0.5rem; padding-top: 0.9rem; border-top: 1px dashed var(--border-subtle);
+  }
+}
+
+/* ===================================================================
+
+   Saved account, server out of reach (slow start-up): waiting instead of the sign-in form
+   ========================================================================== */
+.auth-offline-card .auth-portal-header { margin-bottom: 1.25rem; }
+.auth-offline-card .btn-primary { width: 100%; justify-content: center; padding: 10px; }
+.auth-offline-status { margin: 0.75rem 0 0; min-height: 1.2em; font-size: 0.82rem; color: var(--text-muted); text-align: center; }
+=======
+/* ==========================================================================
+   Tools menu: grouped, compact, and always inside the window
+   (the height itself is set on opening, from the room the button leaves)
+   ========================================================================== */
+#header-tools-menu { overscroll-behavior: contain; }
+#header-tools-menu .tools-group-title { padding: 6px 10px 2px; margin-top: 0; }
+#header-tools-menu .dropdown-divider { margin: 4px; }
+#header-tools-menu .dropdown-item { padding: 6px 10px; }
+#header-tools-menu .dropdown-item-text { min-width: 0; }
+/* one line per description: a long one no longer makes its item twice as tall */
+#header-tools-menu .dropdown-item-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* On a short laptop screen the titles alone are enough, and the whole menu fits without scrolling */
+@media (min-width: 769px) and (max-height: 760px) {
+  #header-tools-menu .dropdown-item-desc { display: none; }
+}
+
+/* Notices shown as a popover (above open windows): the browser's popover defaults put it in the
+   middle of the screen with a frame; it keeps its own place and look instead */
+#toast-container[popover] { inset: auto 2rem 2rem auto; margin: 0; padding: 0; border: 0; background: transparent; overflow: visible; width: auto; height: auto; }
+@media (max-width: 768px) {
+  #toast-container[popover] { inset: 0.75rem 0.75rem auto 0.75rem; }
+}
+
+/* The proposal's own text takes the width of its editor */
+#proposal-text-input { width: 100%; min-height: 6rem; }

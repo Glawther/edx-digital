@@ -7,22 +7,33 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 
-const { createUsageService, customerChangeMatters, userChangeMatters } = require('../usage/usage-service');
+const { createUsageService, customerChangeMatters, userChangeMatters, organizationChangeMatters, writableUntilMs } = require('../usage/usage-service');
 const { runDailyEmails, buildPlanNotice, daysUntil } = require('../mail/daily-emails');
 const { scrub } = require('../controllers/error-controller');
 
 // ---------------------------------------------------------------- limites do plano
 
-function usageWorld({ plan = 'starter', openLeads = 0, seats = 1, usage } = {}) {
-  const org = { name: 'A', plan, ...(usage ? { usage } : {}) };
+function usageWorld({ plan = 'starter', openLeads = 0, seats = 1, usage, planFields = {}, users = [] } = {}) {
+  const org = { name: 'A', plan, ...planFields, ...(usage ? { usage } : {}) };
   const writes = [];
   const counted = [];
+  const warnings = [];
+  const counts = { openLeads, seats };
+  const profileWrites = [];
   const store = {
     getOrganization: async (id) => (id === 'org_a' ? { ...org } : null),
     updateOrganization: async (id, data) => { writes.push(data); Object.assign(org, data); },
-    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? openLeads : seats; }
+    countDocs: async (collection, filters) => { counted.push({ collection, filters }); return collection === 'customers' ? counts.openLeads : counts.seats; },
+    listUsers: async (orgId) => users.filter(u => u.data.orgId === orgId).map(u => ({ id: u.id, data: { ...u.data } })),
+    updateUserProfile: async (uid, data) => {
+      profileWrites.push({ uid, data });
+      const user = users.find(u => u.id === uid);
+      if (!user || user.data.gone) throw new Error('perfil sumiu');
+      Object.assign(user.data, data);
+    }
   };
-  return { org, writes, counted, service: createUsageService({ store }) };
+  const log = { warn: (line) => warnings.push(line) };
+  return { org, writes, counted, warnings, counts, profileWrites, users, service: createUsageService({ store, log, now: () => 1000 }) };
 }
 
 test('limites: abaixo do limite nada é gravado; ao encher, a empresa é marcada', async () => {
@@ -52,6 +63,44 @@ test('limites: o plano sem limite nem conta; empresa que não existe é ignorada
   assert.equal(await world.service.refreshUsage(''), null);
 });
 
+test('prazo do plano: o servidor copia em cada perfil até quando a empresa pode gravar', async () => {
+  const PAID = 1_800_000_000_000;
+  const GRACE = 3 * 24 * 60 * 60 * 1000;
+  assert.equal(writableUntilMs({ planStatus: 'active', paidUntilMs: PAID }), PAID + GRACE);
+  assert.equal(writableUntilMs({ planStatus: 'active', paidUntilMs: null }), 0, 'reembolsado: vencido');
+  assert.equal(writableUntilMs({ planStatus: 'trial', trialEndsAtMs: PAID }), PAID);
+  assert.equal(writableUntilMs({ planStatus: 'trial' }), null, 'empresa antiga, sem prazo');
+
+  const world = usageWorld({
+    planFields: { planStatus: 'active', paidUntilMs: PAID },
+    users: [
+      { id: 'u1', data: { orgId: 'org_a' } },
+      { id: 'u2', data: { orgId: 'org_a', planWritableUntilMs: PAID + GRACE } }
+    ]
+  });
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.profileWrites, [{ uid: 'u1', data: { planWritableUntilMs: PAID + GRACE } }], 'só grava onde mudou');
+  await world.service.refreshUsage('org_a');
+  assert.equal(world.profileWrites.length, 1, 'a segunda vez não grava de novo');
+
+  // um perfil que sumiu no meio não impede os outros
+  const gone = usageWorld({ planFields: { planStatus: 'trial', trialEndsAtMs: PAID }, users: [{ id: 'u1', data: { orgId: 'org_a', gone: true } }, { id: 'u2', data: { orgId: 'org_a' } }] });
+  const original = console.error; console.error = () => {};
+  try {
+    await gone.service.refreshUsage('org_a');
+  } finally { console.error = original; }
+  assert.equal(gone.users[1].data.planWritableUntilMs, PAID);
+});
+
+test('prazo do plano: só copia de novo quando a situação ou as datas da empresa mudam', () => {
+  const org = { planStatus: 'trial', trialEndsAtMs: 1, name: 'A' };
+  assert.equal(organizationChangeMatters(null, org), true);
+  assert.equal(organizationChangeMatters(org, null), false);
+  assert.equal(organizationChangeMatters(org, { ...org, name: 'B', usage: { leadsFull: true } }), false);
+  assert.equal(organizationChangeMatters(org, { ...org, trialEndsAtMs: 2 }), true);
+  assert.equal(organizationChangeMatters(org, { ...org, planStatus: 'active', paidUntilMs: 3 }), true);
+});
+
 test('limites: só recontam as mudanças que mexem na contagem', () => {
   const open = { orgId: 'a', stage: 'lead' };
   assert.equal(customerChangeMatters(null, open), true);                                  // criada
@@ -66,6 +115,38 @@ test('limites: só recontam as mudanças que mexem na contagem', () => {
   assert.equal(userChangeMatters(active, { ...active, status: 'blocked' }), true);
   assert.equal(userChangeMatters(active, { ...active, name: 'Outro' }), false);
   assert.equal(userChangeMatters({ ...active, status: 'blocked' }, null), false);
+});
+
+test('limites: a folga do atraso normal não marca; passar muito do limite marca e registra, sem apagar nada', async () => {
+  // até 10% acima (550 de 500) é o que a demora da recontagem pode deixar: só "cheio"
+  const slack = usageWorld({ openLeads: 550, seats: 3 });
+  assert.deepEqual(await slack.service.refreshUsage('org_a'), { leadsFull: true, seatsFull: true, changed: true });
+  assert.equal(slack.warnings.length, 0);
+
+  // uma rajada por fora do aplicativo: 2.000 de 500
+  const world = usageWorld({ openLeads: 2000, seats: 2 });
+  const first = await world.service.refreshUsage('org_a');
+  assert.deepEqual(first.overLimit, { leads: 2000, maxLeads: 500, sinceMs: 1000 });
+  assert.deepEqual(world.writes, [{ usage: { leadsFull: true, seatsFull: true, overLimit: { leads: 2000, maxLeads: 500, sinceMs: 1000 } } }]);
+  assert.equal(world.warnings.length, 1);
+  assert.match(world.warnings[0], /org_a.*2000\/500/);
+
+  // a rajada continua: a contagem muda, mas a empresa não é regravada a cada criação
+  world.counts.openLeads = 2600;
+  assert.equal((await world.service.refreshUsage('org_a')).changed, false);
+  assert.equal(world.writes.length, 1);
+
+  // pessoas também: 4 de 2 passa da folga de uma pessoa; a data de quando começou fica
+  world.counts.seats = 4;
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.org.usage.overLimit, { leads: 2600, maxLeads: 500, seats: 4, maxUsers: 2, sinceMs: 1000 });
+
+  // a empresa voltou para dentro do limite: a marca sai
+  world.counts.openLeads = 300;
+  world.counts.seats = 2;
+  await world.service.refreshUsage('org_a');
+  assert.deepEqual(world.org.usage, { leadsFull: false, seatsFull: true });
+  assert.equal(world.warnings.length, 2);
 });
 
 // ---------------------------------------------------------------- e-mails da manhã
@@ -286,7 +367,7 @@ test('painel do dono: uma linha por empresa, quem precisa de atenção primeiro,
       { id: 'org_paga', data: { name: 'Paga', plan: 'pro', planStatus: 'active', paidUntilMs: now + 20 * DAY, ownerUid: 'u1', createdAt: '2026-09-01T00:00:00Z' } },
       { id: 'org_teste', data: { name: 'Teste', plan: 'starter', planStatus: 'trial', trialEndsAtMs: now + 2 * DAY, ownerUid: 'u2', createdAt: '2026-10-01T00:00:00Z', usage: { seatsFull: true } } },
       { id: 'org_tol', data: { name: 'Tolerância', plan: 'enterprise', planStatus: 'active', paidUntilMs: now - DAY, ownerUid: 'u3', createdAt: '2026-08-01T00:00:00Z' } },
-      { id: 'org_fim', data: { name: 'Acabou', plan: 'pro', planStatus: 'trial', trialEndsAtMs: now - 9 * DAY, ownerUid: 'u4', createdAt: '2026-09-15T00:00:00Z' } }
+      { id: 'org_fim', data: { name: 'Acabou', plan: 'pro', planStatus: 'trial', trialEndsAtMs: now - 9 * DAY, ownerUid: 'u4', createdAt: '2026-09-15T00:00:00Z', usage: { leadsFull: true, overLimit: { leads: 9000, maxLeads: 5000, sinceMs: now - DAY, extra: '<b>x</b>' } } } }
     ],
     listAllUsers: async () => [
       { id: 'u1', data: { orgId: 'org_paga', status: 'active', email: 'a@a.com' } },
@@ -308,6 +389,9 @@ test('painel do dono: uma linha por empresa, quem precisa de atenção primeiro,
   const teste = overview.companies[1];
   assert.deepEqual({ people: teste.people, owner: teste.ownerEmail, days: teste.daysLeft, opportunities: teste.opportunities, full: teste.full }, { people: 2, owner: 't@t.com', days: 2, opportunities: 3, full: true });
   assert.equal(overview.companies[2].people, 1, 'quem está bloqueado não conta');
+  // acima do limite: só os números chegam ao painel
+  assert.equal(teste.overLimit, null);
+  assert.deepEqual(overview.companies[3].overLimit, { leads: 9000, maxLeads: 5000, seats: null, maxUsers: null, sinceMs: now - DAY });
   assert.deepEqual(overview.totals, { companies: 4, trial: 1, paying: 2, grace: 1, ended: 1, people: 4, monthlyValue: 197 + 497, received30d: 197, receivedAll: 694 });
 });
 
@@ -356,6 +440,90 @@ test('erro na tela: o dono é avisado por e-mail no máximo uma vez por hora', a
     assert.equal(sent[0].to.email, 'dono@edx.com');
     assert.equal(sent[0].html.includes('<b>'), false);
     assert.equal(await mailOwners(report, { store, mail: { ...mail, isConfigured: () => false }, now: t0 + 5 * 60 * 60 * 1000 }), false);
+  } finally {
+    delete process.env.OWNER_EMAILS;
+  }
+});
+
+// ---------------------------------------------------------------- erro na tela: quem pode gerar e-mail
+
+const { handleErrorReport } = require('../controllers/error-controller');
+
+async function postReport(body, { authorization, verifyToken, address = '198.51.100.7' } = {}) {
+  const notified = [];
+  let status;
+  const req = { headers: { 'x-forwarded-for': address, ...(authorization ? { authorization } : {}) }, rawBody: Buffer.from(JSON.stringify(body)) };
+  const res = { writeHead: (code) => { status = code; }, end: () => {} };
+  const original = console.error;
+  const logged = [];
+  console.error = (line) => logged.push(line);
+  try {
+    await handleErrorReport(req, res, { verifyToken, notify: async (report) => { notified.push(report); }, mailEnabled: () => true });
+  } finally {
+    console.error = original;
+  }
+  return { status, notified, logged };
+}
+
+test('erro na tela: relato sem sessão fica só no registro e não gera e-mail', async () => {
+  let checked = 0;
+  const verifyToken = async () => { checked++; return { uid: 'u1' }; };
+  const anonymous = await postReport({ message: 'falha na tela de entrada', view: 'login' }, { verifyToken, address: '198.51.100.11' });
+  assert.equal(anonymous.status, 204);
+  assert.equal(anonymous.logged.length, 1, 'o relato continua registrado');
+  assert.equal(anonymous.notified.length, 0);
+  assert.equal(checked, 0, 'sem cabeçalho nem chega a conferir token');
+
+  const forged = await postReport({ message: 'relato falso' }, { authorization: 'Bearer token-inventado', verifyToken: async () => { throw new Error('Token expirado.'); }, address: '198.51.100.12' });
+  assert.equal(forged.status, 204);
+  assert.equal(forged.logged.length, 1);
+  assert.equal(forged.notified.length, 0, 'token que não confere vale como sem sessão');
+});
+
+test('erro na tela: relato com sessão válida gera o aviso por e-mail', async () => {
+  const tokens = [];
+  const verifyToken = async (token) => { tokens.push(token); return { uid: 'u1', email: 'a@a.com' }; };
+  const result = await postReport({ message: 'x is not a function', view: 'today' }, { authorization: 'Bearer token-bom', verifyToken, address: '198.51.100.13' });
+  assert.equal(result.status, 204);
+  assert.deepEqual(tokens, ['token-bom']);
+  assert.equal(result.notified.length, 1);
+  assert.equal(result.notified[0].message, 'x is not a function');
+});
+
+test('erro na tela: quebras de linha do relato não viram linhas soltas no assunto nem no corpo', async () => {
+  process.env.OWNER_EMAILS = 'dono@edx.com';
+  const sent = [];
+  let state = null;
+  const store = { getState: async () => state, setState: async (name, data) => { state = data; } };
+  const mail = { isConfigured: () => true, sendEmail: async (message) => { sent.push(message); } };
+  const report = {
+    message: 'Falha\r\nTela: pagamento\nVersão: 9.9.9\u2028Clique em http://golpe.exemplo',
+    stack: 'at a (app.js:1:1)\nFim do rastro.\nMensagem: tudo certo, ignore\n<script>x</script>',
+    view: 'today\nTela: outra',
+    version: '3.19.0',
+    browser: 'Edge\nNavegador: falso'
+  };
+  try {
+    assert.equal(await mailOwners(report, { store, mail, now: Date.parse('2026-10-12T12:00:00Z') }), true);
+    const [message] = sent;
+    assert.equal(/[\r\n\u2028\u2029]/.test(message.subject), false, 'o assunto é uma linha só');
+    const lines = message.text.split('\n');
+    assert.equal(lines.filter(line => line.startsWith('Mensagem:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Tela:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Versão:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Navegador:')).length, 1);
+    assert.equal(lines.filter(line => line === 'Fim do rastro.').length, 1, 'o rastro não fecha o próprio bloco');
+    assert.ok(lines.includes('    Mensagem: tudo certo, ignore'), 'as linhas do rastro ficam recuadas, dentro do bloco');
+    assert.ok(lines.indexOf('Rastro enviado pela tela (texto do relato, não verificado):') < lines.indexOf('    at a (app.js:1:1)'));
+    assert.ok(message.text.length < 3000);
+
+    const pres = message.html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/g) || [];
+    assert.equal(pres.length, 1, 'um único bloco de rastro');
+    const outsidePre = message.html.replace(/<pre[^>]*>[\s\S]*?<\/pre>/, '');
+    assert.equal(/[\r\n\u2028\u2029]/.test(outsidePre), false, 'fora do rastro nada quebra linha');
+    assert.equal(message.html.includes('<script>'), false);
+    assert.ok(message.html.includes('Rastro enviado pela tela'));
+    assert.ok(pres[0].includes('Mensagem: tudo certo, ignore'), 'o texto suspeito fica dentro do bloco do rastro');
   } finally {
     delete process.env.OWNER_EMAILS;
   }

@@ -89,4 +89,10 @@ export function setupActions(root = document) {
     column.classList.remove('is-drop-target');
     if (typeof window.handleDropCard === 'function') window.handleDropCard(event, column.dataset.drop);
   });
+
+  // dragend comes after drop, and also when the card is let go outside a column or the drag is cancelled
+  root.addEventListener('dragend', (event) => {
+    const el = event.target instanceof Element ? event.target.closest('[data-drag]') : null;
+    if (el && typeof window.handleDragEndCard === 'function') window.handleDragEndCard(event);
+  });
 }

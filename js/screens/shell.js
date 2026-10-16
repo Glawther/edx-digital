@@ -69,6 +69,15 @@ export function applyRoleUIRestrictions(permissions) {
   const btnMenuCustomize = document.getElementById('btn-menu-customize');
   if (btnMenuCustomize) btnMenuCustomize.style.display = isAdmin ? 'flex' : 'none';
 
+  // The product page (plans) and the system owner's entries serve no one but the administrator.
+  // '' instead of 'flex' for the owner entries: their own `hidden` attribute must keep working.
+  const linkMenuLanding = document.getElementById('link-menu-landing');
+  if (linkMenuLanding) linkMenuLanding.style.display = isAdmin ? '' : 'none';
+  for (const id of ['btn-menu-owner', 'btn-menu-owner-verify']) {
+    const entry = document.getElementById(id);
+    if (entry) entry.style.display = isAdmin ? '' : 'none';
+  }
+
   if (exportBtn) {
     if (permissions.canExportAll) {
       exportBtn.title = 'Exportar base completa para CSV';
@@ -538,10 +547,28 @@ export function setupHeaderToolsMenu() {
     btnTools.classList.toggle('active', isHidden);
     if (isHidden) {
       menu.classList.add('open');
+      fitMenuHeight();
     } else {
       menu.classList.remove('open');
     }
   }
+
+  // A fixed max-height in the stylesheet cut the last items on a short laptop screen:
+  // the menu gets exactly the room between the button and the edge of the window, and scrolls inside it.
+  function fitMenuHeight() {
+    menu.style.removeProperty('max-height');
+    // 16px also covers the few pixels the opening animation shifts the box while it is measured
+    const margin = 16;
+    const button = btnTools.getBoundingClientRect();
+    const box = menu.getBoundingClientRect();
+    const opensUpwards = box.top < button.top;
+    const room = opensUpwards ? box.bottom - margin : window.innerHeight - box.top - margin;
+    menu.style.setProperty('max-height', `${Math.max(160, Math.floor(room))}px`, 'important');
+  }
+
+  window.addEventListener('resize', () => {
+    if (menu.style.display === 'block') fitMenuHeight();
+  });
 
   function closeMenu() {
     menu.style.display = 'none';

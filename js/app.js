@@ -14,6 +14,7 @@ import {
   initAuth,
   isIdleTooLong,
   isSessionActive,
+  isSessionRestorePending,
   logoutToPortal,
   onAuthChange
 } from './services/auth-service.js';
@@ -58,7 +59,7 @@ import {
 } from './screens/opportunity.js';
 import { setupFilterEvents, setupLossReasonEvents } from './screens/pipeline.js';
 import { setupBillingEvents, setupCheckoutModalEvents } from './screens/plan.js';
-import { enterSession } from './screens/session.js';
+import { enterSession, waitForSessionRestore } from './screens/session.js';
 import {
   applyRoleUIRestrictions,
   setupCommandPalette,
@@ -216,6 +217,8 @@ async function initApp() {
 
     // Restore the session first (signed-in account, demo, or none): which data is loaded depends on it
     await initAuth();
+    // a saved account the server could not confirm yet: wait for it instead of the sign-in form
+    if (isSessionRestorePending()) await waitForSessionRestore();
     if (isIdleTooLong()) {
       await logoutToPortal();
     }

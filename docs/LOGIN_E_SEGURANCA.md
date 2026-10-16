@@ -52,7 +52,7 @@ npm run test:rules
 
 - **Plano e cobrança**: o plano da empresa não pode ser alterado pelo aplicativo (as regras recusam). Enquanto a cobrança não gravar o plano pelo servidor, toda empresa fica em período de teste.
 - **Excluir um colaborador** remove o acesso dele aos dados, mas a conta de login continua existindo no Firebase Authentication. Para apagar a conta, use o console do Firebase.
-- **Limites do plano** (oportunidades em aberto e pessoas com acesso): o aplicativo confere antes de criar, e o servidor reconta a cada mudança e grava na empresa se o plano está cheio (`usage.leadsFull`, `usage.seatsFull`). As regras leem essa marca e recusam novas oportunidades ou novas pessoas enquanto ela disser cheio. Como a recontagem vem depois da gravação, uma rajada de criações pode passar um pouco do limite antes de a porta fechar.
+- **Limites do plano** (oportunidades em aberto e pessoas com acesso): o aplicativo confere antes de criar, e o servidor reconta a cada mudança e grava na empresa se o plano está cheio (`usage.leadsFull`, `usage.seatsFull`). As regras leem essa marca e recusam novas oportunidades ou novas pessoas enquanto ela disser cheio. Como a recontagem vem depois da gravação, uma rajada de criações pode passar do limite antes de a porta fechar; quando passa muito, o painel do dono mostra (ver "Limite conhecido" mais abaixo).
 - **E-mail confirmado**: uma empresa só é criada por uma conta com o e-mail confirmado (as regras conferem `email_verified`). Entrar por convite não exige confirmação, porque o código já veio de quem administra.
 - **Leads de formulários**: cada empresa tem um token, gerado pelo administrador em Ferramentas, Receber leads de formulários. O servidor guarda só a ligação do hash do token com a empresa (`webhook_tokens`) e o token em `webhook_config`, as duas coleções fechadas ao aplicativo. Cada contato que chega é gravado direto nas oportunidades da empresa dona do token, com a dona da empresa como responsável; nada passa pelo navegador. Um contato com o mesmo e-mail ou telefone de uma oportunidade existente vira uma anotação nela. Plano vencido ou cheio: o contato é recusado e o formulário recebe o motivo.
 
@@ -81,6 +81,7 @@ Os anexos das oportunidades ficam no Firebase Storage, em `orgs/{empresa}/custom
 - quem alcança um arquivo é quem alcança a oportunidade no banco (o administrador da empresa ou o vendedor responsável); a regra confere o perfil e a oportunidade no Firestore;
 - só entram PDF, imagem (PNG, JPG, WEBP), Word, Excel, CSV e texto, até 10 MB, e sempre marcados para download: nenhum arquivo é aberto como página;
 - o endereço usa um identificador sorteado, nunca o nome do arquivo; ninguém lista pastas nem troca um arquivo por outro;
+- com o plano vencido não se anexa arquivo novo, mas os que existem continuam abrindo e podendo ser excluídos. Como a regra só pode ler dois documentos do banco, o servidor copia em cada perfil até quando a empresa pode gravar (`planWritableUntilMs`), a cada mudança de plano e toda manhã;
 - quando a oportunidade (ou a empresa) é excluída, a função `dailyEmails` apaga os arquivos dela na manhã seguinte.
 
 Os testes ficam em `tests/rules/storage-rules.test.mjs` e rodam com `npm run test:rules`.
@@ -107,6 +108,8 @@ Limites conhecidos, que não têm correção só no código:
 ## Erros das telas
 
 Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/errors`) e o relato vira uma linha de erro no registro das funções, no console do Firebase. Vão a mensagem, o trecho do código, a tela aberta e a versão; nada da pessoa, da empresa ou dos clientes, e o servidor ainda apaga o que tiver formato de e-mail ou de número longo. São no máximo 5 relatos por visita e 10 por minuto por endereço.
+
+O dono do sistema recebe no máximo um e-mail por hora sobre esses erros, e só de relatos que chegam com a sessão de uma conta confirmada pelo servidor (o token do Firebase no cabeçalho `Authorization`). Relatos sem sessão, como os da tela de entrada, ficam só no registro: assim ninguém de fora escreve o e-mail do dono nem gasta a vaga da hora com um relato falso. No e-mail, a mensagem, a tela, a versão e o navegador vão cada um numa linha curta, sem quebras; o rastro fica num bloco à parte, marcado como enviado pela tela.
 
 ## Proteções do navegador
 
@@ -172,4 +175,4 @@ No aplicativo, também da mesma revisão:
 - **Importação de planilha**: confere os mesmos limites do banco antes de importar, lê o CSV do Excel em português (Windows-1252), avisa valores negativos ou com letras, não deixa uma aspa aberta engolir o arquivo, reconhece "Nome da empresa" como a empresa, e grava em blocos.
 - **Restaurar cópia de segurança**: mostra o que vai acontecer e pergunta antes; não substitui o que mudou depois da cópia; um registro recusado não interrompe os outros.
 
-Limite conhecido que continua: uma rajada de gravações feita por fora do aplicativo pode passar um pouco do limite do plano antes de o servidor marcar o plano como cheio.
+Limite conhecido que continua: uma rajada de gravações feita por fora do aplicativo (lotes chamados direto no banco, em paralelo) pode passar do limite do plano antes de o servidor marcar o plano como cheio, e não só um pouco. As regras do banco não conseguem contar quantos registros um lote cria, então não há como fechar isso nelas sem um contador gravado junto em todo ponto que cria, exclui, fecha ou reabre oportunidade (e pelo servidor no webhook). O que existe é a vigilância: quando a contagem passa o limite em mais de 10% (no mínimo uma pessoa a mais), o servidor marca a empresa (`usage.overLimit`, com os números e desde quando) e registra uma linha `[Limites]` no log das funções. O painel do dono mostra "Acima do limite do plano" na empresa e a coluna correspondente na exportação. Nada é apagado: a decisão é do dono (falar com a empresa, cobrar o plano certo, bloquear). Uma empresa que mudou para um plano menor aparece da mesma forma. Enquanto o plano estiver cheio, nenhuma oportunidade nova entra pelo aplicativo nem pela rajada seguinte.

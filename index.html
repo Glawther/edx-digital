@@ -21,15 +21,27 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.26.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.26.0">
-  <link rel="stylesheet" href="css/components.css?v=3.26.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.26.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.26.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.27.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.27.0">
+  <link rel="stylesheet" href="css/components.css?v=3.27.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.27.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.27.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.26.0"></script>
+  <script src="js/theme-boot.js?v=3.27.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
+
+  <!-- Saved account, server out of reach: wait instead of showing the sign-in form -->
+  <div id="auth-offline-screen" class="auth-portal-wrapper" style="display: none;" role="alert" aria-live="polite">
+    <div class="auth-portal-card auth-offline-card">
+      <div class="auth-portal-header">
+        <h1 class="auth-portal-title">Sem conexão com o servidor</h1>
+        <p class="auth-portal-subtitle">Sua sessão continua guardada neste aparelho. Assim que a conexão voltar, o CRM abre sozinho.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="btn-auth-offline-retry">Tentar de novo</button>
+      <p class="auth-offline-status" id="auth-offline-status" role="status"></p>
+    </div>
+  </div>
 
   <!-- ======================================================================
        PORTAL DE AUTENTICAÇÃO & REGISTRO (Tríade CID & RBAC)
@@ -270,14 +282,28 @@
           </button>
         
           <div class="dropdown-menu sidebar-dropdown-menu" id="header-tools-menu" style="display: none;">
-            <!-- Inteligência Artificial & Nuvem (Dentro do Menu de Ferramentas) -->
-            <div class="tools-group-title">Conta</div>
-
-            <button type="button" class="dropdown-item" id="sidebar-gemini-btn">
+            <!-- Groups in order of use: everyday first, technical integrations together, help last -->
+            <div class="tools-group-title" id="tools-group-daily">Dia a dia</div>
+            <button type="button" class="dropdown-item" id="btn-menu-import">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Inteligência artificial</span>
-                <span class="dropdown-item-desc">Chave do Gemini para as análises</span>
+                <span class="dropdown-item-title">Importar contatos</span>
+                <span class="dropdown-item-desc">De uma planilha ou arquivo CSV</span>
+              </div>
+            </button>
+
+            <button type="button" class="dropdown-item" id="btn-menu-export-csv">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Exportar clientes</span>
+                <span class="dropdown-item-desc">Arquivo CSV, abre no Excel</span>
+              </div>
+            </button>
+
+            <button type="button" class="dropdown-item" id="btn-menu-account">
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Minha conta e privacidade</span>
+                <span class="dropdown-item-desc">Seus dados, exportação e exclusão</span>
               </div>
             </button>
 
@@ -308,57 +334,6 @@
               </div>
             </button>
 
-            <div class="dropdown-divider"></div>
-
-            <div class="tools-group-title">Dados</div>
-            <button type="button" class="dropdown-item" id="btn-menu-import">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Importar contatos</span>
-                <span class="dropdown-item-desc">De uma planilha ou arquivo CSV</span>
-              </div>
-            </button>
-            
-            <button type="button" class="dropdown-item" id="btn-menu-export-csv">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Exportar clientes</span>
-                <span class="dropdown-item-desc">Arquivo CSV, abre no Excel</span>
-              </div>
-            </button>
-            
-            <button type="button" class="dropdown-item" id="btn-menu-export-audit">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Exportar auditoria</span>
-                <span class="dropdown-item-desc">Histórico de atividade em CSV</span>
-              </div>
-            </button>
-
-            <button type="button" class="dropdown-item" id="btn-menu-webhook">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Receber leads de formulários</span>
-                <span class="dropdown-item-desc">Anúncios, sites e outras ferramentas</span>
-              </div>
-            </button>
-
-            <a href="/landing" class="dropdown-item" style="text-decoration: none; color: inherit;">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Recursos e planos</span>
-                <span class="dropdown-item-desc">Página de apresentação do produto</span>
-              </div>
-            </a>
-
-            <div class="dropdown-divider"></div>
-
-            <button type="button" class="dropdown-item" id="btn-menu-account">
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Minha conta e privacidade</span>
-                <span class="dropdown-item-desc">Seus dados, exportação e exclusão</span>
-              </div>
-            </button>
             <button type="button" class="dropdown-item" id="btn-menu-owner" hidden>
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -373,6 +348,37 @@
                 <span class="dropdown-item-desc">Necessário para abrir o painel do sistema</span>
               </div>
             </button>
+
+            <div class="dropdown-divider" id="tools-divider-integrations"></div>
+
+            <div class="tools-group-title" id="tools-group-integrations">Integrações e dados</div>
+            <button type="button" class="dropdown-item" id="sidebar-gemini-btn">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Inteligência artificial</span>
+                <span class="dropdown-item-desc">Chave do Gemini para as análises</span>
+              </div>
+            </button>
+
+            <button type="button" class="dropdown-item" id="btn-menu-webhook">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Receber leads de formulários</span>
+                <span class="dropdown-item-desc">Anúncios, sites e outras ferramentas</span>
+              </div>
+            </button>
+
+            <button type="button" class="dropdown-item" id="btn-menu-export-audit">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Exportar auditoria</span>
+                <span class="dropdown-item-desc">Histórico de atividade em CSV</span>
+              </div>
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <div class="tools-group-title" id="tools-group-help">Ajuda</div>
             <button type="button" class="dropdown-item" id="btn-menu-tour">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -394,7 +400,15 @@
                 <span class="dropdown-item-desc">Lista de atalhos</span>
               </div>
             </button>
-            
+
+            <a href="/landing" class="dropdown-item" id="link-menu-landing" style="text-decoration: none; color: inherit;">
+              <span class="dropdown-item-icon"></span>
+              <div class="dropdown-item-text">
+                <span class="dropdown-item-title">Recursos e planos</span>
+                <span class="dropdown-item-desc">Página de apresentação do produto</span>
+              </div>
+            </a>
+
             <button type="button" class="dropdown-item" id="btn-menu-pwa" style="display: none;">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -1943,7 +1957,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.26.0"></script>
+  <script type="module" src="js/app.js?v=3.27.0"></script>
 
 </body>
 </html>

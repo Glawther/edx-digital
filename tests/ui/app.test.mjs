@@ -129,6 +129,29 @@ test('administrador: o funil abre com as oportunidades e sem nenhum erro', async
   assert.deepEqual(problems, []);
 });
 
+test('na janela da oportunidade, as ações têm o mesmo estilo e "Excluir" fica separado, também no celular', async (t) => {
+  for (const [role, viewport] of [['admin', { width: 1300, height: 800 }], ['admin', { width: 390, height: 844 }], ['employee', { width: 390, height: 844 }]]) {
+    const demo = await openDemo(t, role, viewport);
+    if (!demo) return;
+    const { page } = demo;
+    await page.locator('.lead-card .lead-name').first().click();
+    await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+    const actions = page.locator('#lead-details-actions');
+    // a filled button among outlined ones reads as the selected tab
+    assert.equal(await actions.locator('.btn-primary').count(), 0);
+    assert.match(await actions.locator('[data-click="handleOpenEditCustomer"]').textContent(), /Editar/);
+    const remove = actions.locator('[data-click="handleDeleteCustomer"]');
+    if (role !== 'admin') {
+      assert.equal(await remove.count(), 0, 'o vendedor não exclui oportunidades');
+      continue;
+    }
+    const main = await actions.locator('.lead-actions-main').boundingBox();
+    const box = await remove.boundingBox();
+    if (viewport.width < 768) assert.ok(box.y >= main.y + main.height + 12, 'no celular, "Excluir" fica numa linha própria, longe das outras ações');
+    else assert.ok(box.x >= main.x + main.width + 24, 'no notebook, "Excluir" fica afastado das outras ações');
+  }
+});
+
 test('o cartão abre a oportunidade pelo clique e pelo Enter, mas não ao usar o seletor de etapa', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
@@ -161,6 +184,38 @@ test('arrastar um cartão para outra coluna muda a etapa', async (t) => {
   await card.dragTo(page.locator('[data-drop="negotiation"]'));
   await page.waitForFunction(cardId => document.querySelector(`.lead-card[data-id="${cardId}"]`)?.closest('[data-drop]')?.dataset.drop === 'negotiation', id);
   assert.equal(await stageOf(page, id), 'negotiation');
+  assert.deepEqual(problems, []);
+});
+
+test('soltar o cartão fora das colunas não deixa o arraste preso, e o arraste seguinte funciona', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  const card = page.locator('[data-drop="lead"] .lead-card').first();
+  const id = await card.getAttribute('data-id');
+
+  // passes over a column (lights it up) and lets go outside every column
+  const from = await card.boundingBox();
+  const over = await page.locator('[data-drop="proposal"]').boundingBox();
+  const outside = await page.locator('.pipeline-column').first().evaluate(column => {
+    const top = column.getBoundingClientRect().top;
+    return { x: 650, y: Math.max(2, top - 30) };
+  });
+  assert.equal(await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest('[data-drop]'), outside), false, 'o ponto de soltar não pode estar numa coluna');
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(over.x + over.width / 2, over.y + 60, { steps: 5 });
+  await page.mouse.move(outside.x, outside.y, { steps: 5 });
+  await page.mouse.up();
+
+  await page.waitForFunction(() => !document.querySelector('.lead-card.dragging'));
+  assert.equal(await page.locator('.lead-card.dragging').count(), 0);
+  assert.equal(await page.locator('[data-drop].is-drop-target').count(), 0);
+  assert.equal(await stageOf(page, id), 'lead');
+
+  await card.dragTo(page.locator('[data-drop="negotiation"]'));
+  await page.waitForFunction(cardId => document.querySelector(`.lead-card[data-id="${cardId}"]`)?.closest('[data-drop]')?.dataset.drop === 'negotiation', id);
+  assert.equal(await page.locator('.lead-card.dragging').count(), 0);
   assert.deepEqual(problems, []);
 });
 
@@ -271,6 +326,72 @@ test('janela larga: o menu de ferramentas abre acima do botão, dentro da barra 
   assert.ok(menu.y >= 0, 'cabe na altura da tela');
 });
 
+// What each profile finds in the tools menu, and whether every entry can be seen and reached
+async function openToolsMenu(page) {
+  await page.click('#btn-header-tools');
+  await page.waitForTimeout(250); // the opening animation
+  return page.evaluate(() => {
+    const menu = document.getElementById('header-tools-menu');
+    const box = menu.getBoundingClientRect();
+    const entries = [...menu.querySelectorAll('.dropdown-item')].filter(item => item.offsetParent !== null);
+    const outside = [];
+    for (const item of entries) {
+      item.scrollIntoView({ block: 'nearest' });
+      const r = item.getBoundingClientRect();
+      const m = menu.getBoundingClientRect();
+      if (r.top < m.top - 1 || r.bottom > m.bottom + 1 || r.top < 0 || r.bottom > window.innerHeight) outside.push(item.id || item.textContent.trim());
+    }
+    menu.scrollTop = 0;
+    return {
+      ids: entries.map(item => item.id),
+      groups: [...menu.querySelectorAll('.tools-group-title')].filter(title => title.offsetParent !== null).map(title => title.textContent.trim()),
+      inWindow: box.top >= 0 && box.bottom <= window.innerHeight && box.left >= 0 && box.right <= window.innerWidth,
+      fitsWhole: menu.scrollHeight <= menu.clientHeight + 1,
+      outside
+    };
+  });
+}
+
+const adminOnlyEntries = ['btn-menu-whitelabel', 'btn-menu-customize', 'btn-menu-billing', 'btn-menu-webhook', 'btn-menu-export-audit', 'link-menu-landing', 'btn-menu-owner', 'btn-menu-owner-verify'];
+
+test('menu de ferramentas: agrupado, inteiro na tela, e o vendedor não vê o que é do administrador', async (t) => {
+  for (const viewport of [{ width: 1300, height: 700 }, { width: 390, height: 844 }]) {
+    const admin = await openDemo(t, 'admin', viewport, 'today');
+    if (!admin) return;
+    const adminMenu = await openToolsMenu(admin.page);
+    const size = `${viewport.width}x${viewport.height}`;
+    assert.deepEqual(adminMenu.groups, ['Dia a dia', 'Empresa', 'Integrações e dados', 'Ajuda'], size);
+    for (const id of ['btn-menu-import', 'btn-menu-billing', 'sidebar-gemini-btn', 'btn-menu-webhook', 'link-menu-help']) {
+      assert.ok(adminMenu.ids.includes(id), `${size}: o administrador vê ${id}`);
+    }
+    assert.ok(adminMenu.inWindow, `${size}: o menu do administrador cabe na janela`);
+    assert.ok(adminMenu.fitsWhole, `${size}: o menu do administrador cabe sem rolar`);
+    assert.deepEqual(adminMenu.outside, [], `${size}: itens do administrador fora da área visível`);
+
+    const seller = await openDemo(t, 'employee', viewport, 'today');
+    const sellerMenu = await openToolsMenu(seller.page);
+    assert.deepEqual(sellerMenu.ids.filter(id => adminOnlyEntries.includes(id)), [], `${size}: o vendedor vê itens do administrador`);
+    assert.deepEqual(sellerMenu.groups, ['Dia a dia', 'Integrações e dados', 'Ajuda'], size);
+    for (const id of ['btn-menu-import', 'btn-menu-export-csv', 'btn-menu-account', 'sidebar-gemini-btn', 'btn-menu-tour', 'link-menu-help']) {
+      assert.ok(sellerMenu.ids.includes(id), `${size}: o vendedor vê ${id}`);
+    }
+    assert.ok(sellerMenu.inWindow, `${size}: o menu do vendedor cabe na janela`);
+    assert.deepEqual(sellerMenu.outside, [], `${size}: itens do vendedor fora da área visível`);
+    assert.deepEqual([...admin.problems, ...seller.problems], []);
+  }
+});
+
+test('menu de ferramentas numa janela bem baixa: fica dentro da tela e rola até o último item', async (t) => {
+  for (const viewport of [{ width: 1300, height: 520 }, { width: 390, height: 560 }]) {
+    const demo = await openDemo(t, 'admin', viewport, 'today');
+    if (!demo) return;
+    const menu = await openToolsMenu(demo.page);
+    const size = `${viewport.width}x${viewport.height}`;
+    assert.ok(menu.inWindow, `${size}: o menu cabe na janela`);
+    assert.deepEqual(menu.outside, [], `${size}: itens que não dá para alcançar`);
+  }
+});
+
 test('botões e campos usam a fonte do aplicativo', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
@@ -351,7 +472,13 @@ test('relatório por vendedor: o administrador vê as duas tabelas e exporta; o 
 });
 
 test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alterado', async (t) => {
-  for (const [role, viewport] of [['admin', { width: 1300, height: 800 }], ['employee', { width: 375, height: 800 }]]) {
+  const runs = [
+    ['admin', { width: 1300, height: 800 }],
+    ['admin', { width: 390, height: 844 }],
+    ['employee', { width: 1300, height: 800 }],
+    ['employee', { width: 375, height: 800 }]
+  ];
+  for (const [role, viewport] of runs) {
     const demo = await openDemo(t, role, viewport);
     if (!demo) return;
     const { page, problems } = demo;
@@ -361,7 +488,8 @@ test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alte
     await page.click('#btn-menu-tour');
     await page.waitForFunction(() => /^Passo 1 de/.test(document.getElementById('tour-progress')?.textContent || ''));
     const total = Number((await page.textContent('#tour-progress')).match(/de (\d+)/)[1]);
-    assert.ok(total >= 10, `${role}: ${total} passos`);
+    // short on purpose: a long tour is skipped half way
+    assert.equal(total, role === 'admin' ? 8 : 7, `${role}: ${total} passos`);
 
     const titles = [];
     for (let step = 1; step <= total; step++) {
@@ -375,8 +503,7 @@ test('passeio: percorre todos os passos sem sair da tela, e não deixa nada alte
         const lit = await spot.boundingBox();
         const overlapX = Math.min(box.x + box.width, lit.x + lit.width) - Math.max(box.x, lit.x);
         const overlapY = Math.min(box.y + box.height, lit.y + lit.height) - Math.max(box.y, lit.y);
-        // a card over what it explains is accepted only when that thing takes most of the screen
-        if (overlapX > 8 && overlapY > 8) assert.ok(lit.height > viewport.height * 0.4 || lit.width > viewport.width * 0.8, `${role}, passo ${step} (${titles.at(-1)}): o cartão cobre o que explica`);
+        assert.ok(overlapX <= 0 || overlapY <= 0, `${role} ${viewport.width}px, passo ${step} (${titles.at(-1)}): o cartão cobre o que explica`);
       }
       await page.click('[data-tour="next"]');
     }
@@ -553,6 +680,68 @@ test('páginas públicas: desenhadas pelos arquivos de estilo, sem nada recusado
   }
 });
 
+test('ajuda: a busca mostra só as perguntas com as palavras, avisa quando nada bate e volta tudo ao limpar', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const problems = [];
+  await page.addInitScript(() => document.addEventListener('securitypolicyviolation', event => console.error(`CSP ${event.violatedDirective} ${event.blockedURI}`)));
+  page.on('console', message => { if (message.type() === 'error' && /^CSP (style|script)/.test(message.text())) problems.push(message.text()); });
+  page.on('pageerror', error => problems.push(`erro: ${error.message}`));
+  await page.goto(base + '/ajuda');
+
+  const field = page.getByLabel('Buscar na ajuda');
+  await field.waitFor({ state: 'visible' });
+  const all = await page.locator('main details').count();
+  const visible = () => page.locator('main details:visible summary').allTextContents();
+  const visibleSections = () => page.locator('main h2:visible').allTextContents();
+
+  // only the keyboard: the field is reached with Tab from the top of the page
+  await page.keyboard.press('Tab');
+  for (let step = 0; step < 10 && !(await field.evaluate(el => el === document.activeElement)); step++) await page.keyboard.press('Tab');
+  assert.equal(await field.evaluate(el => el === document.activeElement), true, 'o campo de busca não é alcançado pelo teclado');
+
+  // accents and case ignored: "codigo CONVITE" finds "código de convite"
+  await page.keyboard.type('codigo CONVITE');
+  assert.deepEqual(await visible(), ['Como coloco minha equipe no sistema?', 'Um vendedor saiu da empresa. O que faço?', 'O código de convite não funciona.']);
+  assert.deepEqual(await visibleSections(), ['Equipe e permissões', 'Problemas comuns']);
+  assert.equal(await page.locator('main details[open]').count(), 3, 'as perguntas encontradas abrem');
+  assert.equal(await page.locator('main nav.index').isVisible(), false);
+  assert.equal(await page.locator('#help-search-status').getAttribute('aria-live'), 'polite');
+  assert.equal(await page.textContent('#help-search-status'), '3 perguntas encontradas');
+
+  await field.fill('pix');
+  assert.deepEqual(await visible(), ['Como pago?']);
+  assert.equal(await page.textContent('#help-search-status'), '1 pergunta encontrada');
+
+  await field.fill('helicóptero');
+  assert.deepEqual(await visible(), []);
+  assert.deepEqual(await visibleSections(), []);
+  assert.match(await page.textContent('#help-search-status'), /Nenhuma pergunta com "helicóptero"\. Tente outra palavra/);
+  assert.equal(await page.locator('.contact').isVisible(), true, 'o contato continua à vista');
+
+  // Escape clears, and everything is back as it was: all questions, all closed, the subjects list
+  await page.keyboard.press('Escape');
+  assert.equal(await field.inputValue(), '');
+  assert.equal((await visible()).length, all);
+  assert.equal(await page.locator('main details[open]').count(), 0);
+  assert.equal(await page.locator('main nav.index').isVisible(), true);
+  assert.equal(await page.textContent('#help-search-status'), '');
+  assert.deepEqual(problems, []);
+});
+
+test('ajuda: sem JavaScript a página continua inteira e a busca não aparece', async (t) => {
+  if (!browser) return t.skip('Edge ou Chrome não encontrado nesta máquina');
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', javaScriptEnabled: false });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  await page.goto(base + '/ajuda');
+  assert.equal(await page.locator('#help-search').isVisible(), false);
+  assert.ok(await page.locator('main details:visible').count() > 30);
+  assert.equal(await page.locator('main nav.index').isVisible(), true);
+});
+
 test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mostra só o que é seu', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
@@ -599,4 +788,104 @@ test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mos
   await page.click('.nav-item[data-view="metrics"]');
   assert.match(await page.textContent('#metrics-content'), /no funil Pós venda/);
   assert.deepEqual(problems, []);
+});
+
+test('excluir e desfazer: a oportunidade volta; se desfazer falhar, o aviso diz e nada fica solto', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.click('.nav-item[data-view="customers"]');
+  const remove = page.locator('#view-customers [data-click="handleDeleteCustomer"]');
+  await remove.first().waitFor();
+  const gone = (id) => page.waitForFunction(cardId => !document.querySelector(`#view-customers [data-click="handleDeleteCustomer"][data-a="${cardId}"]`), id);
+
+  const first = await remove.first().getAttribute('data-a');
+  await remove.first().click();
+  await gone(first);
+  await page.locator('.toast-action', { hasText: 'Desfazer' }).last().click();
+  await page.locator(`#view-customers [data-click="handleDeleteCustomer"][data-a="${first}"]`).waitFor();
+  await page.locator('.toast', { hasText: 'Oportunidade restaurada.' }).waitFor();
+
+  // the restoration fails (as when the database refuses it): a notice, not a loose error
+  await page.evaluate(async () => {
+    const { storage } = await import('/js/core/storage-manager.js');
+    storage.restoreCustomer = async () => { throw new Error('falha simulada'); };
+  });
+  const second = await remove.first().getAttribute('data-a');
+  await remove.first().click();
+  await gone(second);
+  await page.locator('.toast-action', { hasText: 'Desfazer' }).last().click();
+  await page.locator('.toast.error', { hasText: 'Não foi possível desfazer: falha simulada' }).waitFor();
+  assert.deepEqual(problems, []);
+});
+
+test('proposta pelo WhatsApp: o WhatsApp abre mesmo quando o histórico não aceita o registro', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.evaluate(async () => {
+    window.__opened = [];
+    window.open = (url) => { window.__opened.push(url); return null; };
+    const { storage } = await import('/js/core/storage-manager.js');
+    storage.addActivity = async () => { throw new Error('falha simulada'); };
+  });
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.click('#lead-details-actions [data-click="handleOpenProposalModal"]');
+  await page.locator('#proposal-dialog').waitFor({ state: 'visible' });
+  await page.click('#btn-send-proposal-wa');
+  await page.locator('.toast', { hasText: 'O aviso não ficou no histórico: falha simulada' }).waitFor();
+  const opened = await page.evaluate(() => window.__opened);
+  assert.equal(opened.length, 1);
+  assert.match(opened[0], /^https:\/\/wa\.me\//);
+  assert.deepEqual(problems, []);
+});
+
+test('conta real com a rede lenta: espera a conexão em vez de mostrar a tela de entrada', async (t) => {
+  if (!browser) {
+    t.skip('Edge ou Chrome não encontrado nesta máquina');
+    return;
+  }
+  // the service worker would fetch the SDK on its own, out of reach of page.route
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', serviceWorkers: 'block' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', error => problems.push(`erro: ${error.message}`));
+  // the last session on this browser was a real account
+  await page.addInitScript(() => localStorage.setItem('edx_session_active', 'cloud'));
+  // the Firebase SDK never arrives, like a phone on a weak signal
+  const held = [];
+  await page.route('https://www.gstatic.com/firebasejs/**', route => { held.push(route); });
+
+  await page.goto(base + '/');
+  await page.locator('#auth-offline-screen').waitFor({ state: 'visible', timeout: 20000 });
+  assert.match(await page.textContent('#auth-offline-screen'), /Sem conexão com o servidor/);
+  assert.equal(await page.locator('#btn-auth-offline-retry').isVisible(), true);
+  assert.equal(await page.locator('#auth-portal-screen').isVisible(), false);
+  assert.equal(await page.locator('#form-auth-login').isVisible(), false);
+  // nothing was forgotten: the session is still marked as a real account
+  assert.equal(await page.evaluate(() => localStorage.getItem('edx_session_active')), 'cloud');
+
+  // trying again while still without the server keeps the waiting screen
+  await page.click('#btn-auth-offline-retry');
+  await page.locator('#auth-offline-status', { hasText: 'Ainda sem conexão' }).waitFor({ timeout: 20000 });
+  assert.equal(await page.locator('#form-auth-login').isVisible(), false);
+  if (process.env.EDX_SHOTS) await page.screenshot({ path: process.env.EDX_SHOTS + '/espera-conexao.png' });
+  assert.deepEqual(problems, []);
+  await page.unroute('https://www.gstatic.com/firebasejs/**');
+  await Promise.all(held.map(route => route.abort().catch(() => {})));
+});
+
+test('quem nunca entrou e tem a rede lenta continua vendo a tela de entrada', async (t) => {
+  if (!browser) {
+    t.skip('Edge ou Chrome não encontrado nesta máquina');
+    return;
+  }
+  const context = await browser.newContext({ viewport: { width: 1300, height: 800 }, locale: 'pt-BR', serviceWorkers: 'block' });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  await page.route('https://www.gstatic.com/firebasejs/**', () => { /* never answers */ });
+  await page.goto(base + '/');
+  await page.locator('#form-auth-login').waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal(await page.locator('#auth-offline-screen').isVisible(), false);
 });

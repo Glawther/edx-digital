@@ -68,22 +68,24 @@ function position() {
     if (bottom - top > 8 && right - left > 8) box = { top, left, width: right - left, height: bottom - top };
   }
 
-  if (box) {
-    const pad = 6;
-    spot.hidden = false;
-    spot.style.top = `${box.top - pad}px`;
-    spot.style.left = `${box.left - pad}px`;
-    spot.style.width = `${box.width + pad * 2}px`;
-    spot.style.height = `${box.height + pad * 2}px`;
-  } else {
-    spot.hidden = true;
-  }
-  active.root.classList.toggle('has-target', Boolean(box));
-
   const size = { width: card.offsetWidth, height: card.offsetHeight };
   const place = placeCard(box, size, screen);
   card.style.top = `${place.top}px`;
   card.style.left = `${place.left}px`;
+
+  // only the part the card leaves uncovered is lit
+  const lit = place.spot;
+  if (lit) {
+    const pad = 6;
+    spot.hidden = false;
+    spot.style.top = `${lit.top - pad}px`;
+    spot.style.left = `${lit.left - pad}px`;
+    spot.style.width = `${lit.width + pad * 2}px`;
+    spot.style.height = `${lit.height + pad * 2}px`;
+  } else {
+    spot.hidden = true;
+  }
+  active.root.classList.toggle('has-target', Boolean(lit));
 }
 
 async function show(index) {

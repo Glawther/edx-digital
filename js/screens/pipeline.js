@@ -131,6 +131,15 @@ window.handleDragStartCard = function(event, customerId) {
   event.target.closest('.lead-card')?.classList.add('dragging');
 };
 
+// Fires after every drag, dropped on a column or not (outside, or cancelled with Esc):
+// without it the card kept its "dragging" look and the id stayed set until the next render.
+// A drop has already read the id by now, so clearing it here does not affect the move.
+window.handleDragEndCard = function() {
+  draggedCustomerId = null;
+  document.querySelectorAll('.lead-card.dragging').forEach(c => c.classList.remove('dragging'));
+  document.querySelectorAll('[data-drop].is-drop-target').forEach(c => c.classList.remove('is-drop-target'));
+};
+
 // The company may ask for some things before an opportunity enters a stage (Ferramentas,
 // "Funil, campos e mensagens"). Says what is missing and offers to open the form.
 function mayEnterStage(customerId, stage) {
