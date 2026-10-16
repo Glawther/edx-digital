@@ -1305,9 +1305,16 @@ export function showToast(message, type = 'info', action = null) {
     button.type = 'button';
     button.className = 'toast-action';
     button.textContent = action.label;
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       dismiss();
-      action.onClick();
+      // Actions handle their own errors; this is the last net, so none is left loose.
+      // A blocked change (read-only) was already explained by its own notice.
+      try {
+        await action.onClick();
+      } catch (err) {
+        if (err && err.code === 'read-only') return;
+        showToast(`Não foi possível concluir: ${err?.message || 'erro desconhecido'}`, 'error');
+      }
     });
     toast.appendChild(button);
   }

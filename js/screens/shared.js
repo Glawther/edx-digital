@@ -4,7 +4,7 @@
 
 import { SALES_TEAM, STAGES } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
-import { getCurrentUser, isAdmin, isCloudSession } from '../services/auth-service.js';
+import { getCurrentUser, isAdmin, isCloudSession, isReadOnly } from '../services/auth-service.js';
 import { getEmployees } from '../services/employee-service.js';
 import { parseMoney } from '../services/import-service.js';
 import { escapeHtml, showToast } from '../ui/ui-renderer.js';
@@ -56,13 +56,19 @@ export function snapshotOf(customerId) {
   return customer ? JSON.parse(JSON.stringify(customer)) : null;
 }
 
+// In read-only mode there is nothing to offer: putting an opportunity back is a write, and the
+// database refuses writes while the plan has lapsed (deleting stays allowed)
 export function undoAction(snapshot, doneMessage) {
-  if (!snapshot) return null;
+  if (!snapshot || isReadOnly()) return null;
   return {
     label: 'Desfazer',
     onClick: async () => {
-      await storage.restoreCustomer(snapshot);
-      showToast(doneMessage, 'info');
+      try {
+        await storage.restoreCustomer(snapshot);
+        showToast(doneMessage, 'info');
+      } catch (err) {
+        reportError('Não foi possível desfazer', err);
+      }
     }
   };
 }

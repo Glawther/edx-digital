@@ -3,6 +3,7 @@
  */
 
 import { getPlanState, getSavedOrganization } from '../core/config.js';
+import { createPaymentWatcher } from '../core/payment-watch.js';
 import { crmStore } from '../core/crm-store.js';
 import { storage } from '../core/storage-manager.js';
 import { AUDIT_ACTIONS, logAudit } from '../services/audit-service.js';
@@ -217,20 +218,19 @@ export function setupCheckoutModalEvents() {
     if (crmStore) crmStore.emitChange();
   };
 
-  const checkPayment = async () => {
-    if (!activePaymentId) return;
-    try {
-      const result = await api(`/api/billing/pix/${activePaymentId}`);
-      if (result.status === 'approved') {
-        await onApproved(result);
-      } else if (result.status !== 'pending') {
-        stopPolling();
-        show('message', 'Esta cobrança foi cancelada ou venceu. Gere outra para pagar.', true);
-      }
-    } catch {
-      // A failed check is not a failed payment: keep waiting
+  // The timer and the return to the tab may ask at the same moment: one question at a time,
+  // and a single confirmation per charge
+  const watcher = createPaymentWatcher({
+    fetchStatus: (paymentId) => api(`/api/billing/pix/${paymentId}`),
+    onApproved: (result) => onApproved(result),
+    onEnded: (result, paymentId) => {
+      if (paymentId !== activePaymentId) return; // another charge is on screen now
+      stopPolling();
+      show('message', 'Esta cobrança foi cancelada ou venceu. Gere outra para pagar.', true);
     }
-  };
+  });
+
+  const checkPayment = () => watcher.check(activePaymentId);
 
   const loadCharge = async (plan) => {
     activePlan = plan;
