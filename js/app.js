@@ -18,6 +18,7 @@ import {
   onAuthChange
 } from './services/auth-service.js';
 import { forgetOldWebhookToken } from './services/webhook-service.js';
+import { onAuditLog } from './services/audit-service.js';
 import { pendingWriteCount } from './services/firebase-service.js';
 import { notify } from './services/notification-service.js';
 import { registerActions, setupActions } from './ui/actions.js';
@@ -143,6 +144,9 @@ async function initApp() {
     setupWebhookModalEvents();
     setupAccountDialog();
     setupIdleSignOut();
+
+    // the audit counter follows each new record, not only changes to the opportunities
+    onAuditLog(() => updateNavCounters(crmStore.getState()));
 
     // What the header says about saving follows the writes and the connection; closing the tab
     // with changes not yet confirmed by the server asks first (they would be lost)

@@ -165,8 +165,11 @@ export function updateNavCounters(state) {
     todayCount.textContent = urgent;
     todayCount.hidden = urgent === 0;
   }
-  if (pipelineCount) pipelineCount.textContent = state.allCustomers.length;
-  if (customersCount) customersCount.textContent = state.allCustomers.length;
+  // what each screen shows: the person's own opportunities (a salesperson does not see the
+  // company's total) in the funnel on screen; the board leaves the lost ones out
+  const mine = state.pipelineCustomers || state.visibleCustomers || [];
+  if (pipelineCount) pipelineCount.textContent = mine.filter(c => c.stage !== 'lost').length;
+  if (customersCount) customersCount.textContent = mine.length;
   if (tasksCount) {
     const pendingCount = (state.tasks || []).filter(t => !t.completed).length;
     tasksCount.textContent = pendingCount;
@@ -175,8 +178,8 @@ export function updateNavCounters(state) {
   // Update team counter
   const teamCount = document.getElementById('nav-count-team');
   if (teamCount) {
-    // the signed-in administrator is not in the list
-    teamCount.textContent = getEmployees().length + 1;
+    // the people in the list on the screen (the signed-in administrator is not one of the rows)
+    teamCount.textContent = getEmployees().length;
   }
 
   // Update audit counter
@@ -336,7 +339,7 @@ export function setupCommandPalette() {
           html += `
             <div class="command-item ${isAct ? 'active' : ''}" data-customer-id="${escapeHtml(c.id)}">
               <div class="command-item-left">
-                <span class="command-item-icon"></span>
+                <span class="command-item-icon" aria-hidden="true">${escapeHtml(String(c.name || '?').trim().charAt(0).toUpperCase() || '?')}</span>
                 <div>
                   <div style="font-weight: 600; font-size: 0.82rem;">${escapeHtml(c.name)}</div>
                   <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml([c.company, formatBRL(c.dealValue)].filter(Boolean).join(', '))}</div>
@@ -399,6 +402,8 @@ export function setupKeyboardShortcuts() {
     // Ctrl+K or Cmd+K: Open Command Palette
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
+      // not on top of a window already open: one window at a time
+      if (document.querySelector('dialog[open]:not(#command-palette-dialog)')) return;
       if (window.openCommandPalette) window.openCommandPalette();
       return;
     }
@@ -647,7 +652,7 @@ export function setupNotificationCenter() {
 
     const notifications = getInAppNotifications(20);
     if (notifications.length === 0) {
-      listEl.innerHTML = '<p class="notification-empty">Nada por aqui. Os lembretes de tarefa e os contatos que chegam por formulário aparecem nesta lista.</p>';
+      listEl.innerHTML = '<p class="notification-empty">Nada por aqui. Aparecem nesta lista os lembretes das tarefas das suas oportunidades e os contatos que chegam por formulário. As tarefas da equipe inteira estão na tela Hoje.</p>';
       return;
     }
 

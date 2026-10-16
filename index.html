@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.25.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.25.0">
-  <link rel="stylesheet" href="css/components.css?v=3.25.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.25.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.25.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.26.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.26.0">
+  <link rel="stylesheet" href="css/components.css?v=3.26.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.26.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.26.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.25.0"></script>
+  <script src="js/theme-boot.js?v=3.26.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -760,23 +760,23 @@
       <div class="dialog-body">
         <div class="form-grid">
           <div class="form-group full-width">
-            <label for="input-customer-name">Nome do contato</label>
-            <input type="text" id="input-customer-name" class="form-input" placeholder="Mariana Albuquerque" required autocomplete="off">
+            <label for="input-customer-name">Nome do contato <span class="required-mark" aria-hidden="true">*</span></label>
+            <input type="text" id="input-customer-name" class="form-input" placeholder="Ex.: João da Silva" required autocomplete="off">
           </div>
 
           <div class="form-group">
             <label for="input-customer-company">Empresa</label>
-            <input type="text" id="input-customer-company" class="form-input" placeholder="Albuquerque Móveis" autocomplete="off">
+            <input type="text" id="input-customer-company" class="form-input" placeholder="Ex.: Silva Distribuidora" autocomplete="off">
           </div>
 
           <div class="form-group">
             <label for="input-customer-phone">Telefone ou WhatsApp</label>
-            <input type="tel" id="input-customer-phone" class="form-input" placeholder="(11) 98888-7777" inputmode="tel" autocomplete="off">
+            <input type="tel" id="input-customer-phone" class="form-input" placeholder="Ex.: (11) 98888-7777" inputmode="tel" autocomplete="off">
           </div>
 
           <div class="form-group">
             <label for="input-deal-value">Valor (R$)</label>
-            <input type="text" id="input-deal-value" class="form-input" placeholder="0,00" inputmode="decimal" autocomplete="off" required>
+            <input type="text" id="input-deal-value" class="form-input" placeholder="0,00" inputmode="decimal" autocomplete="off">
           </div>
 
           <div class="form-group">
@@ -802,12 +802,12 @@
           <div class="form-grid">
             <div class="form-group">
               <label for="input-customer-email">E-mail</label>
-              <input type="email" id="input-customer-email" class="form-input" placeholder="mariana@empresa.com" autocomplete="off">
+              <input type="email" id="input-customer-email" class="form-input" placeholder="Ex.: joao@empresa.com.br" autocomplete="off">
             </div>
 
             <div class="form-group">
               <label for="input-customer-role">Cargo</label>
-              <input type="text" id="input-customer-role" class="form-input" placeholder="Diretora de compras" autocomplete="off">
+              <input type="text" id="input-customer-role" class="form-input" placeholder="Ex.: Gerente de compras" autocomplete="off">
             </div>
 
             <div class="form-group">
@@ -928,7 +928,7 @@
         <button type="submit" class="btn btn-outline btn-sm">Agendar</button>
       </form>
 
-      <div id="lead-attachments-block" hidden>
+      <div id="lead-attachments-block">
         <h3 class="section-title section-gap">Anexos</h3>
         <div id="lead-details-attachments"></div>
         <div class="attachment-add">
@@ -1943,7 +1943,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.25.0"></script>
+  <script type="module" src="js/app.js?v=3.26.0"></script>
 
 </body>
 </html>

@@ -305,7 +305,11 @@ export function setupCheckoutModalEvents() {
   };
   el('btn-close-checkout-modal')?.addEventListener('click', close);
   el('btn-close-checkout-footer')?.addEventListener('click', close);
-  modal.addEventListener('close', stopPolling);
+  // closed by any way (Esc included): a charge still on its way must not start checking afterwards
+  modal.addEventListener('close', () => {
+    stopPolling();
+    requestSeq += 1;
+  });
   el('chk-retry')?.addEventListener('click', () => loadCharge(activePlan));
   el('chk-test-charge')?.addEventListener('change', () => loadCharge(activePlan));
 

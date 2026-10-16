@@ -299,11 +299,17 @@ export function setupExportEvents() {
   const btnExport = document.getElementById('btn-export-csv');
   if (btnExport) {
     btnExport.addEventListener('click', () => {
-      const customers = crmStore.getState().filteredCustomers;
+      const state = crmStore.getState();
+      const customers = state.filteredCustomers;
       try {
         exportCustomersToCSV(customers);
         logAudit(AUDIT_ACTIONS.DATA_EXPORTED, { type: 'customers_csv', count: customers.length });
-        showToast("Planilha CSV exportada com sucesso!", "success");
+        // the file follows what is on screen: say so when a filter or a search left some out
+        const all = state.pipelineCustomers.length;
+        const what = `${customers.length} ${customers.length === 1 ? 'oportunidade' : 'oportunidades'}`;
+        showToast(customers.length < all
+          ? `Planilha exportada com ${what} de ${all}: só as que o filtro ou a busca mostram na tela.`
+          : `Planilha exportada com ${what}.`, 'success');
       } catch (err) {
         showToast("Erro ao exportar: " + err.message, "error");
       }

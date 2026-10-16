@@ -1594,7 +1594,7 @@ a.dropdown-item { text-decoration: none; box-sizing: border-box; }
 .week-empty { margin: 0; font-size: 0.76rem; color: var(--text-muted); }
 .week-task { display: flex; gap: 0.4rem; align-items: flex-start; padding: 0.35rem 0; border-top: 1px solid var(--border-subtle); }
 .week-task-main { display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem; min-width: 0; }
-.week-task-title { font-size: 0.8rem; color: var(--text-primary); overflow-wrap: anywhere; line-height: 1.3; }
+.week-task-title { font-size: 0.8rem; color: var(--text-primary); overflow-wrap: break-word; hyphens: auto; line-height: 1.3; }
 .week-task-time { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .week-task .link-btn { font-size: 0.74rem; text-align: left; }
 .week-task-calendar { color: var(--text-muted); text-decoration: none; }
@@ -1686,3 +1686,31 @@ h1, h2, h3, .dialog-title, .section-title, .page-title { text-wrap: balance; }
 .connection-pill.offline { color: var(--color-proposal); border-color: var(--color-proposal-border); background: var(--color-proposal-bg); }
 .connection-pill.offline .pulse-dot { background: var(--color-proposal); }
 .connection-pill.saving .pulse-dot { background: var(--text-muted); }
+
+/* The week agenda takes the whole width; the new-task form goes below it */
+.tasks-layout.is-week { grid-template-columns: minmax(0, 1fr); }
+
+/* Forms in windows never pass the window's edge: columns may shrink, and on a phone they stack */
+.form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.form-grid .form-input, .form-grid .form-select, .form-grid .form-textarea { width: 100%; min-width: 0; }
+@media (max-width: 560px) {
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .form-group.full-width { grid-column: auto; }
+  .crm-dialog .dialog-body { padding: 1rem; }
+  .crm-dialog .dialog-header, .crm-dialog .dialog-footer { padding-left: 1rem; padding-right: 1rem; }
+}
+
+/* On a phone: notices at the top (the button for a new opportunity lives at the bottom),
+   and the end of every list stays above that button */
+@media (max-width: 768px) {
+  .toast-container { top: 0.75rem; bottom: auto; left: 0.75rem; right: 0.75rem; }
+  .toast-container .toast { max-width: none; }
+  .content-area { padding-bottom: 5.5rem; }
+}
+.required-mark { color: var(--color-lost); font-weight: 600; }
+
+/* The quick search opens near the top, centred (a reset had pinned it to the corner) */
+.command-palette-dialog { margin: 12vh auto auto; }
+.command-item-icon { font-size: 0.75rem; font-weight: 600; }
+/* "Esc to close" is already in the footer */
+.command-palette-badge { display: none; }

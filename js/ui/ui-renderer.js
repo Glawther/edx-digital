@@ -460,7 +460,7 @@ function renderWeek(container, tasks) {
         <div class="week-task-main">
           <span class="week-task-title">${task.dueTime ? `<span class="week-task-time">${escapeHtml(task.dueTime)}</span> ` : ''}${escapeHtml(task.title)}</span>
           <button type="button" class="link-btn" data-click="handleOpenLeadDetails" data-a="${escapeHtml(task.customerId)}">${escapeHtml(task.customerName)}</button>
-          ${calendar ? `<a class="link-btn week-task-calendar" href="${escapeHtml(calendar)}" target="_blank" rel="noopener noreferrer">Pôr no Google Agenda</a>` : ''}
+          ${calendar ? `<a class="link-btn week-task-calendar" href="${escapeHtml(calendar)}" target="_blank" rel="noopener noreferrer" title="Pôr no Google Agenda">Google Agenda</a>` : ''}
         </div>
       </div>`;
   };
@@ -915,9 +915,13 @@ export function renderLeadTimeline(customer) {
   const attachBlock = document.getElementById('lead-attachments-block');
   const attachList = document.getElementById('lead-details-attachments');
   if (attachBlock && attachList) {
-    attachBlock.hidden = !isCloudSession();
+    const cloud = isCloudSession();
     const files = customer.attachments || [];
-    attachList.innerHTML = files.length === 0
+    attachBlock.querySelector('.attachment-add')?.toggleAttribute('hidden', !cloud);
+    // the demonstration keeps no files, but shows that the feature exists
+    attachList.innerHTML = !cloud
+      ? '<p class="empty-note" style="margin: 0 0 0.75rem;">Na conta da empresa, cada oportunidade guarda até 10 arquivos: proposta assinada, contrato, fotos, planilhas. A demonstração não guarda arquivos.</p>'
+      : files.length === 0
       ? '<p class="empty-note" style="margin: 0 0 0.75rem;">Nenhum arquivo. Guarde aqui a proposta assinada, o contrato ou o que o cliente enviou.</p>'
       : files.map(file => `
           <div class="lead-task attachment-row">
