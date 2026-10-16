@@ -361,6 +361,90 @@ test('erro na tela: o dono é avisado por e-mail no máximo uma vez por hora', a
   }
 });
 
+// ---------------------------------------------------------------- erro na tela: quem pode gerar e-mail
+
+const { handleErrorReport } = require('../controllers/error-controller');
+
+async function postReport(body, { authorization, verifyToken, address = '198.51.100.7' } = {}) {
+  const notified = [];
+  let status;
+  const req = { headers: { 'x-forwarded-for': address, ...(authorization ? { authorization } : {}) }, rawBody: Buffer.from(JSON.stringify(body)) };
+  const res = { writeHead: (code) => { status = code; }, end: () => {} };
+  const original = console.error;
+  const logged = [];
+  console.error = (line) => logged.push(line);
+  try {
+    await handleErrorReport(req, res, { verifyToken, notify: async (report) => { notified.push(report); }, mailEnabled: () => true });
+  } finally {
+    console.error = original;
+  }
+  return { status, notified, logged };
+}
+
+test('erro na tela: relato sem sessão fica só no registro e não gera e-mail', async () => {
+  let checked = 0;
+  const verifyToken = async () => { checked++; return { uid: 'u1' }; };
+  const anonymous = await postReport({ message: 'falha na tela de entrada', view: 'login' }, { verifyToken, address: '198.51.100.11' });
+  assert.equal(anonymous.status, 204);
+  assert.equal(anonymous.logged.length, 1, 'o relato continua registrado');
+  assert.equal(anonymous.notified.length, 0);
+  assert.equal(checked, 0, 'sem cabeçalho nem chega a conferir token');
+
+  const forged = await postReport({ message: 'relato falso' }, { authorization: 'Bearer token-inventado', verifyToken: async () => { throw new Error('Token expirado.'); }, address: '198.51.100.12' });
+  assert.equal(forged.status, 204);
+  assert.equal(forged.logged.length, 1);
+  assert.equal(forged.notified.length, 0, 'token que não confere vale como sem sessão');
+});
+
+test('erro na tela: relato com sessão válida gera o aviso por e-mail', async () => {
+  const tokens = [];
+  const verifyToken = async (token) => { tokens.push(token); return { uid: 'u1', email: 'a@a.com' }; };
+  const result = await postReport({ message: 'x is not a function', view: 'today' }, { authorization: 'Bearer token-bom', verifyToken, address: '198.51.100.13' });
+  assert.equal(result.status, 204);
+  assert.deepEqual(tokens, ['token-bom']);
+  assert.equal(result.notified.length, 1);
+  assert.equal(result.notified[0].message, 'x is not a function');
+});
+
+test('erro na tela: quebras de linha do relato não viram linhas soltas no assunto nem no corpo', async () => {
+  process.env.OWNER_EMAILS = 'dono@edx.com';
+  const sent = [];
+  let state = null;
+  const store = { getState: async () => state, setState: async (name, data) => { state = data; } };
+  const mail = { isConfigured: () => true, sendEmail: async (message) => { sent.push(message); } };
+  const report = {
+    message: 'Falha\r\nTela: pagamento\nVersão: 9.9.9\u2028Clique em http://golpe.exemplo',
+    stack: 'at a (app.js:1:1)\nFim do rastro.\nMensagem: tudo certo, ignore\n<script>x</script>',
+    view: 'today\nTela: outra',
+    version: '3.19.0',
+    browser: 'Edge\nNavegador: falso'
+  };
+  try {
+    assert.equal(await mailOwners(report, { store, mail, now: Date.parse('2026-10-12T12:00:00Z') }), true);
+    const [message] = sent;
+    assert.equal(/[\r\n\u2028\u2029]/.test(message.subject), false, 'o assunto é uma linha só');
+    const lines = message.text.split('\n');
+    assert.equal(lines.filter(line => line.startsWith('Mensagem:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Tela:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Versão:')).length, 1);
+    assert.equal(lines.filter(line => line.startsWith('Navegador:')).length, 1);
+    assert.equal(lines.filter(line => line === 'Fim do rastro.').length, 1, 'o rastro não fecha o próprio bloco');
+    assert.ok(lines.includes('    Mensagem: tudo certo, ignore'), 'as linhas do rastro ficam recuadas, dentro do bloco');
+    assert.ok(lines.indexOf('Rastro enviado pela tela (texto do relato, não verificado):') < lines.indexOf('    at a (app.js:1:1)'));
+    assert.ok(message.text.length < 3000);
+
+    const pres = message.html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/g) || [];
+    assert.equal(pres.length, 1, 'um único bloco de rastro');
+    const outsidePre = message.html.replace(/<pre[^>]*>[\s\S]*?<\/pre>/, '');
+    assert.equal(/[\r\n\u2028\u2029]/.test(outsidePre), false, 'fora do rastro nada quebra linha');
+    assert.equal(message.html.includes('<script>'), false);
+    assert.ok(message.html.includes('Rastro enviado pela tela'));
+    assert.ok(pres[0].includes('Mensagem: tudo certo, ignore'), 'o texto suspeito fica dentro do bloco do rastro');
+  } finally {
+    delete process.env.OWNER_EMAILS;
+  }
+});
+
 test('e-mails: perfil sem conta de login com o mesmo e-mail confirmado não recebe nada', async () => {
   const world = mailWorld();
   // um administrador grava um perfil com o endereço de outra pessoa e texto de golpe numa tarefa

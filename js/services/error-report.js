@@ -7,7 +7,10 @@
  * removes anything that looks like an e-mail or a long number (server/controllers/error-controller.js).
  */
 
+import { getIdToken } from './auth-service.js';
+
 const MAX_PER_VISIT = 5;
+const TOKEN_WAIT_MS = 3000;
 const sent = new Set();
 
 function appVersion() {
@@ -16,18 +19,34 @@ function appVersion() {
   return match ? match[1] : '';
 }
 
-function report(kind, message, stack) {
+/**
+ * The session token, when a real account is signed in (null on the sign-in screen and in the
+ * demo). Only reports with it can become the owner's e-mail; the others are still logged.
+ */
+async function sessionToken() {
+  try {
+    const timeout = new Promise(resolve => setTimeout(() => resolve(null), TOKEN_WAIT_MS));
+    return (await Promise.race([getIdToken(), timeout])) || null;
+  } catch {
+    return null;
+  }
+}
+
+async function report(kind, message, stack) {
   const text = String(message || '').slice(0, 500);
   if (!text || sent.has(text) || sent.size >= MAX_PER_VISIT) return;
   sent.add(text);
   try {
-    fetch('/api/errors', {
+    const token = await sessionToken();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    await fetch('/api/errors', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       keepalive: true,
       body: JSON.stringify({ kind, message: text, stack: String(stack || '').slice(0, 3000), view: document.body.dataset.view || '', version: appVersion() })
-    }).catch(() => { /* reporting a failure must never cause another */ });
-  } catch { /* same */ }
+    });
+  } catch { /* reporting a failure must never cause another */ }
 }
 
 export function setupErrorReporting() {

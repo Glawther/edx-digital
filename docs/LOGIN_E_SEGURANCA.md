@@ -108,6 +108,8 @@ Limites conhecidos, que não têm correção só no código:
 
 Quando algo falha na tela de alguém, o aplicativo avisa o servidor (`/api/errors`) e o relato vira uma linha de erro no registro das funções, no console do Firebase. Vão a mensagem, o trecho do código, a tela aberta e a versão; nada da pessoa, da empresa ou dos clientes, e o servidor ainda apaga o que tiver formato de e-mail ou de número longo. São no máximo 5 relatos por visita e 10 por minuto por endereço.
 
+O dono do sistema recebe no máximo um e-mail por hora sobre esses erros, e só de relatos que chegam com a sessão de uma conta confirmada pelo servidor (o token do Firebase no cabeçalho `Authorization`). Relatos sem sessão, como os da tela de entrada, ficam só no registro: assim ninguém de fora escreve o e-mail do dono nem gasta a vaga da hora com um relato falso. No e-mail, a mensagem, a tela, a versão e o navegador vão cada um numa linha curta, sem quebras; o rastro fica num bloco à parte, marcado como enviado pela tela.
+
 ## Proteções do navegador
 
 - **Dados do banco na tela**: todo texto e todo valor de atributo passa por `escapeHtml` (`js/core/html.js`). Identificadores com caracteres que o aplicativo não gera são recusados pelas regras do banco na criação e ignorados na leitura. Sem isso, um vendedor poderia gravar um registro que executasse código na tela de quem administra.
