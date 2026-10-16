@@ -582,7 +582,11 @@ window.handleDeleteCustomer = async function(customerId) {
   }
 
   const before = snapshotOf(customerId);
-  if (!confirm(`Excluir ${before?.name || 'esta oportunidade'}? Você pode desfazer logo em seguida; depois disso, não.`)) return;
+  // With the plan lapsed, deleting is allowed but putting it back is not (it would be a new record)
+  const undoNote = isReadOnly()
+    ? 'Com o CRM em modo de leitura, não dá para desfazer.'
+    : 'Você pode desfazer logo em seguida; depois disso, não.';
+  if (!confirm(`Excluir ${before?.name || 'esta oportunidade'}? ${undoNote}`)) return;
   try {
     const cust = storage.getCustomer(customerId);
     await storage.deleteCustomer(customerId);

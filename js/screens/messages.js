@@ -160,18 +160,24 @@ export function setupWhatsAppModalEvents() {
         return;
       }
 
-      // Log contact action
+      // Open WhatsApp Web first: it must open even when the history note cannot be written
       recordWhatsAppContact(customer);
-      await storage.addActivity(customer.id, {
-        type: 'whatsapp',
-        title: 'Mensagem pelo WhatsApp',
-        text: message
-      });
-
-      // Open WhatsApp Web
       window.open(link, '_blank', 'noopener');
       closeDialog();
-      showToast('WhatsApp aberto. A mensagem ficou registrada no histórico.', 'success');
+      if (isReadOnly()) {
+        showToast('WhatsApp aberto. Com o CRM em modo de leitura, a mensagem não fica no histórico.', 'info');
+        return;
+      }
+      try {
+        await storage.addActivity(customer.id, {
+          type: 'whatsapp',
+          title: 'Mensagem pelo WhatsApp',
+          text: message
+        });
+        showToast('WhatsApp aberto. A mensagem ficou registrada no histórico.', 'success');
+      } catch (err) {
+        showToast(`WhatsApp aberto. A mensagem não ficou no histórico: ${err.message}`, 'warning');
+      }
     });
   }
 }
@@ -460,13 +466,24 @@ export function setupProposalModalEvents() {
       const msg = `Olá, ${customer.name}. Preparamos a proposta da ${orgName}${customer.company ? ` para a ${customer.company}` : ''}, no valor de ${formatBRL(customer.dealValue)}. Vou enviar o documento em seguida. Qualquer dúvida, é só responder aqui.`;
       const link = buildWhatsAppLink(customer.phone, msg);
       if (link) {
-        await storage.addActivity(customer.id, {
-          type: 'whatsapp',
-          title: 'Proposta avisada pelo WhatsApp',
-          text: `Mensagem sobre a proposta de ${formatBRL(customer.dealValue)} enviada para ${customer.phone}.`
-        });
+        // WhatsApp opens first, while the click still counts (pop-up blockers), and whatever
+        // happens to the history note
         window.open(link, '_blank', 'noopener');
-        showToast("WhatsApp aberto com a mensagem. Anexe o PDF da proposta na conversa.", "success");
+        const opened = 'WhatsApp aberto com a mensagem. Anexe o PDF da proposta na conversa.';
+        if (isReadOnly()) {
+          showToast(`${opened} Com o CRM em modo de leitura, o aviso não fica no histórico.`, 'info');
+          return;
+        }
+        try {
+          await storage.addActivity(customer.id, {
+            type: 'whatsapp',
+            title: 'Proposta avisada pelo WhatsApp',
+            text: `Mensagem sobre a proposta de ${formatBRL(customer.dealValue)} enviada para ${customer.phone}.`
+          });
+          showToast(opened, 'success');
+        } catch (err) {
+          showToast(`${opened} O aviso não ficou no histórico: ${err.message}`, 'warning');
+        }
       }
     });
   }

@@ -600,3 +600,53 @@ test('vários funis: criar um, trocar de funil, cadastrar nele, e cada funil mos
   assert.match(await page.textContent('#metrics-content'), /no funil Pós venda/);
   assert.deepEqual(problems, []);
 });
+
+test('excluir e desfazer: a oportunidade volta; se desfazer falhar, o aviso diz e nada fica solto', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.click('.nav-item[data-view="customers"]');
+  const remove = page.locator('#view-customers [data-click="handleDeleteCustomer"]');
+  await remove.first().waitFor();
+  const gone = (id) => page.waitForFunction(cardId => !document.querySelector(`#view-customers [data-click="handleDeleteCustomer"][data-a="${cardId}"]`), id);
+
+  const first = await remove.first().getAttribute('data-a');
+  await remove.first().click();
+  await gone(first);
+  await page.locator('.toast-action', { hasText: 'Desfazer' }).last().click();
+  await page.locator(`#view-customers [data-click="handleDeleteCustomer"][data-a="${first}"]`).waitFor();
+  await page.locator('.toast', { hasText: 'Oportunidade restaurada.' }).waitFor();
+
+  // the restoration fails (as when the database refuses it): a notice, not a loose error
+  await page.evaluate(async () => {
+    const { storage } = await import('/js/core/storage-manager.js');
+    storage.restoreCustomer = async () => { throw new Error('falha simulada'); };
+  });
+  const second = await remove.first().getAttribute('data-a');
+  await remove.first().click();
+  await gone(second);
+  await page.locator('.toast-action', { hasText: 'Desfazer' }).last().click();
+  await page.locator('.toast.error', { hasText: 'Não foi possível desfazer: falha simulada' }).waitFor();
+  assert.deepEqual(problems, []);
+});
+
+test('proposta pelo WhatsApp: o WhatsApp abre mesmo quando o histórico não aceita o registro', async (t) => {
+  const demo = await openDemo(t);
+  if (!demo) return;
+  const { page, problems } = demo;
+  await page.evaluate(async () => {
+    window.__opened = [];
+    window.open = (url) => { window.__opened.push(url); return null; };
+    const { storage } = await import('/js/core/storage-manager.js');
+    storage.addActivity = async () => { throw new Error('falha simulada'); };
+  });
+  await page.locator('.lead-card .lead-name').first().click();
+  await page.click('#lead-details-actions [data-click="handleOpenProposalModal"]');
+  await page.locator('#proposal-dialog').waitFor({ state: 'visible' });
+  await page.click('#btn-send-proposal-wa');
+  await page.locator('.toast', { hasText: 'O aviso não ficou no histórico: falha simulada' }).waitFor();
+  const opened = await page.evaluate(() => window.__opened);
+  assert.equal(opened.length, 1);
+  assert.match(opened[0], /^https:\/\/wa\.me\//);
+  assert.deepEqual(problems, []);
+});
