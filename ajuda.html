@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site-ajuda.css?v=3.22.0">
+  <script type="module" src="js/help-search.js?v=3.22.0"></script>
 </head>
 <body>
   <header class="top"><div>
@@ -20,6 +21,13 @@
 
     <h1>Ajuda</h1>
     <p class="meta">Respostas curtas para as dúvidas mais comuns. Dentro do sistema, em Ferramentas, o item "Conhecer o sistema" refaz o passeio pelas telas quando você quiser.</p>
+
+    <!-- Shown by js/help-search.js; without JavaScript the page stays as it is -->
+    <div class="search" id="help-search" role="search" hidden>
+      <label for="help-search-input">Buscar na ajuda</label>
+      <input type="search" id="help-search-input" autocomplete="off" spellcheck="false" placeholder="Por exemplo: senha, PIX, convite" aria-describedby="help-search-status">
+      <p class="search-status" id="help-search-status" role="status" aria-live="polite"></p>
+    </div>
 
     <nav class="index" aria-label="Assuntos">
       <a href="#comecar">Primeiros passos</a>
