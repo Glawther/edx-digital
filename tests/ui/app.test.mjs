@@ -326,6 +326,72 @@ test('janela larga: o menu de ferramentas abre acima do botão, dentro da barra 
   assert.ok(menu.y >= 0, 'cabe na altura da tela');
 });
 
+// What each profile finds in the tools menu, and whether every entry can be seen and reached
+async function openToolsMenu(page) {
+  await page.click('#btn-header-tools');
+  await page.waitForTimeout(250); // the opening animation
+  return page.evaluate(() => {
+    const menu = document.getElementById('header-tools-menu');
+    const box = menu.getBoundingClientRect();
+    const entries = [...menu.querySelectorAll('.dropdown-item')].filter(item => item.offsetParent !== null);
+    const outside = [];
+    for (const item of entries) {
+      item.scrollIntoView({ block: 'nearest' });
+      const r = item.getBoundingClientRect();
+      const m = menu.getBoundingClientRect();
+      if (r.top < m.top - 1 || r.bottom > m.bottom + 1 || r.top < 0 || r.bottom > window.innerHeight) outside.push(item.id || item.textContent.trim());
+    }
+    menu.scrollTop = 0;
+    return {
+      ids: entries.map(item => item.id),
+      groups: [...menu.querySelectorAll('.tools-group-title')].filter(title => title.offsetParent !== null).map(title => title.textContent.trim()),
+      inWindow: box.top >= 0 && box.bottom <= window.innerHeight && box.left >= 0 && box.right <= window.innerWidth,
+      fitsWhole: menu.scrollHeight <= menu.clientHeight + 1,
+      outside
+    };
+  });
+}
+
+const adminOnlyEntries = ['btn-menu-whitelabel', 'btn-menu-customize', 'btn-menu-billing', 'btn-menu-webhook', 'btn-menu-export-audit', 'link-menu-landing', 'btn-menu-owner', 'btn-menu-owner-verify'];
+
+test('menu de ferramentas: agrupado, inteiro na tela, e o vendedor não vê o que é do administrador', async (t) => {
+  for (const viewport of [{ width: 1300, height: 700 }, { width: 390, height: 844 }]) {
+    const admin = await openDemo(t, 'admin', viewport, 'today');
+    if (!admin) return;
+    const adminMenu = await openToolsMenu(admin.page);
+    const size = `${viewport.width}x${viewport.height}`;
+    assert.deepEqual(adminMenu.groups, ['Dia a dia', 'Empresa', 'Integrações e dados', 'Ajuda'], size);
+    for (const id of ['btn-menu-import', 'btn-menu-billing', 'sidebar-gemini-btn', 'btn-menu-webhook', 'link-menu-help']) {
+      assert.ok(adminMenu.ids.includes(id), `${size}: o administrador vê ${id}`);
+    }
+    assert.ok(adminMenu.inWindow, `${size}: o menu do administrador cabe na janela`);
+    assert.ok(adminMenu.fitsWhole, `${size}: o menu do administrador cabe sem rolar`);
+    assert.deepEqual(adminMenu.outside, [], `${size}: itens do administrador fora da área visível`);
+
+    const seller = await openDemo(t, 'employee', viewport, 'today');
+    const sellerMenu = await openToolsMenu(seller.page);
+    assert.deepEqual(sellerMenu.ids.filter(id => adminOnlyEntries.includes(id)), [], `${size}: o vendedor vê itens do administrador`);
+    assert.deepEqual(sellerMenu.groups, ['Dia a dia', 'Integrações e dados', 'Ajuda'], size);
+    for (const id of ['btn-menu-import', 'btn-menu-export-csv', 'btn-menu-account', 'sidebar-gemini-btn', 'btn-menu-tour', 'link-menu-help']) {
+      assert.ok(sellerMenu.ids.includes(id), `${size}: o vendedor vê ${id}`);
+    }
+    assert.ok(sellerMenu.inWindow, `${size}: o menu do vendedor cabe na janela`);
+    assert.deepEqual(sellerMenu.outside, [], `${size}: itens do vendedor fora da área visível`);
+    assert.deepEqual([...admin.problems, ...seller.problems], []);
+  }
+});
+
+test('menu de ferramentas numa janela bem baixa: fica dentro da tela e rola até o último item', async (t) => {
+  for (const viewport of [{ width: 1300, height: 520 }, { width: 390, height: 560 }]) {
+    const demo = await openDemo(t, 'admin', viewport, 'today');
+    if (!demo) return;
+    const menu = await openToolsMenu(demo.page);
+    const size = `${viewport.width}x${viewport.height}`;
+    assert.ok(menu.inWindow, `${size}: o menu cabe na janela`);
+    assert.deepEqual(menu.outside, [], `${size}: itens que não dá para alcançar`);
+  }
+});
+
 test('botões e campos usam a fonte do aplicativo', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
