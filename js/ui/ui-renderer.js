@@ -902,12 +902,18 @@ export function renderLeadTimeline(customer) {
 
   const actionsEl = document.getElementById('lead-details-actions');
   if (actionsEl) {
+    // All actions share one outlined style with an icon, so the row never reads as tabs;
+    // deleting sits in its own group, apart from the rest, to avoid a mistaken tap.
+    const icon = (paths) => `<svg class="lead-action-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+    const id = escapeHtml(customer.id);
     actionsEl.innerHTML = `
-      <button type="button" class="btn btn-primary btn-sm" data-click="handleOpenEditCustomer" data-a="${escapeHtml(customer.id)}">Editar</button>
-      ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm" data-click="handleOpenWhatsAppModal" data-a="${escapeHtml(customer.id)}">WhatsApp</button>` : ''}
-      <button type="button" class="btn btn-outline btn-sm" data-click="handleOpenProposalModal" data-a="${escapeHtml(customer.id)}">Proposta</button>
-      <button type="button" class="btn btn-outline btn-sm" data-click="handleAnalyzeWithAI" data-a="${escapeHtml(customer.id)}">Analisar com IA</button>
-      ${isAdmin() ? `<button type="button" class="btn btn-outline btn-sm btn-danger-outline push-right" data-click="handleDeleteCustomer" data-a="${escapeHtml(customer.id)}">Excluir</button>` : ''}
+      <div class="lead-actions-main">
+        <button type="button" class="btn btn-outline btn-sm lead-action lead-action-edit" data-click="handleOpenEditCustomer" data-a="${id}">${icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>')}Editar dados</button>
+        ${customer.phone ? `<button type="button" class="btn btn-outline btn-sm lead-action" data-click="handleOpenWhatsAppModal" data-a="${id}">${icon('<path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5Z"/>')}WhatsApp</button>` : ''}
+        <button type="button" class="btn btn-outline btn-sm lead-action" data-click="handleOpenProposalModal" data-a="${id}">${icon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>')}Proposta</button>
+        <button type="button" class="btn btn-outline btn-sm lead-action" data-click="handleAnalyzeWithAI" data-a="${id}">${icon('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/><path d="M19 17v4M17 19h4"/>')}Analisar com IA</button>
+      </div>
+      ${isAdmin() ? `<div class="lead-actions-danger"><button type="button" class="btn btn-outline btn-sm btn-danger-outline lead-action" data-click="handleDeleteCustomer" data-a="${id}">${icon('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>')}Excluir</button></div>` : ''}
     `;
   }
 

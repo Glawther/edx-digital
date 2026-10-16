@@ -129,6 +129,29 @@ test('administrador: o funil abre com as oportunidades e sem nenhum erro', async
   assert.deepEqual(problems, []);
 });
 
+test('na janela da oportunidade, as ações têm o mesmo estilo e "Excluir" fica separado, também no celular', async (t) => {
+  for (const [role, viewport] of [['admin', { width: 1300, height: 800 }], ['admin', { width: 390, height: 844 }], ['employee', { width: 390, height: 844 }]]) {
+    const demo = await openDemo(t, role, viewport);
+    if (!demo) return;
+    const { page } = demo;
+    await page.locator('.lead-card .lead-name').first().click();
+    await page.locator('#lead-details-dialog').waitFor({ state: 'visible' });
+    const actions = page.locator('#lead-details-actions');
+    // a filled button among outlined ones reads as the selected tab
+    assert.equal(await actions.locator('.btn-primary').count(), 0);
+    assert.match(await actions.locator('[data-click="handleOpenEditCustomer"]').textContent(), /Editar/);
+    const remove = actions.locator('[data-click="handleDeleteCustomer"]');
+    if (role !== 'admin') {
+      assert.equal(await remove.count(), 0, 'o vendedor não exclui oportunidades');
+      continue;
+    }
+    const main = await actions.locator('.lead-actions-main').boundingBox();
+    const box = await remove.boundingBox();
+    if (viewport.width < 768) assert.ok(box.y >= main.y + main.height + 12, 'no celular, "Excluir" fica numa linha própria, longe das outras ações');
+    else assert.ok(box.x >= main.x + main.width + 24, 'no notebook, "Excluir" fica afastado das outras ações');
+  }
+});
+
 test('o cartão abre a oportunidade pelo clique e pelo Enter, mas não ao usar o seletor de etapa', async (t) => {
   const demo = await openDemo(t);
   if (!demo) return;
