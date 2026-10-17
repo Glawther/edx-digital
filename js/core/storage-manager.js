@@ -12,6 +12,14 @@ import { crmStore, getLossReasonLabel, getStageName } from './crm-store.js';
 import { normalizeCustomer } from './normalize.js';
 import { leadsRoom, isOpenOpportunity, currentPlan, PlanLimitError } from '../services/billing-service.js';
 
+// A day of the sample data, counted from today on this machine's calendar (not universal time:
+// after 9 p.m. in Brazil that is already tomorrow, and today's sample tasks showed as tomorrow's)
+function demoDay(offset) {
+  const day = new Date();
+  day.setDate(day.getDate() + offset);
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+}
+
 let lastCloudWarningAt = 0;
 
 /**
@@ -79,7 +87,7 @@ const INITIAL_DEMO_LEADS = [
     tags: ['Fintech', 'Inbound'],
     notes: 'Interesse em integração de API para pagamento em lote.',
     assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
-    expectedCloseDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+    expectedCloseDate: demoDay(+15),
     createdAt: new Date(Date.now() - 4 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
     activities: [
@@ -105,7 +113,7 @@ const INITIAL_DEMO_LEADS = [
         id: 'task-1-1',
         title: 'Follow-up de Apresentação via WhatsApp',
         type: 'whatsapp',
-        dueDate: new Date().toISOString().split('T')[0], // Today
+        dueDate: demoDay(0), // Today
         completed: false
       }
     ]
@@ -123,7 +131,7 @@ const INITIAL_DEMO_LEADS = [
     tags: ['Logística', 'SLA Alto'],
     notes: 'Primeira reunião agendada para alinhamento de requisitos técnicos.',
     assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
-    expectedCloseDate: new Date(Date.now() + 20 * 86400000).toISOString().split('T')[0],
+    expectedCloseDate: demoDay(+20),
     createdAt: new Date(Date.now() - 6 * 86400000).toISOString(),
     // 4 days idle to demonstrate Deal Rotting alert
     updatedAt: new Date(Date.now() - 4 * 86400000).toISOString(),
@@ -142,7 +150,7 @@ const INITIAL_DEMO_LEADS = [
         id: 'task-2-1',
         title: 'Ligar para reagendar reunião técnica',
         type: 'call',
-        dueDate: new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0],
+        dueDate: demoDay(+1),
         completed: false
       }
     ]
@@ -160,7 +168,7 @@ const INITIAL_DEMO_LEADS = [
     tags: ['Saúde', 'Segurança LGPD'],
     notes: 'Proposta comercial de 12 meses enviada. Em análise pelo comitê executivo.',
     assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@example.com' },
-    expectedCloseDate: new Date(Date.now() + 8 * 86400000).toISOString().split('T')[0],
+    expectedCloseDate: demoDay(+8),
     createdAt: new Date(Date.now() - 10 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
     activities: [
@@ -186,7 +194,7 @@ const INITIAL_DEMO_LEADS = [
         id: 'task-3-1',
         title: 'Cobrança do retorno da proposta com Camila',
         type: 'meeting',
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: demoDay(0),
         completed: false
       }
     ]
@@ -204,7 +212,7 @@ const INITIAL_DEMO_LEADS = [
     tags: ['Agro', 'Cloud', 'Piloto'],
     notes: 'Negociando cláusulas de suporte 24/7 e SLA de 99.9%. Decisão nesta semana.',
     assignedTo: { id: 'employee-user-02', name: 'Lucas Mendes (Consultor)', email: 'lucas.vendas@example.com' },
-    expectedCloseDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+    expectedCloseDate: demoDay(+5),
     createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 86400000).toISOString(),
     activities: [
@@ -222,7 +230,7 @@ const INITIAL_DEMO_LEADS = [
         id: 'task-4-1',
         title: 'Enviar minuta revisada com cláusula jurídica',
         type: 'followup',
-        dueDate: new Date().toISOString().split('T')[0],
+        dueDate: demoDay(0),
         completed: true
       }
     ]
@@ -240,7 +248,7 @@ const INITIAL_DEMO_LEADS = [
     tags: ['Energia', 'Contrato Assinado'],
     notes: 'Contrato anual assinado! Onboarding agendado para a próxima segunda-feira.',
     assignedTo: { id: 'employee-user-03', name: 'Mariana Costa (Consultora)', email: 'mariana.vendas@example.com' },
-    expectedCloseDate: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+    expectedCloseDate: demoDay(-2),
     createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
     activities: [
