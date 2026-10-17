@@ -889,3 +889,20 @@ test('quem nunca entrou e tem a rede lenta continua vendo a tela de entrada', as
   await page.locator('#form-auth-login').waitFor({ state: 'visible', timeout: 20000 });
   assert.equal(await page.locator('#auth-offline-screen').isVisible(), false);
 });
+test('funil com muitos cartões numa coluna: a coluna rola e nenhum cartão fica cortado', async (t) => {
+  const demo = await openDemo(t, 'admin', { width: 1300, height: 560 });
+  if (!demo) return;
+  const { page } = demo;
+  // every opportunity in the same column, more than its height holds
+  await page.evaluate(async () => {
+    const ids = [...document.querySelectorAll('.lead-card')].map(card => card.dataset.id);
+    for (const id of ids) await window.handleMoveStage(id, 'won');
+  });
+  await page.waitForFunction(() => document.querySelectorAll('.pipeline-column[data-stage="won"] .lead-card').length >= 4);
+  const cut = await page.evaluate(() => [...document.querySelectorAll('.pipeline-column[data-stage="won"] .lead-card')]
+    .filter(card => card.scrollHeight - card.clientHeight > 1 || !card.querySelector('.move-stage-select'))
+    .map(card => card.dataset.id));
+  assert.deepEqual(cut, []);
+  const column = await page.evaluate(() => { const box = document.querySelector('.pipeline-column[data-stage="won"] .cards-container'); return { scrolls: box.scrollHeight > box.clientHeight }; });
+  assert.equal(column.scrolls, true, 'a coluna rola em vez de espremer os cartões');
+});

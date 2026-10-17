@@ -1764,3 +1764,7 @@ body.is-read-only .lead-details-actions .lead-action-edit { display: none !impor
 
 /* The proposal's own text takes the width of its editor */
 #proposal-text-input { width: 100%; min-height: 6rem; }
+
+/* A column with more cards than its height scrolls; the cards themselves never shrink (shrunk,
+   their stage selector and WhatsApp button were cut off) */
+.cards-container > .lead-card { flex: none; }
