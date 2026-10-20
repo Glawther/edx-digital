@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.27.2">
-  <link rel="stylesheet" href="css/layout.css?v=3.27.2">
-  <link rel="stylesheet" href="css/components.css?v=3.27.2">
-  <link rel="stylesheet" href="css/animations.css?v=3.27.2">
-  <link rel="stylesheet" href="css/identity.css?v=3.27.2">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.28.0">
+  <link rel="stylesheet" href="css/layout.css?v=3.28.0">
+  <link rel="stylesheet" href="css/components.css?v=3.28.0">
+  <link rel="stylesheet" href="css/animations.css?v=3.28.0">
+  <link rel="stylesheet" href="css/identity.css?v=3.28.0">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.27.2"></script>
+  <script src="js/theme-boot.js?v=3.28.0"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -352,14 +352,6 @@
             <div class="dropdown-divider" id="tools-divider-integrations"></div>
 
             <div class="tools-group-title" id="tools-group-integrations">Integrações e dados</div>
-            <button type="button" class="dropdown-item" id="sidebar-gemini-btn">
-              <span class="dropdown-item-icon"></span>
-              <div class="dropdown-item-text">
-                <span class="dropdown-item-title">Inteligência artificial</span>
-                <span class="dropdown-item-desc">Chave do Gemini para as análises</span>
-              </div>
-            </button>
-
             <button type="button" class="dropdown-item" id="btn-menu-webhook">
               <span class="dropdown-item-icon"></span>
               <div class="dropdown-item-text">
@@ -1000,14 +992,13 @@
 
       <div id="gemini-unavailable" style="display: none; padding: 1.5rem 0.25rem;">
         <p id="gemini-unavailable-text" style="font-size: 0.9rem; color: var(--text-primary); line-height: 1.5; margin: 0 0 1rem;"></p>
-        <button type="button" class="btn btn-primary btn-sm" data-click="openGeminiKey">Informar a chave do Gemini</button>
       </div>
 
       <div id="gemini-results" style="display: none;">
         <!-- Probability Gauge -->
         <div class="gemini-insight-card">
           <div class="gemini-insight-title">
-            <span>Chance de fechar, na avaliação do Gemini</span>
+            <span>Chance de fechar, na avaliação da IA</span>
             <span id="gemini-probability-number" style="font-size: 1rem; color: #10b981; margin-left: auto;">0%</span>
           </div>
           <div class="probability-bar-wrapper">
@@ -1050,38 +1041,6 @@
     <div class="dialog-footer">
       <button type="button" class="btn btn-outline" id="btn-close-gemini-modal-footer">Fechar</button>
     </div>
-  </dialog>
-
-  <!-- ========================================================================
-       MODAL 4: Gemini API Key Dialog
-       ======================================================================== -->
-  <dialog id="gemini-key-dialog" class="crm-dialog">
-    <div class="dialog-header">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <h2 class="dialog-title">Chave do Google Gemini</h2>
-      </div>
-      <button type="button" class="action-btn" id="btn-close-gemini-key-dialog" aria-label="Fechar modal">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-
-    <form id="gemini-key-form">
-      <div class="dialog-body">
-        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-          <strong>Opcional.</strong> Com uma chave de API do Gemini (obtida em <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color: #2563eb; text-decoration: underline; font-weight: 500;">Google AI Studio</a>), cole abaixo para usar a análise de oportunidades e as sugestões de mensagem. A chave fica só neste navegador, e os dados da oportunidade analisada são enviados ao Google.
-        </div>
-
-        <div class="form-group">
-          <label for="input-gemini-key">Chave de API do Gemini</label>
-          <input type="password" id="input-gemini-key" class="form-input" placeholder="AIzaSy...">
-        </div>
-      </div>
-
-      <div class="dialog-footer">
-        <button type="button" class="btn btn-outline" id="btn-cancel-gemini-key">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-save-gemini-key">Salvar</button>
-      </div>
-    </form>
   </dialog>
 
   <!-- ========================================================================
@@ -1957,7 +1916,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.27.2"></script>
+  <script type="module" src="js/app.js?v=3.28.0"></script>
 
 </body>
 </html>

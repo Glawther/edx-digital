@@ -60,7 +60,7 @@ npm run test:rules
 
 - **Onde roda**: em produção o servidor é uma função do Firebase atrás de `/api` no endereço do próprio site; as páginas são entregues pelo Firebase Hosting, que só publica a pasta `dist/`. O item abaixo vale para `server.js`, usado no computador de quem desenvolve.
 - **Só arquivos públicos**: o servidor entrega as páginas, `js/`, `css/` e `assets/`. O código dele, a pasta de dados, configurações e arquivos ocultos respondem "não encontrado". A lista fica em `server/controllers/static-controller.js`.
-- **Rotas em uso**: cobrança (`/api/billing`), leads de formulários (`/api/webhook/leads`, e `/api/webhook/token` para o administrador) e `/health`. Qualquer outro endereço em `/api` responde 404.
+- **Rotas em uso**: cobrança (`/api/billing`), leads de formulários (`/api/webhook/leads`, e `/api/webhook/token` para o administrador), inteligência artificial (`/api/ai`, com login) e `/health`. Qualquer outro endereço em `/api` responde 404.
 - **API antiga removida**: existia uma `/api/v1` que o aplicativo nunca usou, com uma rota de token que entregava sessão sem conferir quem pedia. O código e os testes dela saíram do repositório; o endereço responde 404, e `server/tests/server-surface.test.js` confere isso.
 - **Recebimento de formulários**: aceita até 60 envios por minuto por token e 120 por endereço de origem, corpo de até 32 KB, e guarda só texto simples com tamanho limitado.
 
@@ -119,9 +119,9 @@ O dono do sistema recebe no máximo um e-mail por hora sobre esses erros, e só 
 
 - **Nenhum código no HTML**: não há `onclick` nem `<script>` com conteúdo. Os elementos dizem qual ação disparam (`data-click`, `data-change`) e um único ouvinte em `js/ui/actions.js` chama a função. Por isso a política abaixo proíbe scripts embutidos: mesmo que um texto malicioso chegasse à tela como marcação, o navegador não o executaria.
 - **Estilos**: nenhuma página tem bloco `<style>`; os estilos ficam em arquivos de `css/`, e a política recusa qualquer bloco de estilo escrito numa página. Os atributos `style` em elementos ainda são aceitos (há cerca de 200 no aplicativo); o que um atributo consegue fazer é bem menos do que um bloco.
-- **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, nunca embutidos na página, e só conversa com o Firebase, o Google Gemini e o servidor de cobrança. Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
+- **Política de segurança de conteúdo (CSP)**: o site só carrega scripts dele mesmo e do SDK do Firebase, nunca embutidos na página, e só conversa com o Firebase e com o próprio servidor (`/api`). Ela está em `firebase.json` (site publicado) e em `server/config/constants.js` (servidor). Ao usar um serviço novo, inclua o endereço dele nos dois lugares.
 - **Exportação**: células que uma planilha executaria como fórmula (começando com `=`, `+`, `-` ou `@`) saem com um apóstrofo na frente.
-- **Chave do Gemini**: fica só no navegador de quem a informou e vai para o Google num cabeçalho, nunca no endereço.
+- **Inteligência artificial**: a chave da Groq fica no Secret Manager (`GROQ_API_KEY`), nunca no navegador. O navegador só diz a tarefa e o número da oportunidade; o servidor confere que a pessoa alcança aquela oportunidade (mesma empresa, administrador ou vendedor responsável, conta ativa, plano em dia), lê os dados no banco e monta o pedido. Assim a chave não vira uma IA de uso livre para quem tem login. Limites: 6 pedidos por minuto por pessoa e 40 por dia por empresa (`server/ai/ai-service.js`). A chave antiga do Gemini, se existir no navegador, é apagada ao abrir o sistema.
 
 ### O que vale ligar no console (depende de você)
 

@@ -7,13 +7,9 @@ import { messagesFor } from '../core/message-templates.js';
 import { getStageName } from '../core/crm-store.js';
 import { getSavedOrganization } from '../core/config.js';
 import { storage } from '../core/storage-manager.js';
-import { getCurrentUser, isAdmin, isReadOnly } from '../services/auth-service.js';
-import { analyzeDealWithGemini, getSavedGeminiKey, saveGeminiKey } from '../services/gemini-service.js';
-import {
-  buildWhatsAppLink,
-  generateAIOutreachMessages,
-  recordWhatsAppContact
-} from '../services/whatsapp-service.js';
+import { getCurrentUser, isReadOnly } from '../services/auth-service.js';
+import { analyzeDeal, suggestMessages } from '../services/ai-service.js';
+import { buildWhatsAppLink, recordWhatsAppContact } from '../services/whatsapp-service.js';
 import { escapeHtml, formatBRL, showToast } from '../ui/ui-renderer.js';
 import { reportError } from './shared.js';
 
@@ -109,21 +105,11 @@ export function setupWhatsAppModalEvents() {
       btnGenerateAi.disabled = true;
       btnGenerateAi.textContent = 'Gerando sugestões…';
 
-      const org = getSavedOrganization();
-      const user = getCurrentUser();
-
       try {
-        const aiOptions = await generateAIOutreachMessages(customer, {
-          companyName: org.name,
-          userName: user?.name
-        });
-
-        renderTemplatesList(aiOptions, customer);
-        showToast('Sugestões do Gemini prontas. Escolha uma e ajuste o texto.', 'success');
+        renderTemplatesList(await suggestMessages(customer), customer);
+        showToast('Sugestões prontas. Escolha uma e ajuste o texto.', 'success');
       } catch (err) {
-        showToast(err.message, err.code === 'no-key' ? 'info' : 'error', err.code === 'no-key'
-          ? { label: 'Informar a chave', onClick: () => document.getElementById('sidebar-gemini-btn')?.click() }
-          : null);
+        showToast(err.message, ['demo', 'daily_limit', 'plan_expired'].includes(err.code) ? 'info' : 'error');
       } finally {
         btnGenerateAi.disabled = false;
         btnGenerateAi.textContent = 'Sugerir com IA';
@@ -183,10 +169,7 @@ export function setupWhatsAppModalEvents() {
 }
 
 // ==========================================================================
-// Firebase Configuration Dialog
-// ==========================================================================
-// ==========================================================================
-// Gemini AI Modals & Handlers
+// AI analysis dialog
 // ==========================================================================
 export function setupGeminiModals() {
   const geminiDialog = document.getElementById('gemini-dialog');
@@ -206,35 +189,6 @@ export function setupGeminiModals() {
       }).catch(() => {
         showToast("Não foi possível copiar automaticamente.", "error");
       });
-    });
-  }
-
-  // Gemini API Key Config Dialog
-  const keyDialog = document.getElementById('gemini-key-dialog');
-  const btnOpenKey = document.getElementById('sidebar-gemini-btn');
-  const btnCloseKey = document.getElementById('btn-close-gemini-key-dialog');
-  const btnCancelKey = document.getElementById('btn-cancel-gemini-key');
-  const keyForm = document.getElementById('gemini-key-form');
-  const keyInput = document.getElementById('input-gemini-key');
-
-  if (btnOpenKey && keyDialog) {
-    btnOpenKey.addEventListener('click', () => {
-      if (keyInput) keyInput.value = getSavedGeminiKey();
-      keyDialog.showModal();
-    });
-  }
-
-  const closeKeyDialog = () => keyDialog && keyDialog.close();
-  if (btnCloseKey) btnCloseKey.addEventListener('click', closeKeyDialog);
-  if (btnCancelKey) btnCancelKey.addEventListener('click', closeKeyDialog);
-
-  if (keyForm) {
-    keyForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const key = keyInput ? keyInput.value : '';
-      saveGeminiKey(key);
-      keyDialog.close();
-      showToast(key ? "Chave do Google Gemini salva neste navegador." : "Chave do Gemini removida.", "success");
     });
   }
 }
@@ -258,10 +212,7 @@ window.handleAnalyzeWithAI = async function(customerId) {
   geminiDialog.showModal();
 
   try {
-    const analysis = await analyzeDealWithGemini(customer, {
-      companyName: getSavedOrganization().name,
-      userName: getCurrentUser()?.name
-    });
+    const analysis = await analyzeDeal(customer);
     const prob = Math.round(analysis.probability);
     document.getElementById('gemini-probability-number').textContent = `${prob}%`;
     document.getElementById('gemini-probability-bar').style.width = `${prob}%`;
@@ -272,12 +223,8 @@ window.handleAnalyzeWithAI = async function(customerId) {
     document.getElementById('gemini-email-draft').textContent = analysis.proposalEmail;
     show('gemini-results');
   } catch (err) {
-    // No key, or Google refused: say so instead of showing an analysis nobody made
-    document.getElementById('gemini-unavailable-text').textContent = err.code === 'no-key'
-      ? (isAdmin()
-        ? 'A análise usa o Gemini, a inteligência artificial do Google, e precisa de uma chave da sua empresa. Ela é gratuita para começar e se informa em Ferramentas, Inteligência artificial. Sem a chave, o resto do CRM funciona normalmente.'
-        : 'A análise com inteligência artificial ainda não foi ligada na sua empresa. Quem administra o CRM pode ligar em Ferramentas.')
-      : err.message;
+    // The AI did not answer: say so instead of showing an analysis nobody made
+    document.getElementById('gemini-unavailable-text').textContent = err.message;
     show('gemini-unavailable');
   }
 };

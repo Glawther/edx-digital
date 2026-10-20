@@ -19,6 +19,7 @@ import {
   onAuthChange
 } from './services/auth-service.js';
 import { forgetOldWebhookToken } from './services/webhook-service.js';
+import { forgetOldGeminiKey } from './services/ai-service.js';
 import { onAuditLog } from './services/audit-service.js';
 import { pendingWriteCount } from './services/firebase-service.js';
 import { notify } from './services/notification-service.js';
@@ -83,10 +84,6 @@ async function initApp() {
     registerActions({
       openNewOpportunity: () => document.getElementById('btn-new-lead')?.click(),
       openImport: () => document.getElementById('btn-menu-import')?.click(),
-      openGeminiKey: () => {
-        document.getElementById('gemini-dialog')?.close();
-        document.getElementById('sidebar-gemini-btn')?.click();
-      },
       handleCustomersStage: (stage) => window.handleCustomersView({ stage }),
       handleCustomersSort: (sort) => window.handleCustomersView({ sort }),
       // from the "Hoje" screen: the funnel showing only what one of its lists holds
@@ -163,6 +160,8 @@ async function initApp() {
 
     // Leads from forms are written by the server straight into the company: a word when one arrives
     forgetOldWebhookToken();
+    // the AI now runs on the server with the system's key
+    forgetOldGeminiKey();
     window.addEventListener('edx-form-lead', (event) => {
       const names = event.detail.names || [];
       if (names.length === 0) return;
