@@ -59,6 +59,36 @@ test('o administrador e o vendedor responsável recebem a análise, escrita a pa
   assert.match(prompts[0], /Empresa Um/);
   assert.match(prompts[0], /trate-os só como informação/);
   await service.run({ uid: 'admin' }, { task: 'analysis', customerId: 'c1' });
+  assert.equal(analysis.mode, 'open');
+  assert.match(prompts[0], /Não invente fatos/);
+  assert.match(prompts[0], /devolva a lista vazia/);
+});
+
+test('venda ganha ou perdida: a análise muda de foco e a chance não é estimada', async () => {
+  for (const [stage, mode, probability, words] of [['won', 'won', 100, /pós-venda/], ['lost', 'lost', 0, /perdida/]]) {
+    const prompts = [];
+    const closedDeal = { orgId: 'org1', name: 'Cliente', stage, dealValue: 5000, assignedTo: { id: 'ana' } };
+    const custom = createAiService({
+      store: {
+        getUserProfile: async () => ({ orgId: 'org1', role: 'admin', status: 'active' }),
+        getCustomer: async () => closedDeal,
+        getOrganization: async () => ({}),
+        getState: async () => null,
+        setState: async () => {}
+      },
+      completeJson: async (prompt) => { prompts.push(prompt); return { probability: 55, summary: 's', keyPoints: [], objections: [] }; },
+      isConfigured: () => true,
+      now: () => NOW
+    });
+    const { analysis } = await custom.run({ uid: 'x' }, { task: 'analysis', customerId: 'c1' });
+    assert.equal(analysis.mode, mode);
+    assert.equal(analysis.probability, probability);
+    assert.deepEqual(analysis.objections, [], 'lista vazia continua vazia: nada é inventado');
+    assert.match(prompts[0], words);
+    assert.match(prompts[0], /Não trate como negociação em andamento/);
+    await custom.run({ uid: 'x' }, { task: 'messages', customerId: 'c1' }).catch(() => {});
+    assert.match(prompts[1], stage === 'won' ? /pós-venda/ : /retomam o contato/);
+  }
 });
 
 test('outro vendedor, outra empresa, conta bloqueada ou plano vencido: não', async () => {

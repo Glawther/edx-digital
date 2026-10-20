@@ -21,13 +21,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-tokens.css?v=3.28.0">
-  <link rel="stylesheet" href="css/layout.css?v=3.28.0">
-  <link rel="stylesheet" href="css/components.css?v=3.28.0">
-  <link rel="stylesheet" href="css/animations.css?v=3.28.0">
-  <link rel="stylesheet" href="css/identity.css?v=3.28.0">
+  <link rel="stylesheet" href="css/design-tokens.css?v=3.28.1">
+  <link rel="stylesheet" href="css/layout.css?v=3.28.1">
+  <link rel="stylesheet" href="css/components.css?v=3.28.1">
+  <link rel="stylesheet" href="css/animations.css?v=3.28.1">
+  <link rel="stylesheet" href="css/identity.css?v=3.28.1">
   <!-- Applies the saved theme before the first paint -->
-  <script src="js/theme-boot.js?v=3.28.0"></script>
+  <script src="js/theme-boot.js?v=3.28.1"></script>
 </head>
 <body class="auth-pending" data-view="today">
 
@@ -998,10 +998,10 @@
         <!-- Probability Gauge -->
         <div class="gemini-insight-card">
           <div class="gemini-insight-title">
-            <span>Chance de fechar, na avaliação da IA</span>
+            <span id="gemini-probability-title">Chance de fechar, na avaliação da IA</span>
             <span id="gemini-probability-number" style="font-size: 1rem; color: #10b981; margin-left: auto;">0%</span>
           </div>
-          <div class="probability-bar-wrapper">
+          <div class="probability-bar-wrapper" id="gemini-probability-wrapper">
             <div class="probability-bar-fill" id="gemini-probability-bar" style="width: 0%;"></div>
           </div>
           <p id="gemini-summary-text" style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-top: 0.75rem;"></p>
@@ -1010,18 +1010,18 @@
         <!-- Key Points & Objections -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
           <div class="gemini-insight-card" style="margin-bottom: 0;">
-            <div class="gemini-insight-title" style="color: #38bdf8;">Pontos a favor</div>
+            <div class="gemini-insight-title" style="color: #38bdf8;" id="gemini-keypoints-title">Pontos a favor</div>
             <ul id="gemini-keypoints-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
           <div class="gemini-insight-card" style="margin-bottom: 0;">
-            <div class="gemini-insight-title" style="color: #f59e0b;">Objeções prováveis e como responder</div>
+            <div class="gemini-insight-title" style="color: #f59e0b;" id="gemini-objections-title">Objeções prováveis e como responder</div>
             <ul id="gemini-objections-list" style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.1rem; line-height: 1.5;"></ul>
           </div>
         </div>
 
         <!-- Recommended Action -->
         <div class="gemini-insight-card" style="border-left: 3px solid #10b981;">
-          <div class="gemini-insight-title" style="color: #10b981;">Próximo passo sugerido</div>
+          <div class="gemini-insight-title" style="color: #10b981;" id="gemini-action-title">Próximo passo sugerido</div>
           <p id="gemini-recommended-action" style="font-size: 0.85rem; color: var(--text-primary); font-weight: 500;"></p>
         </div>
 
@@ -1916,7 +1916,7 @@ Marcos Lima; Padaria Lima; (11) 98888-1111; marcos@padarialima.com.br; 4.500,00"
   <input type="file" id="backup-file-input" style="display: none;" accept=".json">
 
   <!-- Entry Point Script -->
-  <script type="module" src="js/app.js?v=3.28.0"></script>
+  <script type="module" src="js/app.js?v=3.28.1"></script>
 
 </body>
 </html>

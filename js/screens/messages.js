@@ -202,9 +202,13 @@ window.handleAnalyzeWithAI = async function(customerId) {
     const el = document.getElementById(part);
     if (el) el.style.display = part === id ? 'block' : 'none';
   });
+  // an empty list means the data did not support any item: said plainly, never left blank
   const fill = (id, items) => {
-    document.getElementById(id).innerHTML = items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    document.getElementById(id).innerHTML = items.length > 0
+      ? items.map(item => `<li>${escapeHtml(item)}</li>`).join('')
+      : '<li class="empty-note">Os dados desta oportunidade não indicam nenhum. Registre mais detalhes no histórico para uma análise melhor.</li>';
   };
+  const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
 
   document.getElementById('gemini-dialog-customer-name').textContent = customer.name;
   document.getElementById('gemini-dialog-customer-meta').textContent = [customer.company, formatBRL(customer.dealValue)].filter(Boolean).join(', ');
@@ -214,6 +218,19 @@ window.handleAnalyzeWithAI = async function(customerId) {
   try {
     const analysis = await analyzeDeal(customer);
     const prob = Math.round(analysis.probability);
+    const closed = analysis.mode === 'won' || analysis.mode === 'lost';
+    const titles = {
+      open: ['Chance de fechar, na avaliação da IA', 'Pontos a favor', 'Objeções prováveis e como responder', 'Próximo passo sugerido'],
+      won: ['Venda fechada: pós-venda', 'O que ajudou a fechar', 'Riscos no pós-venda e como evitar', 'Próximo passo do pós-venda'],
+      lost: ['Venda perdida: o que aprender', 'O que foi bem', 'Motivos prováveis da perda', 'Vale retomar o contato?']
+    }[analysis.mode] || [];
+    ['gemini-probability-title', 'gemini-keypoints-title', 'gemini-objections-title', 'gemini-action-title']
+      .forEach((id, index) => titles[index] && setText(id, titles[index]));
+    // a closed deal has no chance left to estimate
+    ['gemini-probability-number', 'gemini-probability-wrapper'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = closed ? 'none' : '';
+    });
     document.getElementById('gemini-probability-number').textContent = `${prob}%`;
     document.getElementById('gemini-probability-bar').style.width = `${prob}%`;
     document.getElementById('gemini-summary-text').textContent = analysis.summary;
