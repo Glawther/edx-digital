@@ -65,6 +65,11 @@ export function applyRoleUIRestrictions(permissions) {
   if (btnMenuWebhook) btnMenuWebhook.style.display = isAdmin ? 'flex' : 'none';
   if (groupCompany) groupCompany.style.display = isAdmin ? 'block' : 'none';
   if (dividerCompany) dividerCompany.style.display = isAdmin ? 'block' : 'none';
+  // forms and the audit are the administrator's: for a seller this group would be empty
+  for (const id of ['tools-group-integrations', 'tools-divider-integrations']) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? 'block' : 'none';
+  }
 
   const btnMenuCustomize = document.getElementById('btn-menu-customize');
   if (btnMenuCustomize) btnMenuCustomize.style.display = isAdmin ? 'flex' : 'none';
@@ -578,14 +583,6 @@ export function setupHeaderToolsMenu() {
 
   if (btnTools && menu) {
     btnTools.addEventListener('click', toggleMenu);
-  }
-
-  const btnSidebarGemini = document.getElementById('sidebar-gemini-btn');
-
-  if (btnSidebarGemini) {
-    btnSidebarGemini.addEventListener('click', () => {
-      closeMenu();
-    });
   }
 
   document.addEventListener('click', (e) => {

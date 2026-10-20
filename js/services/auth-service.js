@@ -35,7 +35,7 @@ const ACTIVITY_KEY = 'edx_last_activity';
 
 // Version of the Terms of Use and Privacy Policy a person accepts when creating an account.
 // Change it whenever termos.html or privacidade.html change in substance.
-export const LEGAL_VERSION = '2026-10-12';
+export const LEGAL_VERSION = '2026-10-20';
 
 // A signed-in account left untouched for this long is signed out
 export const IDLE_LIMIT_MS = 8 * 60 * 60 * 1000;

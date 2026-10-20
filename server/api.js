@@ -1,6 +1,6 @@
 /**
  * EDX Digital - The server's routes
- * PIX billing and the inbox for leads sent by forms. The same routes answer in two places:
+ * PIX billing, the inbox for leads sent by forms and the AI features. The same routes answer in two places:
  * in Firebase Functions (cloud.js), which is what runs in production, and in server.js,
  * which serves the site on the developer's own machine.
  */
@@ -10,6 +10,7 @@ const { handleIngestLead, handleWebhookToken } = require('./controllers/webhook-
 const { handleBilling } = require('./billing/billing-controller');
 const { handleErrorReport } = require('./controllers/error-controller');
 const { handleOwner } = require('./controllers/owner-controller');
+const { handleAi } = require('./controllers/ai-controller');
 
 function sendJson(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -46,6 +47,8 @@ function handleApi(req, res) {
     handleIngestLead(req, res);
   } else if (pathname === '/api/webhook/token' && (req.method === 'GET' || req.method === 'POST')) {
     handleWebhookToken(req, res);
+  } else if (pathname === '/api/ai' && req.method === 'POST') {
+    handleAi(req, res);
   } else if (pathname.startsWith('/api/owner/')) {
     handleOwner(req, res, pathname);
   } else if (pathname === '/api/errors' && req.method === 'POST') {

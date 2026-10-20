@@ -361,7 +361,7 @@ test('menu de ferramentas: agrupado, inteiro na tela, e o vendedor não vê o qu
     const adminMenu = await openToolsMenu(admin.page);
     const size = `${viewport.width}x${viewport.height}`;
     assert.deepEqual(adminMenu.groups, ['Dia a dia', 'Empresa', 'Integrações e dados', 'Ajuda'], size);
-    for (const id of ['btn-menu-import', 'btn-menu-billing', 'sidebar-gemini-btn', 'btn-menu-webhook', 'link-menu-help']) {
+    for (const id of ['btn-menu-import', 'btn-menu-billing', 'btn-menu-webhook', 'link-menu-help']) {
       assert.ok(adminMenu.ids.includes(id), `${size}: o administrador vê ${id}`);
     }
     assert.ok(adminMenu.inWindow, `${size}: o menu do administrador cabe na janela`);
@@ -371,8 +371,8 @@ test('menu de ferramentas: agrupado, inteiro na tela, e o vendedor não vê o qu
     const seller = await openDemo(t, 'employee', viewport, 'today');
     const sellerMenu = await openToolsMenu(seller.page);
     assert.deepEqual(sellerMenu.ids.filter(id => adminOnlyEntries.includes(id)), [], `${size}: o vendedor vê itens do administrador`);
-    assert.deepEqual(sellerMenu.groups, ['Dia a dia', 'Integrações e dados', 'Ajuda'], size);
-    for (const id of ['btn-menu-import', 'btn-menu-export-csv', 'btn-menu-account', 'sidebar-gemini-btn', 'btn-menu-tour', 'link-menu-help']) {
+    assert.deepEqual(sellerMenu.groups, ['Dia a dia', 'Ajuda'], size);
+    for (const id of ['btn-menu-import', 'btn-menu-export-csv', 'btn-menu-account', 'btn-menu-tour', 'link-menu-help']) {
       assert.ok(sellerMenu.ids.includes(id), `${size}: o vendedor vê ${id}`);
     }
     assert.ok(sellerMenu.inWindow, `${size}: o menu do vendedor cabe na janela`);

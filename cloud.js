@@ -16,6 +16,7 @@
  *   firebase functions:secrets:set BREVO_API_KEY                  (docs/EMAILS.md)
  *   firebase functions:secrets:set MAIL_SENDER
  *   firebase functions:secrets:set OWNER_EMAILS                   (docs/OPERACAO.md)
+ *   firebase functions:secrets:set GROQ_API_KEY                   (the AI, server/ai/groq.js)
  */
 
 const { onRequest } = require('firebase-functions/v2/https');
@@ -35,11 +36,13 @@ const BREVO_API_KEY = defineSecret('BREVO_API_KEY');
 const MAIL_SENDER = defineSecret('MAIL_SENDER');
 // who owns the system: sees the panel of companies and is told about errors (e-mails separated by commas)
 const OWNER_EMAILS = defineSecret('OWNER_EMAILS');
+// the AI behind the opportunity analysis and the message suggestions (server/ai/groq.js)
+const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
 
 exports.api = onRequest(
   {
     region: 'southamerica-east1',
-    secrets: [MERCADO_PAGO_ACCESS_TOKEN, MERCADO_PAGO_WEBHOOK_SECRET, BREVO_API_KEY, MAIL_SENDER, OWNER_EMAILS],
+    secrets: [MERCADO_PAGO_ACCESS_TOKEN, MERCADO_PAGO_WEBHOOK_SECRET, BREVO_API_KEY, MAIL_SENDER, OWNER_EMAILS, GROQ_API_KEY],
     // a small CRM: a few instances are plenty, and the bill cannot run away
     maxInstances: 3,
     memory: '256MiB',
