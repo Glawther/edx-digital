@@ -6,7 +6,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createAiService, AiError } = require('../ai/ai-service');
-const { completeJson } = require('../ai/groq');
+const { completeJson, resetModelCache } = require('../ai/groq');
 const { handleAi } = require('../controllers/ai-controller');
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -105,19 +105,45 @@ test('sem a chave no servidor, a IA diz que não está ligada', async () => {
   await rejects(service.run({ uid: 'admin' }, { task: 'analysis', customerId: 'c1' }), 503, 'not_configured');
 });
 
-test('Groq: tenta o modelo maior e, se ele recusar, o menor; a chave vai no cabeçalho', async () => {
-  process.env.GROQ_API_KEY = 'chave-de-teste';
+function groqFake({ models, refuse = [] }) {
   const calls = [];
-  const fetchFn = async (url, options) => {
+  const fetchFn = async (url, options = {}) => {
+    if (url.endsWith('/models')) {
+      calls.push({ url, model: null, auth: options.headers.Authorization });
+      return { ok: true, json: async () => ({ data: models.map(id => ({ id, active: true })) }) };
+    }
     const body = JSON.parse(options.body);
     calls.push({ url, model: body.model, auth: options.headers.Authorization, format: body.response_format.type });
-    if (body.model === 'llama-3.3-70b-versatile') return { ok: false, status: 429, json: async () => ({ error: { message: 'limite' } }) };
+    if (refuse.includes(body.model)) return { ok: false, status: 429, json: async () => ({ error: { message: 'limite' } }) };
     return { ok: true, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
   };
+  return { calls, fetchFn };
+}
+
+test('Groq: usa só os modelos que a chave alcança, na ordem preferida, e passa ao seguinte quando um recusa', async () => {
+  process.env.GROQ_API_KEY = 'chave-de-teste';
+  resetModelCache();
+  const { calls, fetchFn } = groqFake({
+    models: ['whisper-large-v3', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'openai/gpt-oss-safeguard-20b'],
+    refuse: ['openai/gpt-oss-120b']
+  });
   assert.deepEqual(await completeJson('responda em JSON', { fetchFn }), { ok: true });
-  assert.deepEqual(calls.map(c => c.model), ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant']);
-  assert.ok(calls.every(c => c.auth === 'Bearer chave-de-teste' && c.format === 'json_object' && !c.url.includes('chave')));
+  assert.deepEqual(calls.map(c => c.model), [null, 'openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
+  assert.ok(calls.every(c => c.auth === 'Bearer chave-de-teste' && !c.url.includes('chave')));
+  assert.ok(calls.filter(c => c.model).every(c => c.format === 'json_object'));
+
+  // a lista fica guardada: o pedido seguinte não pergunta de novo
+  await completeJson('responda em JSON', { fetchFn });
+  assert.equal(calls.filter(c => !c.model).length, 1);
+
+  // quando todos recusam, o erro traz o motivo de cada um, e a lista é perguntada de novo
+  const all = groqFake({ models: ['llama-3.1-8b-instant'], refuse: ['llama-3.1-8b-instant'] });
+  resetModelCache();
+  await assert.rejects(completeJson('responda em JSON', { fetchFn: all.fetchFn }), /llama-3\.1-8b-instant: HTTP 429/);
+  await assert.rejects(completeJson('responda em JSON', { fetchFn: all.fetchFn }));
+  assert.equal(all.calls.filter(c => !c.model).length, 2);
   delete process.env.GROQ_API_KEY;
+  resetModelCache();
 });
 
 function fakeRes() {
