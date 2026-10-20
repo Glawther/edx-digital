@@ -108,6 +108,46 @@ function logNotice(topic, dataId, outcome) {
   console.log(JSON.stringify({ message: `[Cobrança] aviso do Mercado Pago: ${outcome}`, topic: String(topic || '').slice(0, 30), charge: String(dataId || '').slice(0, 64), outcome }));
 }
 
+/**
+ * When a signature fails: which parts arrived and which other reading of the rule would have
+ * matched. Never logs a value: no header, no signature, no secret (only its length).
+ */
+function diagnoseSignature(req, query, body, secret) {
+  const signatureHeader = String(req.headers['x-signature'] || '');
+  const requestId = req.headers['x-request-id'];
+  const queryId = query.get('data.id') || '';
+  const bodyId = String((body && body.data && body.data.id) || '');
+  const check = (dataId, rid, keepCase) => {
+    if (!dataId) return false;
+    if (keepCase) {
+      // the same rule, but without lowering the id
+      const parts = Object.fromEntries(signatureHeader.split(',').map(p => p.split('=').map(s => s.trim())).filter(p => p.length === 2));
+      if (!parts.ts || !parts.v1) return false;
+      const manifest = `id:${dataId};request-id:${rid || ''};ts:${parts.ts};`;
+      return require('crypto').createHmac('sha256', secret).update(manifest).digest('hex') === parts.v1;
+    }
+    return mercadopago.verifyWebhookSignature({ signatureHeader, requestId: rid, dataId, secret });
+  };
+  const variants = {
+    idDaUrl: check(queryId, requestId),
+    idDoCorpo: check(bodyId, requestId),
+    idSemMinusculas: check(queryId || bodyId, requestId, true),
+    semRequestId: check(queryId || bodyId, ''),
+    idDoCorpoSemRequestId: check(bodyId, '')
+  };
+  return {
+    temAssinatura: Boolean(signatureHeader),
+    temTs: /(^|,)\s*ts=/.test(signatureHeader),
+    temV1: /(^|,)\s*v1=/.test(signatureHeader),
+    temRequestId: Boolean(requestId),
+    temIdNaUrl: Boolean(queryId),
+    temIdNoCorpo: Boolean(bodyId),
+    idsIguais: queryId === bodyId,
+    tamanhoDoSegredo: secret.length,
+    variacaoQueBate: Object.keys(variants).filter(key => variants[key]).join(',') || 'nenhuma'
+  };
+}
+
 async function handleWebhook(req, res) {
   if (!isBillingConfigured()) return send(res, 503, { error: 'billing_not_configured' });
 
@@ -141,6 +181,7 @@ async function handleWebhook(req, res) {
     });
     if (!valid) {
       logNotice(topic, dataId, 'recusado, assinatura inválida');
+      console.log(JSON.stringify({ message: '[Cobrança] diagnóstico da assinatura', ...diagnoseSignature(req, query, body, secret) }));
       return send(res, 401, { error: 'invalid_signature' });
     }
   }
